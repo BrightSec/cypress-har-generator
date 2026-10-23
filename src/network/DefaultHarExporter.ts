@@ -43,7 +43,7 @@ export class DefaultHarExporter implements HarExporter {
 
     const json = await this.serializeEntry(entry);
 
-    if (!this.buffer.closed && json) {
+    if (this.buffer.writable && json) {
       // @ts-expect-error signature mismatch due to overloading issues
       await promisify(this.buffer.write).call(this.buffer, `${json}${EOL}`);
     }
@@ -75,17 +75,7 @@ ${stack}`
   }
 
   public end(): void {
-    if (this.buffer.closed) {
-      this.logger.debug('The HAR file has already been closed.');
-
-      return;
-    }
-
-    this.buffer.destroy();
-    this.buffer.close(() => {
-      this.buffer.removeAllListeners();
-      this.logger.debug('The HAR file has been written.');
-    });
+    this.buffer.end();
   }
 
   private async applyFilter(entry: Entry): Promise<unknown> {

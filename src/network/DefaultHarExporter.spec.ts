@@ -2,6 +2,7 @@ import { NetworkRequest } from './NetworkRequest';
 import { DefaultHarExporter } from './DefaultHarExporter';
 import type { Logger } from '../utils/Logger';
 import type { DefaultHarExporterOptions } from './DefaultHarExporterOptions';
+import { FileManager } from '../utils/FileManager';
 import {
   anyFunction,
   anyString,
@@ -17,6 +18,7 @@ import type { Entry } from 'har-format';
 import { beforeEach, describe, it, jest, expect } from '@jest/globals';
 import type { WriteStream } from 'node:fs';
 import { EOL } from 'node:os';
+import { once } from 'node:events';
 
 describe('DefaultHarExporter', () => {
   const streamMock = mock<WriteStream>();
@@ -94,7 +96,7 @@ describe('DefaultHarExporter', () => {
   describe('write', () => {
     it('should write the entry to the buffer', async () => {
       // arrange
-      when(streamMock.closed).thenReturn(false);
+      when(streamMock.writable).thenReturn(true);
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => callback()
       );
@@ -110,7 +112,7 @@ describe('DefaultHarExporter', () => {
 
     it('should write the entry to the buffer if the predicate returns throws an error', async () => {
       // arrange
-      when(streamMock.closed).thenReturn(false);
+      when(streamMock.writable).thenReturn(true);
       when(optionsSpy.filter).thenReturn(predicate);
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => callback()
@@ -130,7 +132,7 @@ describe('DefaultHarExporter', () => {
       // arrange
       const entry = { foo: 'bar' } as unknown as Entry;
       const entryString = JSON.stringify(entry);
-      when(streamMock.closed).thenReturn(false);
+      when(streamMock.writable).thenReturn(true);
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => callback()
       );
@@ -148,7 +150,7 @@ describe('DefaultHarExporter', () => {
 
     it('should skip the entry when the transformation is failed with an error', async () => {
       // arrange
-      when(streamMock.closed).thenReturn(false);
+      when(streamMock.writable).thenReturn(true);
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => callback()
       );
@@ -166,7 +168,7 @@ describe('DefaultHarExporter', () => {
 
     it('should not write the entry to the buffer if the predicate returns true', async () => {
       // arrange
-      when(streamMock.closed).thenReturn(false);
+      when(streamMock.writable).thenReturn(true);
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => callback()
       );
@@ -180,9 +182,9 @@ describe('DefaultHarExporter', () => {
       verify(streamMock.write(anyString(), anyFunction())).never();
     });
 
-    it('should not write the entry to the buffer if the buffer is closed', async () => {
+    it('should not write the entry to the buffer if the buffer is not writable', async () => {
       // arrange
-      when(streamMock.closed).thenReturn(true);
+      when(streamMock.writable).thenReturn(false);
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => callback()
       );
@@ -194,6 +196,42 @@ describe('DefaultHarExporter', () => {
 
       // assert
       verify(streamMock.write(anyString(), anyFunction())).never();
+    });
+
+    it('should not fail if the buffer is ended while the entry is being processed', async () => {
+      // arrange
+      const stream = await FileManager.Instance.createTmpWriteStream();
+      const onError = jest.fn();
+      stream.on('error', onError);
+      let release!: () => void;
+      const transforming = new Promise<void>(resolve =>
+        transform.mockImplementation(
+          entry =>
+            new Promise<Entry>(done => {
+              release = () => done(entry);
+              resolve();
+            })
+        )
+      );
+      const sut = new DefaultHarExporter(instance(loggerMock), stream, {
+        transform
+      });
+
+      try {
+        const pending = sut.write(networkRequest);
+        await transforming;
+
+        // act
+        sut.end();
+        release();
+
+        // assert
+        await expect(pending).resolves.toBeUndefined();
+        await once(stream, 'close');
+        expect(onError).not.toHaveBeenCalled();
+      } finally {
+        await FileManager.Instance.removeFile(sut.path);
+      }
     });
   });
 });
