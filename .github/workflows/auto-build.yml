@@ -39,7 +39,7 @@ jobs:
 
       - name: Execute e2e npm script
         if: ${{ matrix.target == 'e2e' }}
-        uses: cypress-io/github-action@v6
+        uses: cypress-io/github-action@v7
         timeout-minutes: 10
         with:
           wait-on: 'http://localhost:8080/'
