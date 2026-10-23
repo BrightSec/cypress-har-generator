@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { constants, WriteStream } from 'node:fs';
 import { access } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 
 describe('FileManager', () => {
   let path!: string;
@@ -127,6 +128,27 @@ describe('FileManager', () => {
       await expect(
         access(stream.path, constants.F_OK)
       ).resolves.not.toThrowError();
+    });
+
+    it('should remove temp files left by a terminated process', async () => {
+      // arrange
+      const { pid } = spawnSync(process.execPath, ['-e', '']);
+      path = join(tmpdir(), `cypress-har-${pid}-0123456789abcdef`);
+      await sut.writeFile(path, data);
+      // act
+      await sut.createTmpWriteStream();
+      // assert
+      await expect(access(path, constants.F_OK)).rejects.toThrow();
+    });
+
+    it('should keep temp files of a running process', async () => {
+      // arrange
+      path = join(tmpdir(), `cypress-har-${process.ppid}-0123456789abcdef`);
+      await sut.writeFile(path, data);
+      // act
+      await sut.createTmpWriteStream();
+      // assert
+      await expect(access(path, constants.F_OK)).resolves.not.toThrowError();
     });
   });
 });
