@@ -16,16 +16,11 @@ runs:
     - name: Set Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 22
+        node-version: 24
         cache: 'npm'
         registry-url: ${{ inputs.registry }}
         scope: ${{ inputs.scope }}
 
-    # Dependabot writes lock files with npm 11; npm 10 (bundled with Node 22)
-    # rejects them in `npm ci`, so match the lock file's writer.
-    - name: Set npm
-      shell: bash
-      run: npm i -g npm@11.21.1
 
     - name: Install deps in quiet mode
       shell: bash
