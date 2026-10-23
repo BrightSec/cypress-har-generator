@@ -9,10 +9,10 @@
   },
   "dependencies": {
     "express": "^4.21.2",
-    "express-session": "^1.18.1",
+    "express-session": "^1.19.0",
     "hbs": "^4.2.0",
     "minimist": "^1.2.7",
-    "morgan": "^1.10.0",
+    "morgan": "^1.12.1",
     "tslib": "^2.4.1"
   },
   "devDependencies": {
