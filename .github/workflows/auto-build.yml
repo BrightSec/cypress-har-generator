@@ -46,7 +46,7 @@ jobs:
           wait-on-timeout: 120
           start: npm start
           browser: chrome
-          record: ${{ github.repository == 'NeuraLegion/cypress-har-generator' }}
+          record: ${{ github.repository == 'BrightSec/cypress-har-generator' }}
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
