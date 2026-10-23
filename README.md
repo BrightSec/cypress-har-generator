@@ -1,5 +1,7 @@
 # cypress-har-generator
 
+[![Maintainability](https://qlty.sh/gh/BrightSec/projects/cypress-har-generator/maintainability.svg)](https://qlty.sh/gh/BrightSec/projects/cypress-har-generator)
+[![Test Coverage](https://qlty.sh/gh/BrightSec/projects/cypress-har-generator/coverage.svg)](https://qlty.sh/gh/BrightSec/projects/cypress-har-generator)
 [![Build Status](https://github.com/NeuraLegion/cypress-har-generator/actions/workflows/coverage.yml/badge.svg?branch=master&event=push)](https://github.com/NeuraLegion/cypress-har-generator/actions/workflows/coverage.yml?query=branch%3Amaster+event%3Apush)
 [![NPM Downloads](https://img.shields.io/npm/dw/@neuralegion/cypress-har-generator?label=NPM%20Downloads)](https://www.npmjs.com/package/@neuralegion/cypress-har-generator)
 [![cypress-har-generator](https://img.shields.io/endpoint?url=https://cloud.cypress.io/badge/detailed/ir8zwo/master&style=flat&logo=cypress)](https://cloud.cypress.io/projects/ir8zwo/runs)
