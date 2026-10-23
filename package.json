@@ -64,7 +64,7 @@
     "@types/express": "^4.17.15",
     "@types/har-format": "^1.2.8",
     "@types/jest": "^29.5.12",
-    "@types/node": "~22.15.3",
+    "@types/node": "~24.19.2",
     "@types/webpack": "^5.28.0",
     "@types/webpack-node-externals": "^2.5.3",
     "@types/ws": "^8.5.4",
