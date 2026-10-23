@@ -14,7 +14,7 @@ Possible reasons for the failure include:
   - The target may have closed during initialization.
   - The target may have crashed due to memory issues.
 
-Please open an issue on the repository: https://github.com/NeuraLegion/cypress-har-generator/issues for assistance.
+Please open an issue on the repository: https://github.com/BrightSec/cypress-har-generator/issues for assistance.
 
 The stack trace for this error is:`;
 export const FAILED_TO_CONNECT = `${FAILED_ATTEMPT_TO_CONNECT}
