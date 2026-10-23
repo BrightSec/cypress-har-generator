@@ -5,7 +5,7 @@
   "description": "The Cypress plugin for generating HTTP Archive (HAR) files is a tool that allows developers and QA engineers to capture detailed information about network requests made during the execution of Cypress tests.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NeuraLegion/cypress-har-generator.git"
+    "url": "git+https://github.com/BrightSec/cypress-har-generator.git"
   },
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -20,7 +20,7 @@
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/NeuraLegion/cypress-har-generator/issues"
+    "url": "https://github.com/BrightSec/cypress-har-generator/issues"
   },
   "publishConfig": {
     "access": "public"
@@ -52,7 +52,7 @@
     "prepublishOnly": "node --run build",
     "prepare": "is-ci || husky install"
   },
-  "homepage": "https://github.com/NeuraLegion/cypress-har-generator#readme",
+  "homepage": "https://github.com/BrightSec/cypress-har-generator#readme",
   "devDependencies": {
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
