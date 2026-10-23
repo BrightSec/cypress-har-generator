@@ -72,7 +72,7 @@
     "@typescript-eslint/parser": "^5.36.2",
     "chai-like": "^1.1.1",
     "chai-things": "^0.2.0",
-    "cypress": "^13.14.2",
+    "cypress": "^16.2.0",
     "devtools-protocol": "~0.0.1040073",
     "eslint": "^8.23.0",
     "eslint-config-prettier": "^8.5.0",
