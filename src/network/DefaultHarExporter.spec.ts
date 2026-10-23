@@ -2,7 +2,6 @@ import { NetworkRequest } from './NetworkRequest';
 import { DefaultHarExporter } from './DefaultHarExporter';
 import type { Logger } from '../utils/Logger';
 import type { DefaultHarExporterOptions } from './DefaultHarExporterOptions';
-import { FileManager } from '../utils/FileManager';
 import {
   anyFunction,
   anyString,
@@ -18,7 +17,6 @@ import type { Entry } from 'har-format';
 import { beforeEach, describe, it, jest, expect } from '@jest/globals';
 import type { WriteStream } from 'node:fs';
 import { EOL } from 'node:os';
-import { once } from 'node:events';
 
 describe('DefaultHarExporter', () => {
   const streamMock = mock<WriteStream>();
@@ -198,40 +196,28 @@ describe('DefaultHarExporter', () => {
       verify(streamMock.write(anyString(), anyFunction())).never();
     });
 
-    it('should not fail if the buffer is ended while the entry is being processed', async () => {
+    it('should not write the entry to the buffer if the buffer is ended while the entry is being processed', async () => {
       // arrange
-      const stream = await FileManager.Instance.createTmpWriteStream();
-      const onError = jest.fn();
-      stream.on('error', onError);
-      let release!: () => void;
-      const transforming = new Promise<void>(resolve =>
-        transform.mockImplementation(
-          entry =>
-            new Promise<Entry>(done => {
-              release = () => done(entry);
-              resolve();
-            })
-        )
+      let ended = false;
+      when(streamMock.closed).thenReturn(false);
+      when(streamMock.writable).thenCall(() => !ended);
+      when(streamMock.end()).thenCall(() => (ended = true));
+      when(streamMock.write(anyString(), anyFunction())).thenCall(
+        (_, callback) =>
+          callback(ended ? new Error('write after end') : undefined)
       );
-      const sut = new DefaultHarExporter(instance(loggerMock), stream, {
-        transform
+      when(optionsSpy.transform).thenReturn(transform);
+      transform.mockImplementation(entry => {
+        harExporter.end();
+
+        return entry;
       });
 
-      try {
-        const pending = sut.write(networkRequest);
-        await transforming;
+      // act
+      await harExporter.write(networkRequest);
 
-        // act
-        sut.end();
-        release();
-
-        // assert
-        await expect(pending).resolves.toBeUndefined();
-        await once(stream, 'close');
-        expect(onError).not.toHaveBeenCalled();
-      } finally {
-        await FileManager.Instance.removeFile(sut.path);
-      }
+      // assert
+      verify(streamMock.write(anyString(), anyFunction())).never();
     });
   });
 });
