@@ -83,10 +83,12 @@ jobs:
       - name: Install deps
         uses: ./.github/workflows/composite/npm
         with:
-          registry: 'https://npm.pkg.github.com/brightsec'
-          scope: '@NeuraLegion'
+          registry: 'https://npm.pkg.github.com'
+          scope: '@brightsec'
 
       - name: Publish package to GPR
-        run: npm publish --tag $TAG
+        run: |
+          npm pkg set name=@brightsec/cypress-har-generator
+          npm publish --tag $TAG
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GPR_TOKEN }}
