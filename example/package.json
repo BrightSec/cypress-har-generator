@@ -1,7 +1,7 @@
 {
   "name": "cypress-har-generator-demo",
   "version": "1.0.0",
-  "description": "This is a demo project for the [cypress-har-generator](https://github.com/NeuraLegion/cypress-har-generator), with some installation and usage examples.",
+  "description": "This is a demo project for the [cypress-har-generator](https://github.com/BrightSec/cypress-har-generator), with some installation and usage examples.",
   "scripts": {
     "cypress:run": "cypress run --browser chrome --headless",
     "start": "node --experimental-transform-types src/index.ts --port 7079",

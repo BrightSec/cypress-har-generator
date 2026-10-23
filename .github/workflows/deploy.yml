@@ -83,7 +83,7 @@ jobs:
       - name: Install deps
         uses: ./.github/workflows/composite/npm
         with:
-          registry: 'https://npm.pkg.github.com/neuralegion'
+          registry: 'https://npm.pkg.github.com/brightsec'
           scope: '@NeuraLegion'
 
       - name: Publish package to GPR

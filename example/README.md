@@ -1,6 +1,6 @@
 # Example cypress-har-generator
 
-This is a demo project for the [cypress-har-generator](https://github.com/NeuraLegion/cypress-har-generator), with some installation and usage examples.
+This is a demo project for the [cypress-har-generator](https://github.com/BrightSec/cypress-har-generator), with some installation and usage examples.
 
 ## Install
 
