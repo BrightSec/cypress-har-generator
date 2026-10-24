@@ -81,6 +81,34 @@ describe('DefaultHarExporter', () => {
       // assert
       expect(result).toBe(expected);
     });
+
+    it('should wait for the entries being written', async () => {
+      // arrange
+      let flush: (() => void) | undefined;
+      when(streamMock.writable).thenReturn(true);
+      when(streamMock.write(anyString(), anyFunction())).thenCall(
+        (_, callback) => (flush = callback)
+      );
+      when(fileMock.stat()).thenResolve({ size: 0 } as Stats);
+      when(fileMock.read(anything(), 0, 0, 0)).thenResolve({
+        buffer: Buffer.alloc(0),
+        bytesRead: 0
+      });
+      const write = harExporter.write(networkRequest);
+      while (!flush) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+
+      // act
+      const read = harExporter.read();
+      await new Promise(resolve => setImmediate(resolve));
+
+      // assert
+      verify(fileMock.stat()).never();
+      flush?.();
+      await Promise.all([write, read]);
+      verify(fileMock.stat()).once();
+    });
   });
 
   describe('end', () => {
