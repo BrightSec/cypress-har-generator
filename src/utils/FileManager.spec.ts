@@ -1,24 +1,36 @@
 import { FileManager } from './FileManager';
-import { describe, beforeEach, it, expect } from '@jest/globals';
+import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { randomBytes } from 'node:crypto';
 import { basename, dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { constants, WriteStream } from 'node:fs';
 import { access, utimes } from 'node:fs/promises';
-import { spawnSync } from 'node:child_process';
 
 describe('FileManager', () => {
   let path!: string;
 
   const data = 'test data';
   const staleTime = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const pid = 4242;
   const sut = FileManager.Instance;
+
+  const stubProcess = (alive: boolean) =>
+    jest.spyOn(process, 'kill').mockImplementation(() => {
+      if (!alive) {
+        throw Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
+      }
+
+      return true;
+    });
 
   beforeEach(() => {
     path = join(tmpdir(), randomBytes(16).toString('hex').substring(16));
   });
 
-  afterEach(() => sut.removeFile(path));
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await sut.removeFile(path);
+  });
 
   describe('readFile', () => {
     it('should return the contents of a file', async () => {
@@ -142,11 +154,11 @@ describe('FileManager', () => {
 
     it('should remove a stale temp file of a terminated process', async () => {
       // arrange
-      const { pid } = spawnSync(process.execPath, ['-e', '']);
       const stream = await sut.createTmpWriteStream();
       path = join(dirname(stream.path as string), `${pid}-0123456789abcdef`);
       await sut.writeFile(path, data);
       await utimes(path, staleTime, staleTime);
+      stubProcess(false);
       // act
       await new FileManager().createTmpWriteStream();
       // assert
@@ -155,10 +167,10 @@ describe('FileManager', () => {
 
     it('should keep a fresh temp file of a terminated process', async () => {
       // arrange
-      const { pid } = spawnSync(process.execPath, ['-e', '']);
       const stream = await sut.createTmpWriteStream();
       path = join(dirname(stream.path as string), `${pid}-0123456789abcdef`);
       await sut.writeFile(path, data);
+      stubProcess(false);
       // act
       await new FileManager().createTmpWriteStream();
       // assert
@@ -168,12 +180,10 @@ describe('FileManager', () => {
     it('should keep a stale temp file of a running process', async () => {
       // arrange
       const stream = await sut.createTmpWriteStream();
-      path = join(
-        dirname(stream.path as string),
-        `${process.ppid}-0123456789abcdef`
-      );
+      path = join(dirname(stream.path as string), `${pid}-0123456789abcdef`);
       await sut.writeFile(path, data);
       await utimes(path, staleTime, staleTime);
+      stubProcess(true);
       // act
       await new FileManager().createTmpWriteStream();
       // assert
