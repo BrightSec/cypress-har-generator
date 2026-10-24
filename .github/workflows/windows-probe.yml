@@ -1,0 +1,27 @@
+# Temporary: checks temp file cleanup on Windows. Removed before merge.
+name: windows-probe
+on:
+  push:
+    branches: [fix/remove-stale-tmp-files]
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: npm ci
+      - run: npx jest
+      - run: node .github/probe/node.mjs
+      - name: Start app
+        shell: bash
+        run: |
+          npm start > server.log 2>&1 &
+          for i in $(seq 120); do curl -sf http://localhost:8080/ >/dev/null && exit 0; sleep 1; done
+          cat server.log; exit 1
+      - run: node .github/probe/cypress.mjs clean
+      - run: node .github/probe/cypress.mjs twice
+      - run: node .github/probe/cypress.mjs kill-main
+      - run: node .github/probe/cypress.mjs kill-plugin
