@@ -141,9 +141,9 @@ Alternatively, you can pass the `hars_folder` variable in the CLI using the `--e
 $ cypress run --browser chrome --expose hars_folder=cypress/hars
 ```
 
-On Cypress versions before 16, the plugin also reads `hars_folder` from the `env` object, the `--env` option, or the `CYPRESS_HARS_FOLDER` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
+On Cypress versions before 16, the plugin also reads `hars_folder` from the `env` object, the `--env` option, or the `CYPRESS_hars_folder` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
 
-> ⚠ **Notice:** `hars_folder` was previously named `hars_folders`. The old name, including `CYPRESS_HARS_FOLDERS`, is still supported and used when `hars_folder` is not set, but it is deprecated and may be removed in a future major release. Please rename it in your configuration.
+> ⚠ **Notice:** `hars_folder` was previously named `hars_folders`. The old name is still supported and used when `hars_folder` is not set, but it is deprecated and may be removed in a future major release. Please rename it in your configuration. Likewise, the `CYPRESS_HARS_FOLDERS` environment variable is deprecated; use `CYPRESS_hars_folder` instead.
 
 Finally, to start running your tests, use the following command:
 
