@@ -213,6 +213,39 @@ describe('Record HAR', () => {
       });
   });
 
+  it('does not hold up a service worker while it starts', () => {
+    cy.recordHar();
+
+    cy.window().then(async win => {
+      const registration = await win.navigator.serviceWorker.register(
+        '/sw.js?registration',
+        { scope: '/pages/registration' }
+      );
+
+      await registration.unregister();
+    });
+  });
+
+  it('records each request of a service worker once', () => {
+    cy.recordHar();
+
+    cy.get('a[href$=service-worker]').click();
+    cy.reload();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .then((entries: Entry[]) => {
+        const keys = entries.map(
+          ({ request, startedDateTime }: Entry) =>
+            `${request.method} ${request.url} ${startedDateTime}`
+        );
+
+        expect(keys).to.have.length(new Set(keys).size);
+      });
+  });
+
   it('records the Server-Sent Events', () => {
     cy.recordHar();
 

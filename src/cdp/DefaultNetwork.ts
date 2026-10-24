@@ -130,11 +130,12 @@ export class DefaultNetwork implements Network {
     sessionId?: string;
     type: string;
   }): Promise<void> {
-    await this.enableAutoAttach(true, options.sessionId);
-
-    if (this.ALLOWED_TARGETS.has(options.type)) {
-      await this.trackNetworkEvents(options.sessionId);
-    }
+    await Promise.all([
+      this.enableAutoAttach(true, options.sessionId),
+      this.ALLOWED_TARGETS.has(options.type)
+        ? this.trackNetworkEvents(options.sessionId)
+        : undefined
+    ]);
   }
 
   private enableAutoAttach(
@@ -166,25 +167,33 @@ export class DefaultNetwork implements Network {
     );
   };
 
-  private attachedToTargetListener = async ({
-    sessionId,
-    targetInfo,
-    waitingForDebugger
-  }: Protocol.Target.AttachedToTargetEvent): Promise<void> => {
+  private attachedToTargetListener = async (
+    { sessionId, targetInfo }: Protocol.Target.AttachedToTargetEvent,
+    parentSessionId?: string
+  ): Promise<void> => {
     try {
-      await this.recursivelyAttachToTargets({
-        sessionId,
-        type: targetInfo.type
-      });
+      // Chrome also attaches a service worker under each page it controls, and that session is the one tracked
+      if (!parentSessionId && targetInfo.type === 'service_worker') {
+        await this.releaseTarget(sessionId);
 
-      if (waitingForDebugger) {
-        await this.cdp.send(
-          'Runtime.runIfWaitingForDebugger',
-          undefined,
-          sessionId
-        );
+        return;
       }
+
+      // a paused target answers some commands only once it runs
+      await Promise.all([
+        this.recursivelyAttachToTargets({
+          sessionId,
+          type: targetInfo.type
+        }),
+        this.cdp.send('Runtime.runIfWaitingForDebugger', undefined, sessionId)
+      ]);
     } catch (e) {
+      if (this.targetClosedError(e)) {
+        this.logger.debug(TARGET_OR_BROWSER_CLOSED);
+
+        return;
+      }
+
       const stack = ErrorUtils.isError(e) ? e.stack : e;
 
       this.logger.debug(
@@ -198,6 +207,15 @@ export class DefaultNetwork implements Network {
       this.logger.warn(`${UNABLE_TO_ATTACH_TO_TARGET}\n${stack}`);
     }
   };
+
+  private async releaseTarget(sessionId: string): Promise<void> {
+    await this.cdp.send(
+      'Runtime.runIfWaitingForDebugger',
+      undefined,
+      sessionId
+    );
+    await this.cdp.send('Target.detachFromTarget', { sessionId });
+  }
 
   private async trackNetworkEvents(sessionId?: string): Promise<void> {
     try {
@@ -226,7 +244,9 @@ export class DefaultNetwork implements Network {
     return (
       ErrorUtils.isError(e) &&
       (e.message.includes('Target closed') ||
-        e.message.includes('Session closed'))
+        e.message.includes('Session closed') ||
+        e.message.includes('Session with given id not found') ||
+        e.message.includes('No session with given id'))
     );
   }
 }
