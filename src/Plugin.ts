@@ -89,6 +89,7 @@ export class Plugin {
       return;
     }
 
+    await this.disposeOfHar();
     await this.closeConnection();
 
     this.exporter = await this.exporterFactory.create(options);

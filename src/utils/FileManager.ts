@@ -10,7 +10,7 @@ import {
   stat,
   constants
 } from 'node:fs/promises';
-import { type WriteStream } from 'node:fs';
+import { type WriteStream, readdirSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,6 +30,7 @@ export class FileManager {
     `cypress-har-generator${process.getuid ? `-${process.getuid()}` : ''}`
   );
   private sweep?: Promise<void>;
+  private exitHooked = false;
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   static get Instance(): FileManager {
@@ -95,6 +96,7 @@ export class FileManager {
   public async createTmpWriteStream(): Promise<WriteStream> {
     await mkdir(this.tmpDir, { recursive: true, mode: 0o700 });
     await (this.sweep ??= this.removeStaleTmpFiles());
+    this.removeOwnTmpFilesOnExit();
 
     const name = randomBytes(16).toString('hex').substring(16);
     const tmpPath = join(this.tmpDir, `${process.pid}-${name}`);
@@ -106,6 +108,38 @@ export class FileManager {
     stream.path = tmpPath;
 
     return stream;
+  }
+
+  // Cypress ends this process with `process.exit()` when it stops, and with a
+  // signal on Ctrl+C. The signal is re-raised so the process still terminates.
+  private removeOwnTmpFilesOnExit(): void {
+    if (this.exitHooked) {
+      return;
+    }
+
+    this.exitHooked = true;
+
+    process.once('exit', () => this.removeOwnTmpFiles());
+
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+      process.once(signal, () => {
+        this.removeOwnTmpFiles();
+
+        if (process.listenerCount(signal) === 0) {
+          process.kill(process.pid, signal);
+        }
+      });
+    }
+  }
+
+  private removeOwnTmpFiles(): void {
+    try {
+      readdirSync(this.tmpDir)
+        .filter(name => name.startsWith(`${process.pid}-`))
+        .forEach(name => rmSync(join(this.tmpDir, name), { force: true }));
+    } catch {
+      // the process is exiting, there is nothing left to report to
+    }
   }
 
   // A killed process leaves its temp file behind. A file is swept only when its

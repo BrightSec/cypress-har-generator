@@ -23,6 +23,19 @@ describe('FileManager', () => {
       return true;
     });
 
+  const stubExitHandlers = () => {
+    const handlers = new Map<string, () => void>();
+    jest
+      .spyOn(process, 'once')
+      .mockImplementation((event: string | symbol, listener: () => void) => {
+        handlers.set(event.toString(), listener);
+
+        return process;
+      });
+
+    return handlers;
+  };
+
   beforeEach(() => {
     path = join(tmpdir(), randomBytes(16).toString('hex').substring(16));
   });
@@ -188,6 +201,44 @@ describe('FileManager', () => {
       await new FileManager().createTmpWriteStream();
       // assert
       await expect(access(path, constants.F_OK)).resolves.not.toThrowError();
+    });
+
+    it('should remove its temp files when the process exits', async () => {
+      // arrange
+      const handlers = stubExitHandlers();
+      path = (await new FileManager().createTmpWriteStream()).path as string;
+      // act
+      handlers.get('exit')?.();
+      // assert
+      await expect(access(path, constants.F_OK)).rejects.toThrow();
+    });
+
+    it.each(['SIGINT', 'SIGTERM'])(
+      'should remove its temp files and re-raise %s',
+      async signal => {
+        // arrange
+        const handlers = stubExitHandlers();
+        const kill = jest.spyOn(process, 'kill').mockReturnValue(true);
+        jest.spyOn(process, 'listenerCount').mockReturnValue(0);
+        path = (await new FileManager().createTmpWriteStream()).path as string;
+        // act
+        handlers.get(signal)?.();
+        // assert
+        await expect(access(path, constants.F_OK)).rejects.toThrow();
+        expect(kill).toHaveBeenCalledWith(process.pid, signal);
+      }
+    );
+
+    it('should not re-raise a signal that another listener handles', async () => {
+      // arrange
+      const handlers = stubExitHandlers();
+      const kill = jest.spyOn(process, 'kill').mockReturnValue(true);
+      jest.spyOn(process, 'listenerCount').mockReturnValue(1);
+      path = (await new FileManager().createTmpWriteStream()).path as string;
+      // act
+      handlers.get('SIGTERM')?.();
+      // assert
+      expect(kill).not.toHaveBeenCalledWith(process.pid, 'SIGTERM');
     });
   });
 });

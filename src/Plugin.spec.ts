@@ -472,6 +472,21 @@ describe('Plugin', () => {
       verify(connectionMock.open()).twice();
     });
 
+    it('should dispose of the previous recording when it is already started', async () => {
+      // arrange
+      when(harExporterFactoryMock.create(anything())).thenResolve(
+        resolvableInstance(harExporterMock)
+      );
+      when(harExporterMock.path).thenReturn('temp-file.txt');
+      plugin.ensureBrowserFlags(chrome, []);
+      await plugin.recordHar(options);
+      // act
+      await plugin.recordHar(options);
+      // assert
+      verify(harExporterMock.end()).once();
+      verify(fileManagerMock.removeFile('temp-file.txt')).once();
+    });
+
     it('should pass an entry to a exporter', async () => {
       // arrange
       const request = new NetworkRequest(
