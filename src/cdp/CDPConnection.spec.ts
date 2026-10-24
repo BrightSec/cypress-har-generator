@@ -166,6 +166,15 @@ describe('CDPConnection', () => {
       // assert
       verify(clientMock.removeAllListeners()).once();
     });
+
+    it('should not wait for the closing handshake', async () => {
+      // arrange
+      when(clientMock.close()).thenReturn(new Promise(() => void 0));
+      // act
+      const act = sut.close();
+      // assert
+      await expect(act).resolves.toBeUndefined();
+    });
   });
 
   describe('discoverNetwork', () => {

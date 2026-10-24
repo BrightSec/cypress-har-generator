@@ -59,9 +59,11 @@ export class CDPConnection implements Connection {
 
   public async close(): Promise<void> {
     if (this._cdp) {
-      await this._cdp.close();
-      this._cdp.removeAllListeners();
+      const cdp = this._cdp;
       delete this._cdp;
+      cdp.removeAllListeners();
+      // Electron may never answer the closing handshake, e.g. after a spec recorded with video, so it is not awaited
+      void cdp.close();
       this.logger.debug(DISCONNECTED);
     }
   }
