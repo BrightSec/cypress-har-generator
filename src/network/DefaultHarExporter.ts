@@ -24,6 +24,7 @@ export class DefaultHarExporter implements HarExporter {
   }
 
   private readonly buffer: WriteStream;
+  private readonly pendingWrites = new Set<Promise<void>>();
 
   constructor(
     private readonly logger: Logger,
@@ -34,6 +35,8 @@ export class DefaultHarExporter implements HarExporter {
   }
 
   public async read(): Promise<string> {
+    await Promise.allSettled(this.pendingWrites);
+
     const { size } = await this.file.stat();
     const { buffer, bytesRead } = await this.file.read(
       Buffer.alloc(size),
@@ -46,17 +49,14 @@ export class DefaultHarExporter implements HarExporter {
   }
 
   public async write(networkRequest: NetworkRequest): Promise<void> {
-    const entry = await new EntryBuilder(networkRequest).build();
+    const pending = this.writeEntry(networkRequest);
 
-    if (await this.applyFilter(entry)) {
-      return;
-    }
+    this.pendingWrites.add(pending);
 
-    const json = await this.serializeEntry(entry);
-
-    if (this.buffer.writable && json) {
-      // @ts-expect-error signature mismatch due to overloading issues
-      await promisify(this.buffer.write).call(this.buffer, `${json}${EOL}`);
+    try {
+      await pending;
+    } finally {
+      this.pendingWrites.delete(pending);
     }
   }
 
@@ -87,6 +87,21 @@ ${stack}`
 
   public end(): void {
     this.buffer.end();
+  }
+
+  private async writeEntry(networkRequest: NetworkRequest): Promise<void> {
+    const entry = await new EntryBuilder(networkRequest).build();
+
+    if (await this.applyFilter(entry)) {
+      return;
+    }
+
+    const json = await this.serializeEntry(entry);
+
+    if (this.buffer.writable && json) {
+      // @ts-expect-error signature mismatch due to overloading issues
+      await promisify(this.buffer.write).call(this.buffer, `${json}${EOL}`);
+    }
   }
 
   private async applyFilter(entry: Entry): Promise<unknown> {

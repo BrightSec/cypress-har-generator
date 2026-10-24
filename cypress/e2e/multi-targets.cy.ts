@@ -9,7 +9,13 @@ describe('Multi targets', () => {
     cy.recordHar();
 
     cy.get('a[href$=multi-targets]').click();
+    cy.window().then(win => cy.spy(win, 'open').as('open'));
     cy.get('#popup-window').click();
+    cy.get<sinon.SinonSpy>('@open')
+      .its('returnValues.0')
+      .should((popup: Window) =>
+        expect(popup.document.readyState).to.eq('complete')
+      );
 
     cy.saveHar({ waitForIdle: true });
 
