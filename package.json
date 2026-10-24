@@ -51,7 +51,7 @@
     "e2e": "cypress run --browser chrome --headless",
     "build": "NODE_OPTIONS='--experimental-transform-types' webpack --config webpack.config.ts",
     "prepublishOnly": "node --run build",
-    "prepare": "node -e \"require('node:child_process').spawnSync('git', ['config', 'core.hooksPath', '.githooks'])\""
+    "prepare": "git config core.hooksPath .githooks"
   },
   "homepage": "https://github.com/BrightSec/cypress-har-generator#readme",
   "devDependencies": {
