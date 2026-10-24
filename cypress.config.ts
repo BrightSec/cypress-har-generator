@@ -1,4 +1,4 @@
-import { install } from './src';
+import { install } from './src/index.ts';
 import { defineConfig } from 'cypress';
 import { access, constants, unlink, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

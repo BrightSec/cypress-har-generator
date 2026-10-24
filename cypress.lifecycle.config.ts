@@ -1,5 +1,5 @@
-import base from './cypress.config';
-import { enableExperimentalLifecycle } from './src';
+import base from './cypress.config.ts';
+import { enableExperimentalLifecycle } from './src/index.ts';
 import { defineConfig } from 'cypress';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
