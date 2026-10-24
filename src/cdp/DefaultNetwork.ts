@@ -20,8 +20,22 @@ export class DefaultNetwork implements Network {
     'shared_worker'
   ]);
 
+  private readonly FINAL_EVENTS = new Set<string>([
+    'Network.loadingFinished',
+    'Network.loadingFailed',
+    'Network.webSocketClosed'
+  ]);
+
   private listener?: (event: NetworkEvent) => unknown;
-  private readonly sessions = new Map<string, string | undefined>();
+  private readonly requests = new Map<
+    Protocol.Network.RequestId,
+    {
+      sessionId?: string;
+      timestamp?: Protocol.Network.MonotonicTime;
+      type?: Protocol.Network.ResourceType;
+      finished?: boolean;
+    }
+  >();
 
   constructor(
     private readonly cdp: Client,
@@ -36,8 +50,7 @@ export class DefaultNetwork implements Network {
 
     this.cdp.on('event', this.networkEventListener);
     this.cdp.on('Target.attachedToTarget', this.attachedToTargetListener);
-    this.cdp.on('Network.requestWillBeSent', this.sessionListener);
-    this.cdp.on('Network.webSocketCreated', this.sessionListener);
+    this.cdp.on('Target.detachedFromTarget', this.detachedFromTargetListener);
     await this.ignoreCertificateError();
     await this.recursivelyAttachToTargets({ type: 'browser' });
   }
@@ -47,8 +60,10 @@ export class DefaultNetwork implements Network {
       this.cdp.off('event', this.networkEventListener);
       this.cdp.off('Security.certificateError', this.certificateErrorListener);
       this.cdp.off('Target.attachedToTarget', this.attachedToTargetListener);
-      this.cdp.off('Network.requestWillBeSent', this.sessionListener);
-      this.cdp.off('Network.webSocketCreated', this.sessionListener);
+      this.cdp.off(
+        'Target.detachedFromTarget',
+        this.detachedFromTargetListener
+      );
       delete this.listener;
     }
 
@@ -62,7 +77,7 @@ export class DefaultNetwork implements Network {
       this.logger.debug(`Unexpected error while detaching from targets: ${e}`);
     }
 
-    this.sessions.clear();
+    this.requests.clear();
   }
 
   public getRequestBody(
@@ -73,7 +88,7 @@ export class DefaultNetwork implements Network {
       {
         requestId
       },
-      this.sessions.get(requestId)
+      this.requests.get(requestId)?.sessionId
     );
   }
 
@@ -85,7 +100,7 @@ export class DefaultNetwork implements Network {
       {
         requestId
       },
-      this.sessions.get(requestId)
+      this.requests.get(requestId)?.sessionId
     );
   }
 
@@ -106,7 +121,65 @@ export class DefaultNetwork implements Network {
 
   private networkEventListener = (eventMessage: EventMessage) => {
     if (this.matchNetworkEvents(eventMessage)) {
+      this.trackRequest(eventMessage);
       setImmediate(() => this.listener?.(eventMessage));
+    }
+  };
+
+  private trackRequest({ method, params, sessionId }: NetworkEvent): void {
+    const { requestId, timestamp, type } = params as {
+      requestId?: Protocol.Network.RequestId;
+      timestamp?: Protocol.Network.MonotonicTime;
+      type?: Protocol.Network.ResourceType;
+    };
+
+    if (!requestId) {
+      return;
+    }
+
+    const request = this.requests.get(requestId) ?? { sessionId };
+
+    request.timestamp = timestamp ?? request.timestamp;
+
+    if (method === 'Network.requestWillBeSent') {
+      request.type = type;
+    }
+
+    if (this.FINAL_EVENTS.has(method)) {
+      request.finished = true;
+    }
+
+    this.requests.set(requestId, request);
+  }
+
+  // Chrome sends no further events for the requests of a target that is gone, e.g. a terminated worker
+  private detachedFromTargetListener = ({
+    sessionId
+  }: Protocol.Target.DetachedFromTargetEvent): void => {
+    for (const [requestId, request] of this.requests) {
+      if (request.sessionId !== sessionId) {
+        continue;
+      }
+
+      this.requests.delete(requestId);
+
+      if (request.finished || request.timestamp === undefined) {
+        continue;
+      }
+
+      const event: NetworkEvent = {
+        sessionId,
+        method: 'Network.loadingFailed',
+        params: {
+          requestId,
+          timestamp: request.timestamp,
+          type: request.type ?? 'Other',
+          errorText: 'net::ERR_ABORTED',
+          canceled: true
+        }
+      };
+
+      setImmediate(() => this.listener?.(event));
     }
   };
 
@@ -151,20 +224,6 @@ export class DefaultNetwork implements Network {
       sessionId
     );
   }
-
-  private sessionListener = (
-    {
-      requestId
-    }:
-      | Protocol.Network.RequestWillBeSentEvent
-      | Protocol.Network.WebSocketCreatedEvent,
-    sessionId?: string
-  ) => {
-    this.sessions.set(requestId, sessionId);
-    this.logger.debug(
-      `Session ${sessionId ?? 'N/A'} associated with request: ${requestId}`
-    );
-  };
 
   private attachedToTargetListener = async ({
     sessionId,

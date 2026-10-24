@@ -213,6 +213,35 @@ describe('Record HAR', () => {
       });
   });
 
+  it('records an open request of a terminated worker', () => {
+    cy.recordHar();
+
+    cy.window().then(win => {
+      const url = `${win.location.origin}/api/events?from=worker`;
+      const src = win.URL.createObjectURL(
+        new win.Blob([`fetch('${url}')`], { type: 'text/javascript' })
+      );
+      const worker = new win.Worker(src);
+
+      return new Cypress.Promise<void>(resolve =>
+        win.setTimeout(() => {
+          worker.terminate();
+          resolve();
+        }, 1000)
+      );
+    });
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: {
+          url: /\/api\/events\?from=worker$/
+        }
+      });
+  });
+
   it('records the Server-Sent Events', () => {
     cy.recordHar();
 
