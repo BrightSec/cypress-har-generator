@@ -14,7 +14,7 @@ export default defineConfig({
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/e2e/**/*.cy.ts',
     env: {
-      hars_folders: 'cypress/hars'
+      hars_folder: 'cypress/hars'
     },
     setupNodeEvents(
       on: Cypress.PluginEvents,

@@ -1,4 +1,6 @@
 import { StringUtils } from './utils/StringUtils';
+import { type BrowserConfigSource, ConfigUtils } from './utils/ConfigUtils';
+import { HARS_FOLDER_KEYS } from './constants';
 import type { RecordOptions, SaveOptions } from './Plugin';
 
 Cypress.Commands.add(
@@ -22,7 +24,11 @@ Cypress.Commands.add(
   'saveHar',
   (options?: Partial<SaveOptions>): Cypress.Chainable => {
     const fallbackFileName = Cypress.spec.name;
-    const outDir = (Cypress.env('hars_folders') as string) ?? './';
+    const outDir =
+      ConfigUtils.fromBrowser<string>(
+        Cypress as BrowserConfigSource,
+        HARS_FOLDER_KEYS
+      ) ?? './';
 
     return cy.task('saveHar', {
       outDir,
