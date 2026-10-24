@@ -9,10 +9,25 @@
   },
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./commands": {
+      "types": "./commands.d.ts",
+      "import": "./commands.mjs",
+      "require": "./commands.js"
+    },
+    "./*": "./*"
+  },
   "files": [
     "dist",
     "commands.js",
     "commands.js.map",
+    "commands.mjs",
+    "commands.mjs.map",
     "commands.d.ts"
   ],
   "author": {
