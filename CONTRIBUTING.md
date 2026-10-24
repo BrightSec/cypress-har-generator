@@ -218,9 +218,9 @@ $ npm run lint
 
 ### Formatting
 
-This project utilizes [Prettier](https://prettier.io/) for code formatting.
+This project utilizes [Biome](https://biomejs.dev/) for code formatting.
 
-> ⚡ Custom configurations can be set in the `.prettierrc` file located in the project's root directory.
+> ⚡ Custom configurations can be set in the `biome.json` file located in the project's root directory.
 
 To format the entire project, run the command in the terminal:
 

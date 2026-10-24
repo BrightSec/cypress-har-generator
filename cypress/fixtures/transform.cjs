@@ -15,5 +15,3 @@ module.exports = async entry => {
     return entry;
   }
 };
-
-

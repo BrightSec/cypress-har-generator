@@ -157,8 +157,7 @@ export class Plugin {
 
   private parseElectronSwitches(browser: Cypress.Browser): string[] {
     if (!process.env.ELECTRON_EXTRA_LAUNCH_ARGS?.includes(PORT_OPTION_NAME)) {
-      this.logger
-        .err(`The '${browser.name}' browser was detected, however, the required '${PORT_OPTION_NAME}' command line switch was not provided. 
+      this.logger.err(`The '${browser.name}' browser was detected, however, the required '${PORT_OPTION_NAME}' command line switch was not provided. 
 This switch is necessary to enable remote debugging over HTTP on the specified port. 
 
 Please refer to the documentation:
