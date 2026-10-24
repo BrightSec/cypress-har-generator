@@ -15,6 +15,7 @@ jobs:
       - run: npm ci
       - run: npx jest src/utils src/network/DefaultHarExporter.spec.ts src/Plugin.spec.ts
       - run: npm run build
+        shell: bash
       - name: e2e
         shell: bash
         run: |
