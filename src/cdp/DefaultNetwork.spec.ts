@@ -253,7 +253,10 @@ describe('DefaultNetwork', () => {
         );
         await sut.attachToTargets(listener);
         // act
-        await act?.({ sessionId, targetInfo, waitingForDebugger: false });
+        await act?.(
+          { sessionId, targetInfo, waitingForDebugger: false },
+          'parent'
+        );
         // assert
         verify(
           clientMock.send('Network.enable', deepEqual({}), sessionId)
@@ -268,12 +271,12 @@ describe('DefaultNetwork', () => {
       }
     );
 
-    it('should run if waiting for debugger', async () => {
+    it('should release a service worker attached to the browser instead of tracking it twice', async () => {
       // arrange
       const sessionId = '1';
       const targetInfo: Protocol.Target.TargetInfo = {
         targetId: '1',
-        type: 'page',
+        type: 'service_worker',
         url: '',
         title: '',
         attached: true,
@@ -286,6 +289,71 @@ describe('DefaultNetwork', () => {
       await sut.attachToTargets(listener);
       // act
       await act?.({ sessionId, targetInfo, waitingForDebugger: true });
+      // assert
+      verify(
+        clientMock.send('Runtime.runIfWaitingForDebugger', undefined, sessionId)
+      ).once();
+      verify(
+        clientMock.send('Target.detachFromTarget', deepEqual({ sessionId }))
+      ).once();
+      verify(clientMock.send('Network.enable', anything(), sessionId)).never();
+    });
+
+    it.each([{ input: true }, { input: false }])(
+      'should resume the target when waitingForDebugger is $input',
+      async ({ input }) => {
+        // arrange
+        const sessionId = '1';
+        const targetInfo: Protocol.Target.TargetInfo = {
+          targetId: '1',
+          type: 'page',
+          url: '',
+          title: '',
+          attached: true,
+          canAccessOpener: false
+        };
+        let act: ((...args: unknown[]) => Promise<void>) | undefined;
+        when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
+          (_, callback) => (act = callback)
+        );
+        await sut.attachToTargets(listener);
+        // act
+        await act?.(
+          { sessionId, targetInfo, waitingForDebugger: input },
+          'parent'
+        );
+        // assert
+        verify(
+          clientMock.send(
+            'Runtime.runIfWaitingForDebugger',
+            undefined,
+            sessionId
+          )
+        ).once();
+      }
+    );
+
+    it('should resume a paused target without waiting for the network to be enabled', async () => {
+      // arrange
+      const sessionId = '1';
+      const targetInfo: Protocol.Target.TargetInfo = {
+        targetId: '1',
+        type: 'service_worker',
+        url: '',
+        title: '',
+        attached: true,
+        canAccessOpener: false
+      };
+      let act: ((...args: unknown[]) => Promise<void>) | undefined;
+      when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
+        (_, callback) => (act = callback)
+      );
+      when(clientMock.send('Network.enable', anything(), sessionId)).thenReturn(
+        new Promise(() => void 0)
+      );
+      await sut.attachToTargets(listener);
+      // act
+      void act?.({ sessionId, targetInfo, waitingForDebugger: true }, 'parent');
       // assert
       verify(
         clientMock.send('Runtime.runIfWaitingForDebugger', undefined, sessionId)
@@ -321,7 +389,11 @@ describe('DefaultNetwork', () => {
       verify(loggerMock.warn(match('Unable to attach to the target'))).once();
     });
 
-    it.each([{ input: 'Target closed' }, { input: 'Session closed' }])(
+    it.each([
+      { input: 'Target closed' },
+      { input: 'Session closed' },
+      { input: 'Session with given id not found.' }
+    ])(
       'should silently handle an error when the $input has been closed',
       async ({ input }) => {
         // arrange
