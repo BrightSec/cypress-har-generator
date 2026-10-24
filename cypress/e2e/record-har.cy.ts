@@ -213,6 +213,20 @@ describe('Record HAR', () => {
       });
   });
 
+  it('does not hold up a service worker while it starts', () => {
+    cy.recordHar();
+
+    // the worker cannot finish registering while it is paused waiting for the plugin to resume it
+    cy.window().then(async win => {
+      const registration = await win.navigator.serviceWorker.register(
+        '/sw.js?registration',
+        { scope: '/pages/registration' }
+      );
+
+      await registration.unregister();
+    });
+  });
+
   it('records the Server-Sent Events', () => {
     cy.recordHar();
 

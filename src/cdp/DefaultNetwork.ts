@@ -130,11 +130,13 @@ export class DefaultNetwork implements Network {
     sessionId?: string;
     type: string;
   }): Promise<void> {
-    await this.enableAutoAttach(true, options.sessionId);
-
-    if (this.ALLOWED_TARGETS.has(options.type)) {
-      await this.trackNetworkEvents(options.sessionId);
-    }
+    // both are sent before the caller resumes the target, so no request is made before the network is tracked
+    await Promise.all([
+      this.enableAutoAttach(true, options.sessionId),
+      this.ALLOWED_TARGETS.has(options.type)
+        ? this.trackNetworkEvents(options.sessionId)
+        : undefined
+    ]);
   }
 
   private enableAutoAttach(
@@ -172,19 +174,28 @@ export class DefaultNetwork implements Network {
     waitingForDebugger
   }: Protocol.Target.AttachedToTargetEvent): Promise<void> => {
     try {
-      await this.recursivelyAttachToTargets({
-        sessionId,
-        type: targetInfo.type
-      });
-
-      if (waitingForDebugger) {
-        await this.cdp.send(
-          'Runtime.runIfWaitingForDebugger',
-          undefined,
-          sessionId
-        );
-      }
+      // A target paused on start (`waitForDebuggerOnStart`), such as a service worker, answers some commands only
+      // once it runs, so it is resumed in the same batch rather than after them, which would never start it.
+      await Promise.all([
+        this.recursivelyAttachToTargets({
+          sessionId,
+          type: targetInfo.type
+        }),
+        waitingForDebugger
+          ? this.cdp.send(
+              'Runtime.runIfWaitingForDebugger',
+              undefined,
+              sessionId
+            )
+          : undefined
+      ]);
     } catch (e) {
+      if (this.targetClosedError(e)) {
+        this.logger.debug(TARGET_OR_BROWSER_CLOSED);
+
+        return;
+      }
+
       const stack = ErrorUtils.isError(e) ? e.stack : e;
 
       this.logger.debug(
@@ -226,7 +237,9 @@ export class DefaultNetwork implements Network {
     return (
       ErrorUtils.isError(e) &&
       (e.message.includes('Target closed') ||
-        e.message.includes('Session closed'))
+        e.message.includes('Session closed') ||
+        // a session of a target that went away while being attached, e.g. an extension's service worker
+        e.message.includes('Session with given id not found'))
     );
   }
 }
