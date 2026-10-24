@@ -5,6 +5,7 @@ export class Loader {
     let module: unknown;
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       module = require(/* webpackIgnore: true */ path);
     } catch (err) {
       if (!this.shouldUseDynamicImport(err)) {

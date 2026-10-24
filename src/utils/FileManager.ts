@@ -1,3 +1,4 @@
+/// <reference types="node" preserve="true" />
 import { Logger } from './Logger';
 import {
   access,

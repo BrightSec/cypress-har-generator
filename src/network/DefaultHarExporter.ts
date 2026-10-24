@@ -1,3 +1,4 @@
+/// <reference types="node" preserve="true" />
 import { EntryBuilder } from './EntryBuilder';
 import type { NetworkRequest } from './NetworkRequest';
 import type { HarExporter } from './HarExporter';

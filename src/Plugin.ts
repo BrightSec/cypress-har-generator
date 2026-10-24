@@ -1,3 +1,4 @@
+/// <reference types="cypress" preserve="true" />
 import { Logger } from './utils/Logger';
 import { FileManager } from './utils/FileManager';
 import type {
