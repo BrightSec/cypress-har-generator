@@ -13,6 +13,8 @@ jobs:
         with:
           node-version-file: .node-version
       - run: npm ci
+      - run: node .github/probe/temporary.mjs
+        continue-on-error: true
       - run: npx jest
         continue-on-error: true
       - run: node .github/probe/node.mjs
