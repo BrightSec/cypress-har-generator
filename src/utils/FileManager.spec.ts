@@ -1,10 +1,22 @@
 import { FileManager } from './FileManager';
-import { describe, beforeEach, it, expect } from '@jest/globals';
+import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { constants } from 'node:fs';
-import { access } from 'node:fs/promises';
+import * as fsPromises from 'node:fs/promises';
+import { access, type FileHandle } from 'node:fs/promises';
+
+jest.mock('node:fs/promises', () => {
+  const actual =
+    jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
+
+  return {
+    ...actual,
+    open: jest.fn(actual.open),
+    unlink: jest.fn(actual.unlink)
+  };
+});
 
 describe('FileManager', () => {
   let path!: string;
@@ -135,6 +147,21 @@ describe('FileManager', () => {
       // assert
       await expect(file.stat()).resolves.toMatchObject({ nlink: 0 });
       await file.close();
+    });
+
+    it('should close the temp file if it cannot be unlinked', async () => {
+      // arrange
+      const error = new Error('EPERM');
+      jest.mocked(fsPromises.open).mockClear();
+      jest.mocked(fsPromises.unlink).mockRejectedValueOnce(error);
+      // act
+      const act = sut.createTmpFile();
+      // assert
+      await expect(act).rejects.toThrow(error);
+      const { calls, results } = jest.mocked(fsPromises.open).mock;
+      path = calls[0][0] as string;
+      const file: FileHandle = await (results[0].value as Promise<FileHandle>);
+      expect(file.fd).toBe(-1);
     });
   });
 });

@@ -86,7 +86,12 @@ export class FileManager {
     const tmpPath = join(tmpdir(), name);
     const file = await open(tmpPath, 'wx+', 0o600);
 
-    await unlink(tmpPath);
+    try {
+      await unlink(tmpPath);
+    } catch (e) {
+      await file.close();
+      throw e;
+    }
 
     return file;
   }
