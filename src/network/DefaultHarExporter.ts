@@ -43,7 +43,7 @@ export class DefaultHarExporter implements HarExporter {
 
     const json = await this.serializeEntry(entry);
 
-    if (!this.buffer.closed && json) {
+    if (this.buffer.writable && json) {
       // @ts-expect-error signature mismatch due to overloading issues
       await promisify(this.buffer.write).call(this.buffer, `${json}${EOL}`);
     }
