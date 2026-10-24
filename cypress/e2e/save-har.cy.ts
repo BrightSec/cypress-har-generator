@@ -2,6 +2,7 @@ describe('Save HAR', () => {
   beforeEach(() => {
     Cypress.env('hars_folder', undefined);
     Cypress.env('hars_folders', undefined);
+    Cypress.env('HARS_FOLDER', undefined);
 
     cy.visit('/');
 
@@ -63,6 +64,28 @@ describe('Save HAR', () => {
       .its('fileName')
       .then(fileName => {
         const path = `${Cypress.env('hars_folder')}/${fileName}`;
+
+        cy.exists(path).should('be.true');
+      });
+  });
+
+  it('saves a HAR file to the folder specified by the upper-case env variable', () => {
+    cy.recordHar();
+    cy.get('@options')
+      .its('outDir')
+      .then(value => {
+        Cypress.env('HARS_FOLDER', value);
+      });
+
+    cy.visit('/');
+    cy.get('a[href$=fetch]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 1);
+
+    cy.saveHar();
+    cy.get('@options')
+      .its('fileName')
+      .then(fileName => {
+        const path = `${Cypress.env('HARS_FOLDER')}/${fileName}`;
 
         cy.exists(path).should('be.true');
       });
