@@ -7,6 +7,7 @@ import {
   unlink,
   open,
   readdir,
+  stat,
   constants
 } from 'node:fs/promises';
 import { type WriteStream } from 'node:fs';
@@ -16,11 +17,19 @@ import { join } from 'node:path';
 
 type Serializable = unknown;
 
-const TMP_FILE_PREFIX = 'cypress-har-';
-const TMP_FILE_PATTERN = new RegExp(`^${TMP_FILE_PREFIX}(\\d+)-[\\da-f]+$`);
+const TMP_FILE_PATTERN = /^(\d+)-[\da-f]+$/;
+// A live recording keeps writing to its file, so a file left untouched this long is abandoned.
+const STALE_TMP_FILE_AGE = 60 * 60 * 1000;
 
 export class FileManager {
   private static _instance: FileManager;
+
+  // Per user, so users sharing the temp folder do not lock each other out.
+  private readonly tmpDir = join(
+    tmpdir(),
+    `cypress-har-generator${process.getuid ? `-${process.getuid()}` : ''}`
+  );
+  private sweep?: Promise<void>;
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   static get Instance(): FileManager {
@@ -84,10 +93,11 @@ export class FileManager {
   }
 
   public async createTmpWriteStream(): Promise<WriteStream> {
-    await this.removeStaleTmpFiles();
+    await mkdir(this.tmpDir, { recursive: true, mode: 0o700 });
+    await (this.sweep ??= this.removeStaleTmpFiles());
 
     const name = randomBytes(16).toString('hex').substring(16);
-    const tmpPath = join(tmpdir(), `${TMP_FILE_PREFIX}${process.pid}-${name}`);
+    const tmpPath = join(this.tmpDir, `${process.pid}-${name}`);
     const fileHandle = await open(tmpPath, 'wx+', 0o600);
     const stream = fileHandle.createWriteStream({
       encoding: 'utf-8'
@@ -98,20 +108,31 @@ export class FileManager {
     return stream;
   }
 
-  // Temp files outlive a process that is killed before it disposes of them,
-  // so they are swept once their owning process is gone.
+  // A killed process leaves its temp file behind. A file is swept only when its
+  // process is gone AND it is stale, since a pid means nothing across containers.
   private async removeStaleTmpFiles(): Promise<void> {
     try {
-      const names = await readdir(tmpdir());
+      const names = await readdir(this.tmpDir);
 
       await Promise.all(
         names
-          .map(name => ({ name, pid: TMP_FILE_PATTERN.exec(name)?.[1] }))
-          .filter(({ pid }) => pid && !this.isProcessAlive(+pid))
-          .map(({ name }) => this.removeFile(join(tmpdir(), name)))
+          .filter(name => {
+            const pid = TMP_FILE_PATTERN.exec(name)?.[1];
+
+            return pid && !this.isProcessAlive(+pid);
+          })
+          .map(name => this.removeIfStale(join(this.tmpDir, name)))
       );
     } catch (e) {
       Logger.Instance.err(e);
+    }
+  }
+
+  private async removeIfStale(path: string): Promise<void> {
+    const { mtimeMs } = await stat(path).catch(() => ({ mtimeMs: Date.now() }));
+
+    if (Date.now() - mtimeMs > STALE_TMP_FILE_AGE) {
+      await this.removeFile(path);
     }
   }
 
