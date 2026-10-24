@@ -660,7 +660,9 @@ export class NetworkRequest {
         this.responseHeaders,
         headerName
       );
-      headerValue && this._responseHeaderValues.set(headerName, headerValue);
+      if (headerValue) {
+        this._responseHeaderValues.set(headerName, headerValue);
+      }
     }
 
     return this._responseHeaderValues.get(headerName);
@@ -723,12 +725,13 @@ export class NetworkRequest {
     );
 
     return fields.reduce((result: Param[], field: string): Param[] => {
-      const [match, name, fileName, contentType, value]: RegExpMatchArray =
-        field.match(keyValuePattern) ?? [];
+      const matches: RegExpMatchArray | null = field.match(keyValuePattern);
 
-      if (!match) {
+      if (!matches) {
         return result;
       }
+
+      const [, name, fileName, contentType, value]: RegExpMatchArray = matches;
 
       result.push({ name, value, fileName, contentType });
 
@@ -746,7 +749,9 @@ export class NetworkRequest {
         this.requestHeaders,
         headerName
       );
-      headerValue && this._requestHeaderValues.set(headerName, headerValue);
+      if (headerValue) {
+        this._requestHeaderValues.set(headerName, headerValue);
+      }
     }
 
     return this._requestHeaderValues.get(headerName);

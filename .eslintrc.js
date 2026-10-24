@@ -76,6 +76,10 @@ module.exports = {
         format: ['UPPER_CASE']
       },
       {
+        selector: 'import',
+        format: ['camelCase', 'PascalCase']
+      },
+      {
         selector: 'typeLike',
         format: ['PascalCase']
       },
@@ -113,11 +117,10 @@ module.exports = {
     ],
     '@typescript-eslint/default-param-last': ['error'],
     '@typescript-eslint/consistent-type-assertions': 'error',
-    '@typescript-eslint/no-duplicate-imports': 'error',
+    'import/no-duplicates': 'error',
     '@typescript-eslint/no-non-null-assertion': 'error',
     '@typescript-eslint/unified-signatures': 'error',
     '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
-    '@typescript-eslint/no-parameter-properties': 'off',
     '@typescript-eslint/typedef': [
       'error',
       {

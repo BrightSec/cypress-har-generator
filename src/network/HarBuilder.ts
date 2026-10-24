@@ -4,7 +4,7 @@ export class HarBuilder {
   constructor(private readonly entries: Entry[]) {}
 
   public build(): Har {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { name, version, homepage: comment } = require('../../package.json');
 
     return {

@@ -5,7 +5,7 @@
     "lib": ["esnext", "dom"],
     "newLine": "LF",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "sourceMap": true,
@@ -26,11 +26,11 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "importHelpers": true,
-    "downlevelIteration": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "typeRoots": ["node_modules/@types", "typings"],
-    "types": ["cypress", "node", "chrome-remote-interface"]
+    "types": ["cypress", "node"],
+    "rootDir": ".",
+    "ignoreDeprecations": "6.0"
   },
   "exclude": ["node_modules", "dist", "example", "**/.*/"]
 }
