@@ -14,7 +14,7 @@ jobs:
           node-version-file: .node-version
       - run: npm ci
       - run: npx jest src/utils src/network/DefaultHarExporter.spec.ts src/Plugin.spec.ts
-      - run: npm run build
+      - run: NODE_OPTIONS='--experimental-transform-types' npx webpack --config webpack.config.ts
         shell: bash
       - name: e2e
         shell: bash
