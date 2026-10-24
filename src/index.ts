@@ -71,11 +71,11 @@ export const enableExperimentalLifecycle = (
       'To activate the experimental mechanism for setting up lifecycle, you must either disable the interactive mode or activate the "experimentalInteractiveRunEvents" feature. For further information, please refer to: https://docs.cypress.io/guides/references/experiments#Configuration'
     );
   } else {
-    on('before:spec', (_: Cypress.Spec) =>
+    on('before:spec', (spec: Cypress.Spec) =>
       plugin.recordHar({
         content: true,
         includeBlobs: true,
-        rootDir: StringUtils.dirname(Cypress.spec.absolute)
+        rootDir: StringUtils.dirname(spec.absolute)
       })
     );
     on('after:spec', (spec: Cypress.Spec, _: CypressCommandLine.RunResult) =>

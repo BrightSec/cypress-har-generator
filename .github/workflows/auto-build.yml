@@ -38,14 +38,19 @@ jobs:
 
   # `default` is the Cypress version the repository depends on; the earlier majors are ones users still run,
   # where options come from `env` (before 16) instead of or as well as `expose`
+  # the `lifecycle` suite runs with `enableExperimentalLifecycle`, which the default suite cannot enable
   e2e:
-    name: e2e (cypress ${{ matrix.cypress }})
+    name: e2e (cypress ${{ matrix.cypress }}${{ matrix.suite == 'lifecycle' && ', lifecycle' || '' }})
     runs-on: ubuntu-latest
     needs: install-deps
     strategy:
       fail-fast: false
       matrix:
         cypress: ['default', '15', '14']
+        suite: ['default']
+        include:
+          - cypress: 'default'
+            suite: 'lifecycle'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,7 +71,8 @@ jobs:
           wait-on-timeout: 120
           start: npm start
           browser: chrome
-          record: ${{ matrix.cypress == 'default' && github.repository == 'BrightSec/cypress-har-generator' }}
+          config-file: ${{ matrix.suite == 'lifecycle' && 'cypress.lifecycle.config.ts' || 'cypress.config.ts' }}
+          record: ${{ matrix.cypress == 'default' && matrix.suite == 'default' && github.repository == 'BrightSec/cypress-har-generator' }}
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
