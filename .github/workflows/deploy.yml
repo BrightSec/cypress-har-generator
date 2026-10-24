@@ -7,7 +7,8 @@ on:
 env:
   VERSION: ${{ github.event.release.tag_name }}
   TARGET_REF: ${{ github.event.release.target_commitish }}
-  TAG: ${{ github.event.release.target_commitish == 'master' && 'latest' || 'next' }}
+  # a maintenance release (e.g. from 4.x) must not move `latest`, and npm refuses tags that are semver ranges like `4.x`
+  TAG: ${{ github.event.release.target_commitish == 'master' && 'latest' || format('release-{0}', github.event.release.target_commitish) }}
 
 jobs:
   install-deps:
