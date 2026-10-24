@@ -349,7 +349,6 @@ describe('DefaultNetwork', () => {
       when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
         (_, callback) => (act = callback)
       );
-      // a paused service worker answers `Network.enable` only once it runs
       when(clientMock.send('Network.enable', anything(), sessionId)).thenReturn(
         new Promise(() => void 0)
       );

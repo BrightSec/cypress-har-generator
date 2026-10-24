@@ -216,7 +216,6 @@ describe('Record HAR', () => {
   it('does not hold up a service worker while it starts', () => {
     cy.recordHar();
 
-    // the worker cannot finish registering while it is paused waiting for the plugin to resume it
     cy.window().then(async win => {
       const registration = await win.navigator.serviceWorker.register(
         '/sw.js?registration',
@@ -231,7 +230,6 @@ describe('Record HAR', () => {
     cy.recordHar();
 
     cy.get('a[href$=service-worker]').click();
-    // the second load goes through the worker installed by the first one
     cy.reload();
 
     cy.saveHar({ waitForIdle: true });

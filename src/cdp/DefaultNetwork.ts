@@ -130,7 +130,6 @@ export class DefaultNetwork implements Network {
     sessionId?: string;
     type: string;
   }): Promise<void> {
-    // both are sent before the caller resumes the target, so no request is made before the network is tracked
     await Promise.all([
       this.enableAutoAttach(true, options.sessionId),
       this.ALLOWED_TARGETS.has(options.type)
@@ -173,18 +172,14 @@ export class DefaultNetwork implements Network {
     parentSessionId?: string
   ): Promise<void> => {
     try {
-      // A service worker is attached twice, under the browser and under each page it controls. Only the page one is
-      // tracked, otherwise its requests are recorded twice, so the browser one is resumed and released. Workers
-      // without a page, such as those of browser extensions, are not the application's traffic.
+      // Chrome also attaches a service worker under each page it controls, and that session is the one tracked
       if (!parentSessionId && targetInfo.type === 'service_worker') {
         await this.releaseTarget(sessionId);
 
         return;
       }
 
-      // A target paused on start (`waitForDebuggerOnStart`), such as a service worker, answers some commands only
-      // once it runs, so it is resumed in the same batch rather than after them, which would never start it. It is
-      // resumed whatever `waitingForDebugger` says, as the command does nothing for a target that is not paused.
+      // a paused target answers some commands only once it runs
       await Promise.all([
         this.recursivelyAttachToTargets({
           sessionId,
@@ -214,11 +209,12 @@ export class DefaultNetwork implements Network {
   };
 
   private async releaseTarget(sessionId: string): Promise<void> {
-    // detaching alone does not resume a target paused on start
-    await Promise.all([
-      this.cdp.send('Runtime.runIfWaitingForDebugger', undefined, sessionId),
-      this.cdp.send('Target.detachFromTarget', { sessionId })
-    ]);
+    await this.cdp.send(
+      'Runtime.runIfWaitingForDebugger',
+      undefined,
+      sessionId
+    );
+    await this.cdp.send('Target.detachFromTarget', { sessionId });
   }
 
   private async trackNetworkEvents(sessionId?: string): Promise<void> {
@@ -249,7 +245,6 @@ export class DefaultNetwork implements Network {
       ErrorUtils.isError(e) &&
       (e.message.includes('Target closed') ||
         e.message.includes('Session closed') ||
-        // a session of a target that went away while being attached, e.g. an extension's service worker
         e.message.includes('Session with given id not found') ||
         e.message.includes('No session with given id'))
     );
