@@ -26,6 +26,8 @@ The plugin allows you to record network requests from multiple targets such as p
 
 - [Install](#install)
 - [Setting Up the Plugin](#setting-up-the-plugin)
+  - [Installing the plugin](#installing-the-plugin)
+  - [Registering the commands](#registering-the-commands)
 - [Generating a HAR File](#generating-a-har-file)
 - [Commands](#commands)
   - [recordHar](#recordhar)
@@ -46,17 +48,11 @@ $ npm i --save-dev @neuralegion/cypress-har-generator
 
 ## Setting Up the Plugin
 
-To use the plugin, you'll need to update the `cypress/plugins/index.js` file as follows:
+Setting up the plugin takes two steps: installing it in the Cypress config, and registering its commands in the support file. Both are required: without the second step, Cypress fails with `cy.recordHar is not a function` or `cy.saveHar is not a function`.
 
-```js
-const { install } = require('@neuralegion/cypress-har-generator');
+### Installing the plugin
 
-module.exports = on => {
-  install(on);
-};
-```
-
-If you're using Cypress version 10.0.0 or higher, you'll need to update your `cypress.config.js` file as follows (for details see [the migration guide](https://docs.cypress.io/guides/references/migration-guide#Plugins-File-Removed)):
+Update your `cypress.config.js` file as follows:
 
 ```js
 const { defineConfig } = require('cypress');
@@ -72,6 +68,16 @@ module.exports = defineConfig({
 ```
 
 > ✴ `setupNodeEvents` can be defined in either the e2e or component configuration
+
+> ✴ Before Cypress 10.0.0, the plugin is installed in the `cypress/plugins/index.js` file instead (for details see [the migration guide](https://docs.cypress.io/guides/references/migration-guide#Plugins-File-Removed)):
+>
+> ```js
+> const { install } = require('@neuralegion/cypress-har-generator');
+>
+> module.exports = on => {
+>   install(on);
+> };
+> ```
 
 > ⚠ Please note that the `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
 >
@@ -97,13 +103,17 @@ module.exports = defineConfig({
 >
 > For more information, see [this GitHub issue](https://github.com/cypress-io/cypress/issues/5240).
 
-Next, add the following line to your `cypress/support/index.js` file to register commands that perform the manipulation with a HAR file:
+### Registering the commands
+
+Add the following line to your [support file](https://docs.cypress.io/app/core-concepts/writing-and-organizing-tests#Support-file), which is `cypress/support/e2e.js` by default (`cypress/support/e2e.ts` for TypeScript projects):
 
 ```js
-require('@neuralegion/cypress-har-generator/commands');
+import '@neuralegion/cypress-har-generator/commands';
 ```
 
-> ✴ Starting from Cypress version 10.0.0, `supportFile` is set to look for the following file: `cypress/support/e2e.js` by default.
+> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. Before Cypress 10.0.0, the default support file is `cypress/support/index.js`, and Cypress 10.0.0 and later no longer load it. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
+
+The import also adds the types of the commands, so TypeScript knows `cy.recordHar`, `cy.saveHar` and `cy.disposeOfHar` without any further configuration.
 
 ## Generating a HAR File
 
