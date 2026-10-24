@@ -23,9 +23,8 @@ describe('Save HAR', () => {
       .as('options');
   });
 
-  // The test seems to be invalid now, as Cypress initiates a request to the server at /add-verified-command.
-  it.skip('does nothing when no recorded entries', () => {
-    cy.recordHar();
+  it('does nothing when no recorded entries', () => {
+    cy.recordHar({ excludePaths: [/^\/__cypress\//] });
     cy.saveHar();
     cy.get('@options')
       .its('fileName')
