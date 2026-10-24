@@ -1,11 +1,15 @@
 import { ErrorUtils } from './ErrorUtils';
+import { createRequire } from 'node:module';
+
+// a CommonJS `require`, also in the ES module build, so that the loaders Cypress registers (e.g. for TypeScript) apply
+const load = createRequire(__filename);
 
 export class Loader {
   public static async load<T>(path: string): Promise<T | undefined> {
     let module: unknown;
 
     try {
-      module = require(/* webpackIgnore: true */ path);
+      module = load(path);
     } catch (err) {
       if (!this.shouldUseDynamicImport(err)) {
         throw err;
