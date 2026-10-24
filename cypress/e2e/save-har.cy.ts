@@ -1,8 +1,8 @@
 describe('Save HAR', () => {
   beforeEach(() => {
-    Cypress.env('hars_folder', undefined);
-    Cypress.env('hars_folders', undefined);
-    Cypress.env('HARS_FOLDER', undefined);
+    Cypress.expose('hars_folder', undefined);
+    Cypress.expose('hars_folders', undefined);
+    Cypress.expose('HARS_FOLDER', undefined);
 
     cy.visit('/');
 
@@ -47,12 +47,12 @@ describe('Save HAR', () => {
       .then(fileName => cy.exists(fileName).should('be.true'));
   });
 
-  it('saves a HAR file to the folder specified by env variable', () => {
+  it('saves a HAR file to the folder specified by the exposed variable', () => {
     cy.recordHar();
     cy.get('@options')
       .its('outDir')
       .then(value => {
-        Cypress.env('hars_folder', value);
+        Cypress.expose('hars_folder', value);
       });
 
     cy.visit('/');
@@ -63,18 +63,18 @@ describe('Save HAR', () => {
     cy.get('@options')
       .its('fileName')
       .then(fileName => {
-        const path = `${Cypress.env('hars_folder')}/${fileName}`;
+        const path = `${Cypress.expose('hars_folder')}/${fileName}`;
 
         cy.exists(path).should('be.true');
       });
   });
 
-  it('saves a HAR file to the folder specified by the upper-case env variable', () => {
+  it('saves a HAR file to the folder specified by the upper-case exposed variable', () => {
     cy.recordHar();
     cy.get('@options')
       .its('outDir')
       .then(value => {
-        Cypress.env('HARS_FOLDER', value);
+        Cypress.expose('HARS_FOLDER', value);
       });
 
     cy.visit('/');
@@ -85,18 +85,18 @@ describe('Save HAR', () => {
     cy.get('@options')
       .its('fileName')
       .then(fileName => {
-        const path = `${Cypress.env('HARS_FOLDER')}/${fileName}`;
+        const path = `${Cypress.expose('HARS_FOLDER')}/${fileName}`;
 
         cy.exists(path).should('be.true');
       });
   });
 
-  it('saves a HAR file to the folder specified by the legacy env variable', () => {
+  it('saves a HAR file to the folder specified by the legacy exposed variable', () => {
     cy.recordHar();
     cy.get('@options')
       .its('outDir')
       .then(value => {
-        Cypress.env('hars_folders', value);
+        Cypress.expose('hars_folders', value);
       });
 
     cy.visit('/');
@@ -107,7 +107,7 @@ describe('Save HAR', () => {
     cy.get('@options')
       .its('fileName')
       .then(fileName => {
-        const path = `${Cypress.env('hars_folders')}/${fileName}`;
+        const path = `${Cypress.expose('hars_folders')}/${fileName}`;
 
         cy.exists(path).should('be.true');
       });

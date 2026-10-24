@@ -13,7 +13,7 @@ export default defineConfig({
     baseUrl: 'http://localhost:8080',
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/e2e/**/*.cy.ts',
-    env: {
+    expose: {
       hars_folder: 'cypress/hars'
     },
     setupNodeEvents(

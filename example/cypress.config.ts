@@ -5,7 +5,7 @@ export default defineConfig({
   video: false,
   fixturesFolder: false,
   screenshotOnRunFailure: false,
-  env: {
+  expose: {
     // Set an output directory to change the destination folder
     hars_folder: 'cypress/hars'
   },
