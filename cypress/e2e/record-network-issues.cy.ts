@@ -18,16 +18,10 @@ describe('Record network issues', () => {
     });
   });
 
-  // ADHOC: Normally, a request with an error should be included,
-  // but the cy.visit() fails ahead of time due to a resolving mechanism in Cypress.
-  // For details please follow the code at
-  // https://github.com/cypress-io/cypress/blob/fc43cecdadda62521f6167e16b48ebc37ccc858a/packages/driver/src/cy/commands/navigation.ts#L464
-  it.skip('records a request failed due DNS issues', () => {
+  it('records a request failed due DNS issues', () => {
+    cy.visit('/');
     cy.recordHar();
 
-    cy.visit(url, {
-      failOnStatusCode: false,
-      retryOnNetworkFailure: false
-    });
+    cy.window().then(win => win.fetch(url).catch(() => undefined));
   });
 });

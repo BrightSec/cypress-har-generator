@@ -1,7 +1,3 @@
-// ADHOC: A few tests are deliberately skipped. CDP does not throttle the request
-// while new page navigation (e.g. clicking on a link with target=_blank). Anyway,
-// this can hardly be considered an issue due to [a known limitation of Cypress](https://docs.cypress.io/guides/references/trade-offs#Multiple-tabs)
-// when working with multiple tabs.
 describe('Multi targets', () => {
   beforeEach(() => cy.visit('/'));
 
@@ -65,7 +61,7 @@ describe('Multi targets', () => {
       });
   });
 
-  it.skip('records requests from a new tab', () => {
+  it('records requests from a new tab', () => {
     cy.recordHar();
 
     cy.get('a[href$=multi-targets]').click();
@@ -87,7 +83,7 @@ describe('Multi targets', () => {
       });
   });
 
-  it.skip('records requests from both new tab and opener', () => {
+  it('records requests from both new tab and opener', () => {
     cy.recordHar();
 
     cy.get('a[href$=multi-targets]').click();
