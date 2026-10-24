@@ -13,7 +13,7 @@ export interface ResponseExtraInfo {
 export class ExtraInfoBuilder {
   private _hasExtraInfo: boolean = false;
   private _finished: boolean = false;
-  private readonly _requests: NetworkRequest[] = [];
+  private readonly _requests: (NetworkRequest | undefined)[] = [];
   private readonly _requestExtraInfo: RequestExtraInfo[] = [];
   private readonly _responseExtraInfo: ResponseExtraInfo[] = [];
 
@@ -22,6 +22,12 @@ export class ExtraInfoBuilder {
   public addRequest(request: NetworkRequest): void {
     this._requests.push(request);
     this.sync();
+  }
+
+  // Holds the place of a request whose extra info arrives but which was never
+  // observed, so that its extra info is not applied to the next request.
+  public addUnseenRequest(): void {
+    this._requests.push(undefined);
   }
 
   public addRequestExtraInfo(info: RequestExtraInfo): void {

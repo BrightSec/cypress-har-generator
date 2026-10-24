@@ -105,6 +105,12 @@ export class NetworkObserver implements Observer<NetworkRequest> {
         documentURL,
         initiator
       );
+
+      // The hop that was redirected was sent before recording began, so its
+      // extra info must not be attached to this request.
+      if (redirectResponse) {
+        this.getExtraInfoBuilder(requestId).addUnseenRequest();
+      }
     }
 
     this.updateNetworkRequestWithRequest(entry, request);
