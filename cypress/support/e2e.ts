@@ -18,7 +18,7 @@ like.extend({
 });
 
 const getDefaultHarPath = (): string =>
-  join(Cypress.env('hars_folders'), Cypress.spec.name.replace('.ts', '.har'));
+  join(Cypress.env('hars_folder'), Cypress.spec.name.replace('.ts', '.har'));
 
 // assert a recorded HAR file
 Cypress.Commands.add('findHar', (fileName?: string) =>

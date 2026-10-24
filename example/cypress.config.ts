@@ -7,7 +7,7 @@ export default defineConfig({
   screenshotOnRunFailure: false,
   env: {
     // Set an output directory to change the destination folder
-    hars_folders: 'cypress/hars'
+    hars_folder: 'cypress/hars'
   },
   // setupNodeEvents can be defined in either
   // the e2e or component configuration

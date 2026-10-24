@@ -1,5 +1,6 @@
 import { StringUtils } from './utils/StringUtils';
 import { type BrowserConfigSource, ConfigUtils } from './utils/ConfigUtils';
+import { HARS_FOLDER_KEYS } from './constants';
 import type { RecordOptions, SaveOptions } from './Plugin';
 
 Cypress.Commands.add(
@@ -26,7 +27,7 @@ Cypress.Commands.add(
     const outDir =
       ConfigUtils.fromBrowser<string>(
         Cypress as BrowserConfigSource,
-        'hars_folders'
+        HARS_FOLDER_KEYS
       ) ?? './';
 
     return cy.task('saveHar', {

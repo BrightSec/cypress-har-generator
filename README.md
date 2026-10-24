@@ -125,23 +125,25 @@ describe('my tests', () => {
 
 By default, the plugin will save the generated HAR file to the root of your project with a file name that includes the current spec's name (e.g. `{specName}.har`).
 
-You can also specify a different destination folder for the generated HAR file by setting the `hars_folders` field in the `expose` object in your Cypress config file (Cypress 15.10 and later):
+You can also specify a different destination folder for the generated HAR file by setting the `hars_folder` field in the `expose` object in your Cypress config file (Cypress 15.10 and later):
 
 ```json
 {
   "expose": {
-    "hars_folders": "cypress/hars"
+    "hars_folder": "cypress/hars"
   }
 }
 ```
 
-Alternatively, you can pass the `hars_folders` variable in the CLI using the `--expose` option:
+Alternatively, you can pass the `hars_folder` variable in the CLI using the `--expose` option:
 
 ```bash
-$ cypress run --browser chrome --expose hars_folders=cypress/hars
+$ cypress run --browser chrome --expose hars_folder=cypress/hars
 ```
 
-On Cypress versions before 16, the plugin also reads `hars_folders` from the `env` object, the `--env` option, or the `CYPRESS_HARS_FOLDERS` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
+On Cypress versions before 16, the plugin also reads `hars_folder` from the `env` object, the `--env` option, or the `CYPRESS_HARS_FOLDER` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
+
+> ⚠ **Notice:** `hars_folder` was previously named `hars_folders`. The old name, including `CYPRESS_HARS_FOLDERS`, is still supported and used when `hars_folder` is not set, but it is deprecated and may be removed in a future major release. Please rename it in your configuration.
 
 Finally, to start running your tests, use the following command:
 
