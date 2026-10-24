@@ -6,9 +6,9 @@ import {
   mkdir,
   unlink,
   open,
-  constants
+  constants,
+  type FileHandle
 } from 'node:fs/promises';
-import { type WriteStream } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -79,16 +79,20 @@ export class FileManager {
     }
   }
 
-  public async createTmpWriteStream(): Promise<WriteStream> {
+  // The file is unlinked right away, so it lives only as long as its handle and
+  // nothing is left behind however the process ends, even on SIGKILL.
+  public async createTmpFile(): Promise<FileHandle> {
     const name = randomBytes(16).toString('hex').substring(16);
     const tmpPath = join(tmpdir(), name);
-    const fileHandle = await open(tmpPath, 'wx+', 0o600);
-    const stream = fileHandle.createWriteStream({
-      encoding: 'utf-8'
-    });
+    const file = await open(tmpPath, 'wx+', 0o600);
 
-    stream.path = tmpPath;
+    try {
+      await unlink(tmpPath);
+    } catch (e) {
+      await file.close();
+      throw e;
+    }
 
-    return stream;
+    return file;
   }
 }

@@ -12,7 +12,7 @@ import {
   beforeEach,
   afterEach
 } from '@jest/globals';
-import type { WriteStream } from 'node:fs';
+import type { FileHandle } from 'node:fs/promises';
 
 const resolvableInstance = <T extends object>(m: T): T =>
   new Proxy<T>(instance(m), {
@@ -31,7 +31,7 @@ const resolvableInstance = <T extends object>(m: T): T =>
 
 describe('DefaultHarExporterFactory', () => {
   const fileManagerMock = mock<FileManager>();
-  const writeStreamMock = mock<WriteStream>();
+  const fileMock = mock<FileHandle>();
   const loggerMock = mock<Logger>();
   const loaderSpy = spy(Loader);
   const predicate = jest.fn();
@@ -49,9 +49,9 @@ describe('DefaultHarExporterFactory', () => {
   afterEach(() => {
     transform.mockReset();
     predicate.mockReset();
-    reset<FileManager | WriteStream | Logger | typeof Loader>(
+    reset<FileManager | FileHandle | Logger | typeof Loader>(
       fileManagerMock,
-      writeStreamMock,
+      fileMock,
       loaderSpy,
       loggerMock
     );
@@ -65,8 +65,8 @@ describe('DefaultHarExporterFactory', () => {
         filter: 'predicate.js',
         transform: 'transform.js'
       };
-      when(fileManagerMock.createTmpWriteStream()).thenResolve(
-        resolvableInstance(writeStreamMock)
+      when(fileManagerMock.createTmpFile()).thenResolve(
+        resolvableInstance(fileMock)
       );
       when(loaderSpy.load('/root/predicate.js')).thenResolve(predicate);
       when(loaderSpy.load('/root/transform.js')).thenResolve(transform);
@@ -83,8 +83,8 @@ describe('DefaultHarExporterFactory', () => {
     it('should create a HarExporter instance without pre and post processors', async () => {
       // arrange
       const options = { rootDir: '/root' };
-      when(fileManagerMock.createTmpWriteStream()).thenResolve(
-        resolvableInstance(writeStreamMock)
+      when(fileManagerMock.createTmpFile()).thenResolve(
+        resolvableInstance(fileMock)
       );
 
       // act

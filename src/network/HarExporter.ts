@@ -1,7 +1,7 @@
 import type { NetworkRequest } from './NetworkRequest';
 
 export interface HarExporter {
-  readonly path: string;
+  read(): Promise<string>;
 
   write(networkRequest: NetworkRequest): Promise<void>;
 

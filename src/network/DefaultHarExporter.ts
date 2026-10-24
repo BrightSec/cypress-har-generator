@@ -10,16 +10,11 @@ import type {
 } from './DefaultHarExporterOptions';
 import type { Entry } from 'har-format';
 import type { WriteStream } from 'node:fs';
+import type { FileHandle } from 'node:fs/promises';
 import { EOL } from 'node:os';
 import { format, promisify } from 'node:util';
 
 export class DefaultHarExporter implements HarExporter {
-  get path(): string {
-    const { path } = this.buffer;
-
-    return Buffer.isBuffer(path) ? path.toString('utf-8') : path;
-  }
-
   private get filter(): Filter | undefined {
     return this.options?.filter;
   }
@@ -28,11 +23,27 @@ export class DefaultHarExporter implements HarExporter {
     return this.options?.transform;
   }
 
+  private readonly buffer: WriteStream;
+
   constructor(
     private readonly logger: Logger,
-    private readonly buffer: WriteStream,
+    private readonly file: FileHandle,
     private readonly options?: DefaultHarExporterOptions
-  ) {}
+  ) {
+    this.buffer = file.createWriteStream({ encoding: 'utf-8' });
+  }
+
+  public async read(): Promise<string> {
+    const { size } = await this.file.stat();
+    const { buffer, bytesRead } = await this.file.read(
+      Buffer.alloc(size),
+      0,
+      size,
+      0
+    );
+
+    return buffer.toString('utf-8', 0, bytesRead);
+  }
 
   public async write(networkRequest: NetworkRequest): Promise<void> {
     const entry = await new EntryBuilder(networkRequest).build();

@@ -1,10 +1,22 @@
 import { FileManager } from './FileManager';
-import { describe, beforeEach, it, expect } from '@jest/globals';
+import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { constants, WriteStream } from 'node:fs';
-import { access } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import * as fsPromises from 'node:fs/promises';
+import { access, type FileHandle } from 'node:fs/promises';
+
+jest.mock('node:fs/promises', () => {
+  const actual =
+    jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
+
+  return {
+    ...actual,
+    open: jest.fn(actual.open),
+    unlink: jest.fn(actual.unlink)
+  };
+});
 
 describe('FileManager', () => {
   let path!: string;
@@ -112,21 +124,44 @@ describe('FileManager', () => {
     });
   });
 
-  describe('createTmpWriteStream', () => {
-    it('should create a new write stream', async () => {
+  describe('createTmpFile', () => {
+    it('should create a temp file that can be written and read', async () => {
+      // arrange
+      const file = await sut.createTmpFile();
+      await file.write(data);
       // act
-      const stream = await sut.createTmpWriteStream();
+      const { buffer, bytesRead } = await file.read(
+        Buffer.alloc(data.length),
+        0,
+        data.length,
+        0
+      );
       // assert
-      expect(stream).toBeInstanceOf(WriteStream);
+      expect(buffer.toString('utf-8', 0, bytesRead)).toBe(data);
+      await file.close();
     });
 
-    it('should create a new temp file', async () => {
+    it('should leave no temp file on disk', async () => {
       // act
-      const stream = await sut.createTmpWriteStream();
+      const file = await sut.createTmpFile();
       // assert
-      await expect(
-        access(stream.path, constants.F_OK)
-      ).resolves.not.toThrowError();
+      await expect(file.stat()).resolves.toMatchObject({ nlink: 0 });
+      await file.close();
+    });
+
+    it('should close the temp file if it cannot be unlinked', async () => {
+      // arrange
+      const error = new Error('EPERM');
+      jest.mocked(fsPromises.open).mockClear();
+      jest.mocked(fsPromises.unlink).mockRejectedValueOnce(error);
+      // act
+      const act = sut.createTmpFile();
+      // assert
+      await expect(act).rejects.toThrow(error);
+      const { calls, results } = jest.mocked(fsPromises.open).mock;
+      path = calls[0][0] as string;
+      const file: FileHandle = await (results[0].value as Promise<FileHandle>);
+      expect(file.fd).toBe(-1);
     });
   });
 });

@@ -22,9 +22,9 @@ export class DefaultHarExporterFactory implements HarExporterFactory {
 
   public async create(options: HarExporterOptions): Promise<HarExporter> {
     const settings = await this.createSettings(options);
-    const stream = await this.fileManager.createTmpWriteStream();
+    const file = await this.fileManager.createTmpFile();
 
-    return new DefaultHarExporter(this.logger, stream, settings);
+    return new DefaultHarExporter(this.logger, file, settings);
   }
 
   private async createSettings({
