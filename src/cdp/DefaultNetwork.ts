@@ -20,11 +20,22 @@ export class DefaultNetwork implements Network {
     'shared_worker'
   ]);
 
+  private readonly FINAL_EVENTS = new Set<string>([
+    'Network.loadingFinished',
+    'Network.loadingFailed',
+    'Network.webSocketClosed'
+  ]);
+
   private listener?: (event: NetworkEvent) => unknown;
-  private targetDetachedListener?: (
-    event: Protocol.Target.DetachedFromTargetEvent
-  ) => unknown;
   private readonly sessions = new Map<string, string | undefined>();
+  private readonly openRequests = new Map<
+    Protocol.Network.RequestId,
+    {
+      sessionId?: string;
+      timestamp?: Protocol.Network.MonotonicTime;
+      type?: Protocol.Network.ResourceType;
+    }
+  >();
 
   constructor(
     private readonly cdp: Client,
@@ -33,13 +44,9 @@ export class DefaultNetwork implements Network {
   ) {}
 
   public async attachToTargets(
-    listener: (event: NetworkEvent) => unknown,
-    targetDetachedListener: (
-      event: Protocol.Target.DetachedFromTargetEvent
-    ) => unknown
+    listener: (event: NetworkEvent) => unknown
   ): Promise<void> {
     this.listener = listener;
-    this.targetDetachedListener = targetDetachedListener;
 
     this.cdp.on('event', this.networkEventListener);
     this.cdp.on('Target.attachedToTarget', this.attachedToTargetListener);
@@ -62,7 +69,6 @@ export class DefaultNetwork implements Network {
       this.cdp.off('Network.requestWillBeSent', this.sessionListener);
       this.cdp.off('Network.webSocketCreated', this.sessionListener);
       delete this.listener;
-      delete this.targetDetachedListener;
     }
 
     try {
@@ -76,6 +82,7 @@ export class DefaultNetwork implements Network {
     }
 
     this.sessions.clear();
+    this.openRequests.clear();
   }
 
   public getRequestBody(
@@ -119,14 +126,72 @@ export class DefaultNetwork implements Network {
 
   private networkEventListener = (eventMessage: EventMessage) => {
     if (this.matchNetworkEvents(eventMessage)) {
+      this.trackOpenRequest(eventMessage);
       setImmediate(() => this.listener?.(eventMessage));
     }
   };
 
-  // dispatched like network events, so it is handled after the events that precede it
-  private detachedFromTargetListener = (
-    event: Protocol.Target.DetachedFromTargetEvent
-  ) => setImmediate(() => this.targetDetachedListener?.(event));
+  private trackOpenRequest({ method, params, sessionId }: NetworkEvent): void {
+    const { requestId, timestamp, type } = params as {
+      requestId?: Protocol.Network.RequestId;
+      timestamp?: Protocol.Network.MonotonicTime;
+      type?: Protocol.Network.ResourceType;
+    };
+
+    if (!requestId) {
+      return;
+    }
+
+    if (this.FINAL_EVENTS.has(method)) {
+      this.openRequests.delete(requestId);
+
+      return;
+    }
+
+    const request = this.openRequests.get(requestId) ?? { sessionId };
+
+    request.timestamp = timestamp ?? request.timestamp;
+    request.type = type ?? request.type;
+
+    this.openRequests.set(requestId, request);
+  }
+
+  // Chrome sends no further events for the requests of a target that is gone, e.g. a terminated worker
+  private detachedFromTargetListener = ({
+    sessionId
+  }: Protocol.Target.DetachedFromTargetEvent): void => {
+    for (const [requestId, session] of this.sessions) {
+      if (session === sessionId) {
+        this.sessions.delete(requestId);
+      }
+    }
+
+    for (const [requestId, request] of this.openRequests) {
+      if (request.sessionId !== sessionId) {
+        continue;
+      }
+
+      this.openRequests.delete(requestId);
+
+      if (request.timestamp === undefined) {
+        continue;
+      }
+
+      const event: NetworkEvent = {
+        sessionId,
+        method: 'Network.loadingFailed',
+        params: {
+          requestId,
+          timestamp: request.timestamp,
+          type: request.type ?? 'Other',
+          errorText: 'net::ERR_ABORTED',
+          canceled: true
+        }
+      };
+
+      setImmediate(() => this.listener?.(event));
+    }
+  };
 
   private certificateErrorListener = ({
     eventId

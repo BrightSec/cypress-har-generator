@@ -23,12 +23,7 @@ export interface Network {
     requestId: string
   ): Promise<Protocol.Network.GetRequestPostDataResponse>;
 
-  attachToTargets(
-    listener: (event: NetworkEvent) => unknown,
-    targetDetachedListener: (
-      event: Protocol.Target.DetachedFromTargetEvent
-    ) => unknown
-  ): Promise<void>;
+  attachToTargets(listener: (event: NetworkEvent) => unknown): Promise<void>;
 
   detachFromTargets(): Promise<void>;
 }

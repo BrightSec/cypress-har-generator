@@ -27,7 +27,6 @@ describe('DefaultNetwork', () => {
   const clientMock = mock<Client>();
   const loggerMock = mock<Logger>();
   const listener = jest.fn();
-  const targetDetachedListener = jest.fn();
 
   let sut!: DefaultNetwork;
 
@@ -39,14 +38,13 @@ describe('DefaultNetwork', () => {
   afterEach(() => {
     jest.useRealTimers();
     listener.mockReset();
-    targetDetachedListener.mockReset();
     reset<Client | Logger>(clientMock, loggerMock);
   });
 
   describe('attachToTargets', () => {
     it('should listen to CDP events', async () => {
       // act
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // assert
       verify(clientMock.on('event', anyFunction())).once();
     });
@@ -79,31 +77,14 @@ describe('DefaultNetwork', () => {
         jest.runAllTimers();
       });
       // act
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // assert
       expect(listener).toHaveBeenNthCalledWith(1, expectedEvent);
     });
 
-    it('should pass a detached target to the registered listener', async () => {
-      // arrange
-      const event = { sessionId: '1', targetId: '1' };
-      when(clientMock.on('Target.detachedFromTarget', anyFunction())).thenCall(
-        (_, callback) => {
-          callback(event);
-          // ADHOC: spawn `setImmediate` immediately
-          jest.runAllTimers();
-        }
-      );
-      // act
-      await sut.attachToTargets(listener, targetDetachedListener);
-      // assert
-      expect(targetDetachedListener).toHaveBeenCalledWith(event);
-      expect(listener).not.toHaveBeenCalled();
-    });
-
     it('should register a handle to ignore certificate errors', async () => {
       // act
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // assert
       verify(clientMock.on('Security.certificateError', anyFunction())).once();
       verify(clientMock.send('Security.enable')).once();
@@ -123,14 +104,21 @@ describe('DefaultNetwork', () => {
         new Error('Something went wrong.')
       );
       // act
-      const act = sut.attachToTargets(listener, targetDetachedListener);
+      const act = sut.attachToTargets(listener);
       // assert
       await expect(act).resolves.not.toThrow();
     });
 
+    it('should listen to detached targets', async () => {
+      // act
+      await sut.attachToTargets(listener);
+      // assert
+      verify(clientMock.on('Target.detachedFromTarget', anyFunction())).once();
+    });
+
     it('should start tracking sessions', async () => {
       // act
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // assert
       verify(clientMock.on('Network.requestWillBeSent', anyFunction())).once();
       verify(clientMock.on('Network.webSocketCreated', anyFunction())).once();
@@ -138,7 +126,7 @@ describe('DefaultNetwork', () => {
 
     it('should attach to the root target', async () => {
       // act
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // assert
       verify(
         clientMock.send(
@@ -166,7 +154,7 @@ describe('DefaultNetwork', () => {
 
     it('should not listen to network events when attaching to the root target', async () => {
       // act
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // assert
       verify(
         clientMock.send('Network.enable', deepEqual({}), undefined)
@@ -197,7 +185,7 @@ describe('DefaultNetwork', () => {
         when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
           (_, callback) => (act = callback)
         );
-        await sut.attachToTargets(listener, targetDetachedListener);
+        await sut.attachToTargets(listener);
         // act
         await act({ sessionId, targetInfo, waitingForDebugger: false });
         // assert
@@ -229,7 +217,7 @@ describe('DefaultNetwork', () => {
       when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
         (_, callback) => (act = callback)
       );
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // act
       await act?.({ sessionId, targetInfo, waitingForDebugger: false });
       // assert
@@ -271,7 +259,7 @@ describe('DefaultNetwork', () => {
         when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
           (_, callback) => (act = callback)
         );
-        await sut.attachToTargets(listener, targetDetachedListener);
+        await sut.attachToTargets(listener);
         // act
         await act?.(
           { sessionId, targetInfo, waitingForDebugger: false },
@@ -306,7 +294,7 @@ describe('DefaultNetwork', () => {
       when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
         (_, callback) => (act = callback)
       );
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // act
       await act?.({ sessionId, targetInfo, waitingForDebugger: true });
       // assert
@@ -336,7 +324,7 @@ describe('DefaultNetwork', () => {
         when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
           (_, callback) => (act = callback)
         );
-        await sut.attachToTargets(listener, targetDetachedListener);
+        await sut.attachToTargets(listener);
         // act
         await act?.(
           { sessionId, targetInfo, waitingForDebugger: input },
@@ -371,7 +359,7 @@ describe('DefaultNetwork', () => {
       when(clientMock.send('Network.enable', anything(), sessionId)).thenReturn(
         new Promise(() => void 0)
       );
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // act
       void act?.({ sessionId, targetInfo, waitingForDebugger: true }, 'parent');
       // assert
@@ -402,7 +390,7 @@ describe('DefaultNetwork', () => {
           sessionId
         )
       ).thenReject(new Error('Something went wrong'));
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // act
       await act?.({ sessionId, targetInfo, waitingForDebugger: true });
       // assert
@@ -433,7 +421,7 @@ describe('DefaultNetwork', () => {
         when(
           clientMock.send('Network.enable', deepEqual({}), sessionId)
         ).thenReject(new Error(input));
-        await sut.attachToTargets(listener, targetDetachedListener);
+        await sut.attachToTargets(listener);
         // act
         await act?.({ sessionId, targetInfo, waitingForDebugger: true });
         // assert
@@ -448,7 +436,7 @@ describe('DefaultNetwork', () => {
         (_, callback) => callback({ eventId })
       );
       // act
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // assert
       verify(clientMock.on('Security.certificateError', anyFunction())).once();
       verify(
@@ -475,7 +463,7 @@ describe('DefaultNetwork', () => {
           callback({ requestId }, sessionId)
         );
         // act
-        await sut.attachToTargets(listener, targetDetachedListener);
+        await sut.attachToTargets(listener);
         // assert
         verify(
           loggerMock.debug(
@@ -484,18 +472,99 @@ describe('DefaultNetwork', () => {
         ).once();
       }
     );
+
+    it('should fail the open requests of a detached target', async () => {
+      // arrange
+      const sessionId = '2';
+      let detach: ((...args: unknown[]) => void) | undefined;
+      when(clientMock.on('event', anyFunction())).thenCall((_, callback) => {
+        callback({
+          method: 'Network.requestWillBeSent',
+          params: { requestId: '1', timestamp: 1, type: 'Fetch' },
+          sessionId
+        });
+        callback({
+          method: 'Network.dataReceived',
+          params: { requestId: '1', timestamp: 2 },
+          sessionId
+        });
+        callback({
+          method: 'Network.requestWillBeSent',
+          params: { requestId: '3', timestamp: 1, type: 'Fetch' },
+          sessionId
+        });
+        callback({
+          method: 'Network.loadingFinished',
+          params: { requestId: '3', timestamp: 2 },
+          sessionId
+        });
+        callback({
+          method: 'Network.requestWillBeSent',
+          params: { requestId: '4', timestamp: 1, type: 'Fetch' },
+          sessionId: '5'
+        });
+      });
+      when(clientMock.on('Target.detachedFromTarget', anyFunction())).thenCall(
+        (_, callback) => (detach = callback)
+      );
+      await sut.attachToTargets(listener);
+      jest.runAllTimers();
+      listener.mockClear();
+      // act
+      detach?.({ sessionId, targetId: '1' });
+      jest.runAllTimers();
+      // assert
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({
+        sessionId,
+        method: 'Network.loadingFailed',
+        params: {
+          requestId: '1',
+          timestamp: 2,
+          type: 'Fetch',
+          errorText: 'net::ERR_ABORTED',
+          canceled: true
+        }
+      });
+    });
+
+    it('should forget the sessions of a detached target', async () => {
+      // arrange
+      const requestId = '1';
+      const sessionId = '2';
+      let detach: ((...args: unknown[]) => void) | undefined;
+      when(clientMock.on('Network.requestWillBeSent', anyFunction())).thenCall(
+        (_, callback) => callback({ requestId }, sessionId)
+      );
+      when(clientMock.on('Target.detachedFromTarget', anyFunction())).thenCall(
+        (_, callback) => (detach = callback)
+      );
+      await sut.attachToTargets(listener);
+      // act
+      detach?.({ sessionId, targetId: '1' });
+      await sut.getResponseBody(requestId);
+      // assert
+      verify(
+        clientMock.send(
+          'Network.getResponseBody',
+          deepEqual({ requestId }),
+          undefined
+        )
+      ).once();
+    });
   });
 
   describe('detachFromTargets', () => {
     it('should remove listeners when they are present', async () => {
       // arrange
-      await sut.attachToTargets(listener, targetDetachedListener);
+      await sut.attachToTargets(listener);
       // act
       await sut.detachFromTargets();
       // assert
       verify(clientMock.off('event', anyFunction())).once();
       verify(clientMock.off('Security.certificateError', anyFunction())).once();
       verify(clientMock.off('Target.attachedToTarget', anyFunction())).once();
+      verify(clientMock.off('Target.detachedFromTarget', anyFunction())).once();
       verify(clientMock.off('Network.requestWillBeSent', anyFunction())).once();
       verify(clientMock.off('Network.webSocketCreated', anyFunction())).once();
     });
@@ -509,6 +578,9 @@ describe('DefaultNetwork', () => {
         clientMock.off('Security.certificateError', anyFunction())
       ).never();
       verify(clientMock.off('Target.attachedToTarget', anyFunction())).never();
+      verify(
+        clientMock.off('Target.detachedFromTarget', anyFunction())
+      ).never();
       verify(
         clientMock.off('Network.requestWillBeSent', anyFunction())
       ).never();
