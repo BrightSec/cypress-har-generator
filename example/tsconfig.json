@@ -4,6 +4,6 @@
     "lib": ["es2020", "dom"],
     "noEmit": true
   },
-  "include": ["**/*.ts", "../src"],
+  "include": ["**/*.ts", "../src", "../typings"],
   "exclude": ["node_modules", "**/.*/"]
 }
