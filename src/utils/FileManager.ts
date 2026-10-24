@@ -121,7 +121,7 @@ export class FileManager {
 
     process.once('exit', () => this.removeOwnTmpFiles());
 
-    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
       process.once(signal, () => {
         this.removeOwnTmpFiles();
 

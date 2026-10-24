@@ -213,7 +213,7 @@ describe('FileManager', () => {
       await expect(access(path, constants.F_OK)).rejects.toThrow();
     });
 
-    it.each(['SIGINT', 'SIGTERM'])(
+    it.each(['SIGINT', 'SIGTERM', 'SIGHUP'])(
       'should remove its temp files and re-raise %s',
       async signal => {
         // arrange
