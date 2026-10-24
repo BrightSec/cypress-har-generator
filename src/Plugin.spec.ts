@@ -569,6 +569,18 @@ describe('Plugin', () => {
       verify(networkObserverMock.unsubscribe()).once();
     });
 
+    it('should close the connection', async () => {
+      // arrange
+      plugin.ensureBrowserFlags(chrome, []);
+      await plugin.recordHar({
+        rootDir: '/'
+      });
+      // act
+      await plugin.disposeOfHar();
+      // assert
+      verify(connectionMock.close()).once();
+    });
+
     it('should do nothing when the recording is not started yet', async () => {
       // act
       await plugin.disposeOfHar();

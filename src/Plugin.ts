@@ -147,6 +147,7 @@ export class Plugin {
 
     await this.networkObservable?.unsubscribe();
     delete this.networkObservable;
+    await this.closeConnection();
 
     if (this.exporter) {
       this.exporter.end();
