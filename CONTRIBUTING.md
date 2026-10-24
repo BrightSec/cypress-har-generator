@@ -156,7 +156,7 @@ To ensure consistency throughout the source code, keep these rules in mind as yo
 - Don't use transpilation mode of the compiler. You can use it only to debug.
 - We love OOP and, whenever possible, prefer them over closures and functions.
 
-> ⚡ We use [husky](https://github.com/typicode/husky), [commitlint](https://github.com/conventional-changelog/commitlint#readme) and [lint-staged](https://github.com/okonet/lint-staged), they will help you to follow these rules.
+> ⚡ We use [commitlint](https://github.com/conventional-changelog/commitlint#readme) and [lint-staged](https://github.com/okonet/lint-staged) through Git hooks in `.githooks`, which `npm install` enables for your clone, they will help you to follow these rules.
 
 ## Installation
 
