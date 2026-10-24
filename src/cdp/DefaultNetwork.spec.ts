@@ -109,6 +109,13 @@ describe('DefaultNetwork', () => {
       await expect(act).resolves.not.toThrow();
     });
 
+    it('should listen to detached targets', async () => {
+      // act
+      await sut.attachToTargets(listener);
+      // assert
+      verify(clientMock.on('Target.detachedFromTarget', anyFunction())).once();
+    });
+
     it('should start tracking sessions', async () => {
       // act
       await sut.attachToTargets(listener);
@@ -465,6 +472,86 @@ describe('DefaultNetwork', () => {
         ).once();
       }
     );
+
+    it('should fail the open requests of a detached target', async () => {
+      // arrange
+      const sessionId = '2';
+      let detach: ((...args: unknown[]) => void) | undefined;
+      when(clientMock.on('event', anyFunction())).thenCall((_, callback) => {
+        callback({
+          method: 'Network.requestWillBeSent',
+          params: { requestId: '1', timestamp: 1, type: 'Fetch' },
+          sessionId
+        });
+        callback({
+          method: 'Network.dataReceived',
+          params: { requestId: '1', timestamp: 2 },
+          sessionId
+        });
+        callback({
+          method: 'Network.requestWillBeSent',
+          params: { requestId: '3', timestamp: 1, type: 'Fetch' },
+          sessionId
+        });
+        callback({
+          method: 'Network.loadingFinished',
+          params: { requestId: '3', timestamp: 2 },
+          sessionId
+        });
+        callback({
+          method: 'Network.requestWillBeSent',
+          params: { requestId: '4', timestamp: 1, type: 'Fetch' },
+          sessionId: '5'
+        });
+      });
+      when(clientMock.on('Target.detachedFromTarget', anyFunction())).thenCall(
+        (_, callback) => (detach = callback)
+      );
+      await sut.attachToTargets(listener);
+      jest.runAllTimers();
+      listener.mockClear();
+      // act
+      detach?.({ sessionId, targetId: '1' });
+      jest.runAllTimers();
+      // assert
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({
+        sessionId,
+        method: 'Network.loadingFailed',
+        params: {
+          requestId: '1',
+          timestamp: 2,
+          type: 'Fetch',
+          errorText: 'net::ERR_ABORTED',
+          canceled: true
+        }
+      });
+    });
+
+    it('should forget the sessions of a detached target', async () => {
+      // arrange
+      const requestId = '1';
+      const sessionId = '2';
+      let detach: ((...args: unknown[]) => void) | undefined;
+      when(clientMock.on('Network.requestWillBeSent', anyFunction())).thenCall(
+        (_, callback) => callback({ requestId }, sessionId)
+      );
+      when(clientMock.on('Target.detachedFromTarget', anyFunction())).thenCall(
+        (_, callback) => (detach = callback)
+      );
+      await sut.attachToTargets(listener);
+      // act
+      detach?.({ sessionId, targetId: '1' });
+      await sut.getResponseBody(requestId);
+      // assert
+      verify(
+        clientMock.send(
+          'Network.getResponseBody',
+          deepEqual({ requestId }),
+          undefined
+        )
+      ).once();
+    });
   });
 
   describe('detachFromTargets', () => {
@@ -477,6 +564,7 @@ describe('DefaultNetwork', () => {
       verify(clientMock.off('event', anyFunction())).once();
       verify(clientMock.off('Security.certificateError', anyFunction())).once();
       verify(clientMock.off('Target.attachedToTarget', anyFunction())).once();
+      verify(clientMock.off('Target.detachedFromTarget', anyFunction())).once();
       verify(clientMock.off('Network.requestWillBeSent', anyFunction())).once();
       verify(clientMock.off('Network.webSocketCreated', anyFunction())).once();
     });
@@ -490,6 +578,9 @@ describe('DefaultNetwork', () => {
         clientMock.off('Security.certificateError', anyFunction())
       ).never();
       verify(clientMock.off('Target.attachedToTarget', anyFunction())).never();
+      verify(
+        clientMock.off('Target.detachedFromTarget', anyFunction())
+      ).never();
       verify(
         clientMock.off('Network.requestWillBeSent', anyFunction())
       ).never();
