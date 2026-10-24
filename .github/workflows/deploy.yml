@@ -7,10 +7,19 @@ on:
 env:
   VERSION: ${{ github.event.release.tag_name }}
   TARGET_REF: ${{ github.event.release.target_commitish }}
-  # a maintenance release (e.g. from 4.x) must not move `latest`, and npm refuses tags that are semver ranges like `4.x`
-  TAG: ${{ github.event.release.target_commitish == 'master' && 'latest' || format('release-{0}', github.event.release.target_commitish) }}
 
 jobs:
+  dist-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      # a maintenance release (e.g. from 4.x or 4.2.x) goes to `latest-4` so it does not move `latest`
+      - id: resolve
+        run: |
+          if [ "$TARGET_REF" = master ]; then tag=latest; else tag="latest-${TARGET_REF%%.*}"; fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
   install-deps:
     runs-on: ubuntu-latest
     steps:
@@ -49,7 +58,9 @@ jobs:
 
   publish-to-npm:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, dist-tag]
+    env:
+      TAG: ${{ needs.dist-tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,7 +81,9 @@ jobs:
 
   publish-to-gpr:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, dist-tag]
+    env:
+      TAG: ${{ needs.dist-tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
