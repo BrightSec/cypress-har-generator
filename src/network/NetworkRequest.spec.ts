@@ -19,9 +19,10 @@ describe('NetworkRequest', () => {
     sendEnd: 15,
     pushStart: 16,
     pushEnd: 17,
-    receiveHeadersEnd: 18,
-    workerFetchStart: 19,
-    workerRespondWithSettled: 20
+    receiveHeadersStart: 18,
+    receiveHeadersEnd: 19,
+    workerFetchStart: 20,
+    workerRespondWithSettled: 21
   };
 
   let sut!: NetworkRequest;
