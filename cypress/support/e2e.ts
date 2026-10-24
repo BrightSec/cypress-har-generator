@@ -1,4 +1,9 @@
 import '../../src/commands';
+import { HARS_FOLDER_KEYS } from '../../src/constants';
+import {
+  type BrowserConfigSource,
+  ConfigUtils
+} from '../../src/utils/ConfigUtils';
 import { Har } from 'har-format';
 import like from 'chai-like';
 import things from 'chai-things';
@@ -18,7 +23,13 @@ like.extend({
 });
 
 const getDefaultHarPath = (): string =>
-  join(Cypress.env('hars_folder'), Cypress.spec.name.replace('.ts', '.har'));
+  join(
+    ConfigUtils.fromBrowser<string>(
+      Cypress as unknown as BrowserConfigSource,
+      HARS_FOLDER_KEYS
+    ) ?? '.',
+    Cypress.spec.name.replace('.ts', '.har')
+  );
 
 // assert a recorded HAR file
 Cypress.Commands.add('findHar', (fileName?: string) =>

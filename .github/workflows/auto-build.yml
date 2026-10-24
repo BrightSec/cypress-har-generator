@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ['lint', 'format', 'build', 'test', 'e2e']
+        target: ['lint', 'format', 'build', 'test']
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,19 +34,39 @@ jobs:
         uses: ./.github/workflows/composite/npm
 
       - name: Execute ${{ matrix.target }} npm script
-        if: ${{ matrix.target != 'e2e' }}
         run: npm run ${{ matrix.target }}
 
+  # `default` is the Cypress version the repository depends on; the earlier majors are ones users still run,
+  # where options come from `env` (before 16) instead of or as well as `expose`
+  e2e:
+    name: e2e (cypress ${{ matrix.cypress }})
+    runs-on: ubuntu-latest
+    needs: install-deps
+    strategy:
+      fail-fast: false
+      matrix:
+        cypress: ['default', '15', '14']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        uses: ./.github/workflows/composite/npm
+
+      - name: Install Cypress ${{ matrix.cypress }}
+        if: ${{ matrix.cypress != 'default' }}
+        run: npm i --no-save cypress@${{ matrix.cypress }}
+
       - name: Execute e2e npm script
-        if: ${{ matrix.target == 'e2e' }}
         uses: cypress-io/github-action@v7
         timeout-minutes: 10
         with:
+          install: false
           wait-on: 'http://localhost:8080/'
           wait-on-timeout: 120
           start: npm start
           browser: chrome
-          record: ${{ github.repository == 'BrightSec/cypress-har-generator' }}
+          record: ${{ matrix.cypress == 'default' && github.repository == 'BrightSec/cypress-har-generator' }}
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
