@@ -28,7 +28,9 @@
     "importHelpers": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": ["cypress", "node"]
+    "types": ["cypress", "node"],
+    "rootDir": ".",
+    "ignoreDeprecations": "6.0"
   },
   "exclude": ["node_modules", "dist", "example", "**/.*/"]
 }
