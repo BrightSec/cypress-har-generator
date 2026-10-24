@@ -169,11 +169,7 @@ export class DefaultNetwork implements Network {
   };
 
   private attachedToTargetListener = async (
-    {
-      sessionId,
-      targetInfo,
-      waitingForDebugger
-    }: Protocol.Target.AttachedToTargetEvent,
+    { sessionId, targetInfo }: Protocol.Target.AttachedToTargetEvent,
     parentSessionId?: string
   ): Promise<void> => {
     try {
@@ -187,19 +183,14 @@ export class DefaultNetwork implements Network {
       }
 
       // A target paused on start (`waitForDebuggerOnStart`), such as a service worker, answers some commands only
-      // once it runs, so it is resumed in the same batch rather than after them, which would never start it.
+      // once it runs, so it is resumed in the same batch rather than after them, which would never start it. It is
+      // resumed whatever `waitingForDebugger` says, as the command does nothing for a target that is not paused.
       await Promise.all([
         this.recursivelyAttachToTargets({
           sessionId,
           type: targetInfo.type
         }),
-        waitingForDebugger
-          ? this.cdp.send(
-              'Runtime.runIfWaitingForDebugger',
-              undefined,
-              sessionId
-            )
-          : undefined
+        this.cdp.send('Runtime.runIfWaitingForDebugger', undefined, sessionId)
       ]);
     } catch (e) {
       if (this.targetClosedError(e)) {

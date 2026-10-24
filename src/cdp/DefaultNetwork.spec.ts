@@ -300,62 +300,37 @@ describe('DefaultNetwork', () => {
       verify(clientMock.send('Network.enable', anything(), sessionId)).never();
     });
 
-    it('should run if waiting for debugger', async () => {
-      // arrange
-      const sessionId = '1';
-      const targetInfo: Protocol.Target.TargetInfo = {
-        targetId: '1',
-        type: 'page',
-        url: '',
-        title: '',
-        attached: true,
-        canAccessOpener: false
-      };
-      let act: ((...args: unknown[]) => Promise<void>) | undefined;
-      when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
-        (_, callback) => (act = callback)
-      );
-      await sut.attachToTargets(listener);
-      // act
-      await act?.({ sessionId, targetInfo, waitingForDebugger: true });
-      // assert
-      verify(
-        clientMock.send('Runtime.runIfWaitingForDebugger', undefined, sessionId)
-      ).once();
-    });
-
-    it.each([
-      { input: 'Target.setAutoAttach' as const },
-      { input: 'Runtime.runIfWaitingForDebugger' as const }
-    ])(
-      'should silently handle a session that is gone when sending $input',
+    it.each([{ input: true }, { input: false }])(
+      'should resume the target when waitingForDebugger is $input',
       async ({ input }) => {
         // arrange
         const sessionId = '1';
         const targetInfo: Protocol.Target.TargetInfo = {
           targetId: '1',
-          type: 'service_worker',
-          url: 'chrome-extension://kgjfgplpablkjnlkjmjdecgdpfankdle/js/bg-loader.js',
+          type: 'page',
+          url: '',
           title: '',
-          attached: false,
+          attached: true,
           canAccessOpener: false
         };
         let act: ((...args: unknown[]) => Promise<void>) | undefined;
         when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
           (_, callback) => (act = callback)
         );
-        when(clientMock.send(input, anything(), sessionId)).thenReject(
-          new Error('Session with given id not found.')
-        );
         await sut.attachToTargets(listener);
         // act
         await act?.(
-          { sessionId, targetInfo, waitingForDebugger: true },
+          { sessionId, targetInfo, waitingForDebugger: input },
           'parent'
         );
         // assert
-        verify(loggerMock.debug(TARGET_OR_BROWSER_CLOSED)).once();
-        verify(loggerMock.warn(anything())).never();
+        verify(
+          clientMock.send(
+            'Runtime.runIfWaitingForDebugger',
+            undefined,
+            sessionId
+          )
+        ).once();
       }
     );
 
