@@ -3,8 +3,7 @@ import type ProtocolMappingApi from 'devtools-protocol/types/protocol-mapping';
 
 export type NetworkEvents = Pick<
   ProtocolMappingApi.Events,
-  | (`Network.${string}` & keyof ProtocolMappingApi.Events)
-  | 'Target.detachedFromTarget'
+  `Network.${string}` & keyof ProtocolMappingApi.Events
 >;
 export type NetworkEventParams<T extends keyof NetworkEvents> =
   NetworkEvents[T][0];
@@ -24,7 +23,12 @@ export interface Network {
     requestId: string
   ): Promise<Protocol.Network.GetRequestPostDataResponse>;
 
-  attachToTargets(listener: (event: NetworkEvent) => unknown): Promise<void>;
+  attachToTargets(
+    listener: (event: NetworkEvent) => unknown,
+    targetDetachedListener: (
+      event: Protocol.Target.DetachedFromTargetEvent
+    ) => unknown
+  ): Promise<void>;
 
   detachFromTargets(): Promise<void>;
 }

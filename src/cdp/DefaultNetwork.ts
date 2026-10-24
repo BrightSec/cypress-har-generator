@@ -21,6 +21,9 @@ export class DefaultNetwork implements Network {
   ]);
 
   private listener?: (event: NetworkEvent) => unknown;
+  private targetDetachedListener?: (
+    event: Protocol.Target.DetachedFromTargetEvent
+  ) => unknown;
   private readonly sessions = new Map<string, string | undefined>();
 
   constructor(
@@ -30,12 +33,17 @@ export class DefaultNetwork implements Network {
   ) {}
 
   public async attachToTargets(
-    listener: (event: NetworkEvent) => unknown
+    listener: (event: NetworkEvent) => unknown,
+    targetDetachedListener: (
+      event: Protocol.Target.DetachedFromTargetEvent
+    ) => unknown
   ): Promise<void> {
     this.listener = listener;
+    this.targetDetachedListener = targetDetachedListener;
 
     this.cdp.on('event', this.networkEventListener);
     this.cdp.on('Target.attachedToTarget', this.attachedToTargetListener);
+    this.cdp.on('Target.detachedFromTarget', this.detachedFromTargetListener);
     this.cdp.on('Network.requestWillBeSent', this.sessionListener);
     this.cdp.on('Network.webSocketCreated', this.sessionListener);
     await this.ignoreCertificateError();
@@ -47,9 +55,14 @@ export class DefaultNetwork implements Network {
       this.cdp.off('event', this.networkEventListener);
       this.cdp.off('Security.certificateError', this.certificateErrorListener);
       this.cdp.off('Target.attachedToTarget', this.attachedToTargetListener);
+      this.cdp.off(
+        'Target.detachedFromTarget',
+        this.detachedFromTargetListener
+      );
       this.cdp.off('Network.requestWillBeSent', this.sessionListener);
       this.cdp.off('Network.webSocketCreated', this.sessionListener);
       delete this.listener;
+      delete this.targetDetachedListener;
     }
 
     try {
@@ -110,6 +123,11 @@ export class DefaultNetwork implements Network {
     }
   };
 
+  // dispatched like network events, so it is handled after the events that precede it
+  private detachedFromTargetListener = (
+    event: Protocol.Target.DetachedFromTargetEvent
+  ) => setImmediate(() => this.targetDetachedListener?.(event));
+
   private certificateErrorListener = ({
     eventId
   }: Protocol.Security.CertificateErrorEvent) =>
@@ -123,9 +141,7 @@ export class DefaultNetwork implements Network {
   ): message is NetworkEvent {
     const [domain]: string[] = message.method.split('.');
 
-    return (
-      domain === this.DOMAIN || message.method === 'Target.detachedFromTarget'
-    );
+    return domain === this.DOMAIN;
   }
 
   private async recursivelyAttachToTargets(options: {

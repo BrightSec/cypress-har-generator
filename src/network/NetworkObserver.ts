@@ -42,8 +42,10 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   ): Promise<void> {
     this.destination = callback;
 
-    await this.network.attachToTargets((event: NetworkEvent): void =>
-      this.handleEvent(event)
+    await this.network.attachToTargets(
+      (event: NetworkEvent): void => this.handleEvent(event),
+      (event: Protocol.Target.DetachedFromTargetEvent): void =>
+        this.detachedFromTarget(event)
     );
   }
 
@@ -208,28 +210,6 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
     const message = errorText || (canceled && 'Canceled');
     this.logger.debug(`Failed request: ${requestId}. Reason: ${message}`);
-  }
-
-  // Chrome sends no further events for the requests of a target that is gone, e.g. a terminated worker
-  public detachedFromTarget({
-    sessionId
-  }: Protocol.Target.DetachedFromTargetEvent): void {
-    for (const [requestId, session] of this._sessions) {
-      const entry = this._entries.get(requestId);
-
-      if (session !== sessionId || !entry) {
-        continue;
-      }
-
-      this.finishRequest(
-        entry,
-        Math.max(entry.issueTime, entry.responseReceivedTime, entry.endTime),
-        -1
-      );
-      this.logger.debug(
-        `Failed request: ${requestId}. Reason: the target has been detached`
-      );
-    }
   }
 
   public webSocketCreated({
@@ -599,6 +579,28 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     return this.requestFilter?.wouldApply(this.options)
       ? !this.requestFilter.apply(request, this.options)
       : false;
+  }
+
+  // Chrome sends no further events for the requests of a target that is gone, e.g. a terminated worker
+  private detachedFromTarget({
+    sessionId
+  }: Protocol.Target.DetachedFromTargetEvent): void {
+    for (const [requestId, session] of this._sessions) {
+      const entry = this._entries.get(requestId);
+
+      if (session !== sessionId || !entry) {
+        continue;
+      }
+
+      this.finishRequest(
+        entry,
+        Math.max(entry.issueTime, entry.responseReceivedTime, entry.endTime),
+        -1
+      );
+      this.logger.debug(
+        `Failed request: ${requestId}. Reason: the target has been detached`
+      );
+    }
   }
 
   private handleEvent({ method, params, sessionId }: NetworkEvent): void {

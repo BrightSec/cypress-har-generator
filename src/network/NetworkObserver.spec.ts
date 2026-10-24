@@ -192,8 +192,8 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(cb =>
-        cb(requestWillBeSentEvent)
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        cb => cb(requestWillBeSentEvent)
       );
       await sut.subscribe(callback);
       // act
@@ -206,7 +206,7 @@ describe('NetworkObserver', () => {
       // act
       await sut.subscribe(callback);
       // assert
-      verify(networkMock.attachToTargets(anyFunction())).once();
+      verify(networkMock.attachToTargets(anyFunction(), anyFunction())).once();
     });
 
     it('should handle a simple sequence of browser events', async () => {
@@ -214,11 +214,13 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -234,22 +236,24 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb({
-          ...responseReceivedEvent,
-          params: {
-            ...responseReceivedEvent.params,
-            type: 'EventSource',
-            response: {
-              ...responseReceivedEvent.params.response,
-              mimeType: 'text/event-stream'
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb({
+            ...responseReceivedEvent,
+            params: {
+              ...responseReceivedEvent.params,
+              type: 'EventSource',
+              response: {
+                ...responseReceivedEvent.params.response,
+                mimeType: 'text/event-stream'
+              }
             }
-          }
-        });
-        await cb(eventSourceMessageReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+          });
+          await cb(eventSourceMessageReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -273,19 +277,21 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb({
-          method: 'Network.signedExchangeReceived',
-          params: {
-            requestId: '1',
-            info: {
-              outerResponse: response
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb({
+            method: 'Network.signedExchangeReceived',
+            params: {
+              requestId: '1',
+              info: {
+                outerResponse: response
+              }
             }
-          }
-        });
-        await cb(loadingFinishedEvent);
-      });
+          });
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -304,22 +310,24 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb({
-          method: 'Network.signedExchangeReceived',
-          params: {
-            requestId: '1',
-            info: {
-              outerResponse: {
-                ...response,
-                requestHeaders: { foo: 'bar' }
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb({
+            method: 'Network.signedExchangeReceived',
+            params: {
+              requestId: '1',
+              info: {
+                outerResponse: {
+                  ...response,
+                  requestHeaders: { foo: 'bar' }
+                }
               }
             }
-          }
-        });
-        await cb(loadingFinishedEvent);
-      });
+          });
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -341,18 +349,20 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb({
-          method: 'Network.resourceChangedPriority',
-          params: {
-            requestId: '1',
-            newPriority: 'VeryLow'
-          }
-        });
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb({
+            method: 'Network.resourceChangedPriority',
+            params: {
+              requestId: '1',
+              newPriority: 'VeryLow'
+            }
+          });
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -368,12 +378,14 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(dataReceivedEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(dataReceivedEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -389,10 +401,12 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(loadingFailedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(loadingFailedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -413,18 +427,17 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody(anyString())).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb({ ...requestWillBeSentEvent, sessionId: '2' });
-        await cb({
-          ...requestWillBeSentEvent,
-          params: { ...requestWillBeSentEvent.params, requestId: '3' },
-          sessionId: '4'
-        });
-        await cb({
-          method: 'Target.detachedFromTarget',
-          params: { sessionId: '2', targetId: '1' }
-        });
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async (cb, targetDetachedCb) => {
+          await cb({ ...requestWillBeSentEvent, sessionId: '2' });
+          await cb({
+            ...requestWillBeSentEvent,
+            params: { ...requestWillBeSentEvent.params, requestId: '3' },
+            sessionId: '4'
+          });
+          await targetDetachedCb({ sessionId: '2', targetId: '1' });
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -444,11 +457,13 @@ describe('NetworkObserver', () => {
         body: '<html></html>',
         base64Encoded: false
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -466,11 +481,13 @@ describe('NetworkObserver', () => {
         body: '<html></html>',
         base64Encoded: false
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -486,10 +503,12 @@ describe('NetworkObserver', () => {
       when(networkMock.getResponseBody('1')).thenReject(
         new Error('No resource with given identifier found')
       );
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(loadingFailedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(loadingFailedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -506,11 +525,13 @@ describe('NetworkObserver', () => {
         body: '<html></html>',
         base64Encoded: false
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -522,11 +543,13 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenReject(
         new Error('something went wrong')
       );
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -542,21 +565,23 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: 'test'
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb({
-          ...requestWillBeSentEvent,
-          params: {
-            ...requestWillBeSentEvent.params,
-            request: {
-              ...requestWillBeSentEvent.params.request,
-              method: 'POST',
-              hasPostData: true
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb({
+            ...requestWillBeSentEvent,
+            params: {
+              ...requestWillBeSentEvent.params,
+              request: {
+                ...requestWillBeSentEvent.params.request,
+                method: 'POST',
+                hasPostData: true
+              }
             }
-          }
-        });
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+          });
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -565,22 +590,24 @@ describe('NetworkObserver', () => {
 
     it('should utilize the preloaded request body', async () => {
       // arrange
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb({
-          ...requestWillBeSentEvent,
-          params: {
-            ...requestWillBeSentEvent.params,
-            request: {
-              ...requestWillBeSentEvent.params.request,
-              method: 'POST',
-              postData: 'test',
-              hasPostData: true
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb({
+            ...requestWillBeSentEvent,
+            params: {
+              ...requestWillBeSentEvent.params,
+              request: {
+                ...requestWillBeSentEvent.params.request,
+                method: 'POST',
+                postData: 'test',
+                hasPostData: true
+              }
             }
-          }
-        });
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+          });
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -589,21 +616,23 @@ describe('NetworkObserver', () => {
 
     it('should prevent loading the request body when the request method forbids the body', async () => {
       // arrange
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb({
-          ...requestWillBeSentEvent,
-          params: {
-            ...requestWillBeSentEvent.params,
-            request: {
-              ...requestWillBeSentEvent.params.request,
-              method: 'OPTIONS',
-              hasPostData: false
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb({
+            ...requestWillBeSentEvent,
+            params: {
+              ...requestWillBeSentEvent.params,
+              request: {
+                ...requestWillBeSentEvent.params.request,
+                method: 'OPTIONS',
+                hasPostData: false
+              }
             }
-          }
-        });
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+          });
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -617,11 +646,13 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -634,11 +665,13 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -654,18 +687,20 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentExtraInfoEvent);
-        await cb({
-          ...requestWillBeSentEvent,
-          params: {
-            ...requestWillBeSentEvent.params,
-            redirectHasExtraInfo: true
-          }
-        });
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentExtraInfoEvent);
+          await cb({
+            ...requestWillBeSentEvent,
+            params: {
+              ...requestWillBeSentEvent.params,
+              redirectHasExtraInfo: true
+            }
+          });
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -687,18 +722,20 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb(responseReceivedExtraInfoEvent);
-        await cb({
-          ...responseReceivedEvent,
-          params: {
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(responseReceivedExtraInfoEvent);
+          await cb({
             ...responseReceivedEvent,
-            hasExtraInfo: true
-          }
-        });
-        await cb(loadingFinishedEvent);
-      });
+            params: {
+              ...responseReceivedEvent,
+              hasExtraInfo: true
+            }
+          });
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -720,34 +757,36 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentEvent);
-        await cb({
-          ...requestWillBeSentEvent,
-          params: {
-            ...requestWillBeSentEvent.params,
-            redirectResponse: {
-              timings,
-              url: 'http://localhost:8081/',
-              status: 302,
-              statusText: 'Found',
-              headers: {
-                Location: 'http://localhost:8080'
-              },
-              mimeType: '',
-              connectionReused: false,
-              connectionId: 1,
-              remoteIPAddress: '[::1]',
-              remotePort: 8081,
-              encodedDataLength: 167,
-              responseTime: 1,
-              protocol: 'http/1.1'
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb({
+            ...requestWillBeSentEvent,
+            params: {
+              ...requestWillBeSentEvent.params,
+              redirectResponse: {
+                timings,
+                url: 'http://localhost:8081/',
+                status: 302,
+                statusText: 'Found',
+                headers: {
+                  Location: 'http://localhost:8080'
+                },
+                mimeType: '',
+                connectionReused: false,
+                connectionId: 1,
+                remoteIPAddress: '[::1]',
+                remotePort: 8081,
+                encodedDataLength: 167,
+                responseTime: 1,
+                protocol: 'http/1.1'
+              }
             }
-          }
-        });
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+          });
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
@@ -772,34 +811,36 @@ describe('NetworkObserver', () => {
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: ''
       });
-      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
-        await cb(requestWillBeSentExtraInfoEvent);
-        await cb({
-          ...responseReceivedExtraInfoEvent,
-          params: {
-            ...responseReceivedExtraInfoEvent.params,
-            headers: { Location: 'http://localhost:8080' },
-            statusCode: 302
-          }
-        });
-        await cb({
-          ...requestWillBeSentEvent,
-          params: {
-            ...requestWillBeSentEvent.params,
-            redirectHasExtraInfo: true,
-            redirectResponse: {
-              ...response,
-              status: 302,
-              statusText: 'Found',
-              headers: { Location: 'http://localhost:8080' }
+      when(networkMock.attachToTargets(anyFunction(), anyFunction())).thenCall(
+        async cb => {
+          await cb(requestWillBeSentExtraInfoEvent);
+          await cb({
+            ...responseReceivedExtraInfoEvent,
+            params: {
+              ...responseReceivedExtraInfoEvent.params,
+              headers: { Location: 'http://localhost:8080' },
+              statusCode: 302
             }
-          }
-        });
-        await cb(requestWillBeSentExtraInfoEvent);
-        await cb(responseReceivedExtraInfoEvent);
-        await cb(responseReceivedEvent);
-        await cb(loadingFinishedEvent);
-      });
+          });
+          await cb({
+            ...requestWillBeSentEvent,
+            params: {
+              ...requestWillBeSentEvent.params,
+              redirectHasExtraInfo: true,
+              redirectResponse: {
+                ...response,
+                status: 302,
+                statusText: 'Found',
+                headers: { Location: 'http://localhost:8080' }
+              }
+            }
+          });
+          await cb(requestWillBeSentExtraInfoEvent);
+          await cb(responseReceivedExtraInfoEvent);
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        }
+      );
       // act
       await sut.subscribe(callback);
       // assert
