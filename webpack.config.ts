@@ -1,6 +1,6 @@
 import externals from 'webpack-node-externals';
 import FileManagerPlugin from 'filemanager-webpack-plugin';
-import webpack, { type Configuration } from 'webpack';
+import type { Configuration } from 'webpack';
 import { resolve } from 'node:path';
 
 const base = (extension: 'js' | 'mjs'): Configuration => ({
@@ -18,7 +18,8 @@ const base = (extension: 'js' | 'mjs'): Configuration => ({
   module: {
     parser: {
       javascript: {
-        commonjsMagicComments: true
+        // `Loader` calls `require` at runtime for user files, which must not be bundled
+        createRequire: false
       }
     },
     rules: [
@@ -89,15 +90,21 @@ const esm: Configuration = {
   // the CommonJS build cleans the output folder, so it must finish first
   dependencies: ['commonjs'],
   externals: externals({ importType: name => `module ${name}` }),
-  experiments: { outputModule: true },
   plugins: [
-    // `Loader` loads user files with `require` so that the loaders registered by Cypress (e.g. for TypeScript) apply
-    new webpack.BannerPlugin({
-      raw: true,
-      test: /index\.mjs$/,
-      banner:
-        "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);"
-    }),
+    {
+      // the import condition needs ES module types, which share the declarations of the CommonJS build
+      apply: compiler =>
+        compiler.hooks.thisCompilation.tap('EsmTypes', compilation =>
+          compilation.hooks.processAssets.tap('EsmTypes', () =>
+            compilation.emitAsset(
+              'index.d.mts',
+              new compiler.webpack.sources.RawSource(
+                "export * from './index.js';\n"
+              )
+            )
+          )
+        )
+    },
     new FileManagerPlugin({
       events: {
         onEnd: [moveCommands('mjs')]
@@ -107,7 +114,6 @@ const esm: Configuration = {
   output: {
     ...base('mjs').output,
     module: true,
-    chunkFormat: 'module',
     library: { type: 'module' }
   }
 };
