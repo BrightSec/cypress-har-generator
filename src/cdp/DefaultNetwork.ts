@@ -168,12 +168,24 @@ export class DefaultNetwork implements Network {
     );
   };
 
-  private attachedToTargetListener = async ({
-    sessionId,
-    targetInfo,
-    waitingForDebugger
-  }: Protocol.Target.AttachedToTargetEvent): Promise<void> => {
+  private attachedToTargetListener = async (
+    {
+      sessionId,
+      targetInfo,
+      waitingForDebugger
+    }: Protocol.Target.AttachedToTargetEvent,
+    parentSessionId?: string
+  ): Promise<void> => {
     try {
+      // A service worker is attached twice, under the browser and under each page it controls. Only the page one is
+      // tracked, otherwise its requests are recorded twice, so the browser one is resumed and released. Workers
+      // without a page, such as those of browser extensions, are not the application's traffic.
+      if (!parentSessionId && targetInfo.type === 'service_worker') {
+        await this.releaseTarget(sessionId);
+
+        return;
+      }
+
       // A target paused on start (`waitForDebuggerOnStart`), such as a service worker, answers some commands only
       // once it runs, so it is resumed in the same batch rather than after them, which would never start it.
       await Promise.all([
@@ -210,6 +222,14 @@ export class DefaultNetwork implements Network {
     }
   };
 
+  private async releaseTarget(sessionId: string): Promise<void> {
+    // detaching alone does not resume a target paused on start
+    await Promise.all([
+      this.cdp.send('Runtime.runIfWaitingForDebugger', undefined, sessionId),
+      this.cdp.send('Target.detachFromTarget', { sessionId })
+    ]);
+  }
+
   private async trackNetworkEvents(sessionId?: string): Promise<void> {
     try {
       await Promise.all([
@@ -239,7 +259,8 @@ export class DefaultNetwork implements Network {
       (e.message.includes('Target closed') ||
         e.message.includes('Session closed') ||
         // a session of a target that went away while being attached, e.g. an extension's service worker
-        e.message.includes('Session with given id not found'))
+        e.message.includes('Session with given id not found') ||
+        e.message.includes('No session with given id'))
     );
   }
 }

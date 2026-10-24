@@ -254,7 +254,10 @@ describe('DefaultNetwork', () => {
         );
         await sut.attachToTargets(listener);
         // act
-        await act?.({ sessionId, targetInfo, waitingForDebugger: false });
+        await act?.(
+          { sessionId, targetInfo, waitingForDebugger: false },
+          'parent'
+        );
         // assert
         verify(
           clientMock.send('Network.enable', deepEqual({}), sessionId)
@@ -268,6 +271,34 @@ describe('DefaultNetwork', () => {
         ).once();
       }
     );
+
+    it('should release a service worker attached to the browser instead of tracking it twice', async () => {
+      // arrange
+      const sessionId = '1';
+      const targetInfo: Protocol.Target.TargetInfo = {
+        targetId: '1',
+        type: 'service_worker',
+        url: '',
+        title: '',
+        attached: true,
+        canAccessOpener: false
+      };
+      let act: ((...args: unknown[]) => Promise<void>) | undefined;
+      when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
+        (_, callback) => (act = callback)
+      );
+      await sut.attachToTargets(listener);
+      // act
+      await act?.({ sessionId, targetInfo, waitingForDebugger: true });
+      // assert
+      verify(
+        clientMock.send('Runtime.runIfWaitingForDebugger', undefined, sessionId)
+      ).once();
+      verify(
+        clientMock.send('Target.detachFromTarget', deepEqual({ sessionId }))
+      ).once();
+      verify(clientMock.send('Network.enable', anything(), sessionId)).never();
+    });
 
     it('should run if waiting for debugger', async () => {
       // arrange
@@ -318,7 +349,10 @@ describe('DefaultNetwork', () => {
         );
         await sut.attachToTargets(listener);
         // act
-        await act?.({ sessionId, targetInfo, waitingForDebugger: true });
+        await act?.(
+          { sessionId, targetInfo, waitingForDebugger: true },
+          'parent'
+        );
         // assert
         verify(loggerMock.debug(TARGET_OR_BROWSER_CLOSED)).once();
         verify(loggerMock.warn(anything())).never();
@@ -346,7 +380,7 @@ describe('DefaultNetwork', () => {
       );
       await sut.attachToTargets(listener);
       // act
-      void act?.({ sessionId, targetInfo, waitingForDebugger: true });
+      void act?.({ sessionId, targetInfo, waitingForDebugger: true }, 'parent');
       // assert
       verify(
         clientMock.send('Runtime.runIfWaitingForDebugger', undefined, sessionId)

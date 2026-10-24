@@ -227,6 +227,27 @@ describe('Record HAR', () => {
     });
   });
 
+  it('records each request of a service worker once', () => {
+    cy.recordHar();
+
+    cy.get('a[href$=service-worker]').click();
+    // the second load goes through the worker installed by the first one
+    cy.reload();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .then((entries: Entry[]) => {
+        const keys = entries.map(
+          ({ request, startedDateTime }: Entry) =>
+            `${request.method} ${request.url} ${startedDateTime}`
+        );
+
+        expect(keys).to.have.length(new Set(keys).size);
+      });
+  });
+
   it('records the Server-Sent Events', () => {
     cy.recordHar();
 
