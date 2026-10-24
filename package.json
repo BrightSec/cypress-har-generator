@@ -12,7 +12,8 @@
   "files": [
     "dist",
     "commands.js",
-    "commands.js.map"
+    "commands.js.map",
+    "commands.d.ts"
   ],
   "author": {
     "name": "Artem Derevnjuk",
