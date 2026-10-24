@@ -1,6 +1,6 @@
-import { NetworkRequest } from './NetworkRequest';
+import { NetworkRequest } from './NetworkRequest.ts';
 import { describe, expect, it } from '@jest/globals';
-import Protocol from 'devtools-protocol';
+import type { Protocol } from 'devtools-protocol';
 
 describe('NetworkRequest', () => {
   const timing: Protocol.Network.ResourceTiming = {

@@ -1,11 +1,11 @@
-import { NetworkRequest } from '../NetworkRequest';
-import { HostFilter } from './HostFilter';
-import { PathFilter } from './PathFilter';
-import { MimeFilter } from './MimeFilter';
-import { MinStatusCodeFilter } from './MinStatusCodeFilter';
-import { BlobFilter } from './BlobFilter';
-import { StatusCodeFilter } from './StatusCodeFilter';
-import type { RequestFilter, RequestFilterOptions } from './RequestFilter';
+import { NetworkRequest } from '../NetworkRequest.ts';
+import { HostFilter } from './HostFilter.ts';
+import { PathFilter } from './PathFilter.ts';
+import { MimeFilter } from './MimeFilter.ts';
+import { MinStatusCodeFilter } from './MinStatusCodeFilter.ts';
+import { BlobFilter } from './BlobFilter.ts';
+import { StatusCodeFilter } from './StatusCodeFilter.ts';
+import type { RequestFilter, RequestFilterOptions } from './RequestFilter.ts';
 
 export class CompositeFilter implements RequestFilter {
   constructor(

@@ -1,6 +1,6 @@
-import { NetworkRequest } from '../NetworkRequest';
-import type { RequestFilter, RequestFilterOptions } from './RequestFilter';
-import { StringUtils } from '../../utils/StringUtils';
+import { NetworkRequest } from '../NetworkRequest.ts';
+import type { RequestFilter, RequestFilterOptions } from './RequestFilter.ts';
+import { StringUtils } from '../../utils/StringUtils.ts';
 
 export class PathFilter implements RequestFilter {
   public apply(

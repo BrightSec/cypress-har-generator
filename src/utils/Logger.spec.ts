@@ -1,4 +1,4 @@
-import { Logger } from './Logger';
+import { Logger } from './Logger.ts';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import chalk from 'chalk';
 

@@ -1,4 +1,4 @@
-import { env, expose } from '../support/config-sources';
+import { env, expose } from '../support/config-sources.ts';
 
 const sources = [expose, env];
 const keys = ['hars_folder', 'HARS_FOLDER', 'hars_folders'];

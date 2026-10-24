@@ -1,5 +1,5 @@
-import { NetworkRequest } from './NetworkRequest';
-import type { Observer } from './Observer';
+import { NetworkRequest } from './NetworkRequest.ts';
+import type { Observer } from './Observer.ts';
 import { promisify } from 'node:util';
 
 export class NetworkIdleMonitor {

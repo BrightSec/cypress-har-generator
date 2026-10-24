@@ -1,7 +1,7 @@
-import { NetworkRequest } from './NetworkRequest';
-import { DefaultHarExporter } from './DefaultHarExporter';
-import type { Logger } from '../utils/Logger';
-import type { DefaultHarExporterOptions } from './DefaultHarExporterOptions';
+import { NetworkRequest } from './NetworkRequest.ts';
+import { DefaultHarExporter } from './DefaultHarExporter.ts';
+import type { Logger } from '../utils/Logger.ts';
+import type { DefaultHarExporterOptions } from './DefaultHarExporterOptions.ts';
 import {
   anyFunction,
   anyString,

@@ -1,4 +1,4 @@
-import { type BrowserConfigSource, ConfigUtils } from './ConfigUtils';
+import { type BrowserConfigSource, ConfigUtils } from './ConfigUtils.ts';
 import { describe, expect, it, jest } from '@jest/globals';
 
 describe('ConfigUtils', () => {

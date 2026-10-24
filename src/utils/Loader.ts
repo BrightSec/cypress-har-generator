@@ -1,9 +1,9 @@
-import { ErrorUtils } from './ErrorUtils';
+import { ErrorUtils } from './ErrorUtils.ts';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 // a CommonJS `require`, also in the ES module build, so that the loaders Cypress registers (e.g. for TypeScript) apply
-const load = createRequire(__filename);
+const load = createRequire(import.meta.url);
 
 export class Loader {
   public static async load<T>(path: string): Promise<T | undefined> {

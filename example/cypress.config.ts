@@ -1,5 +1,5 @@
 import { defineConfig } from 'cypress';
-import { install } from '../src';
+import { install } from '../src/index.ts';
 
 export default defineConfig({
   video: false,

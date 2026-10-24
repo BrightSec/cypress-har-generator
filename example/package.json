@@ -1,6 +1,7 @@
 {
   "name": "cypress-har-generator-demo",
   "version": "1.0.0",
+  "type": "module",
   "description": "This is a demo project for the [cypress-har-generator](https://github.com/BrightSec/cypress-har-generator), with some installation and usage examples.",
   "scripts": {
     "cypress:run": "cypress run --browser chrome --headless",

@@ -1,4 +1,4 @@
-import { CookieParser } from './CookieParser';
+import { CookieParser } from './CookieParser.ts';
 import { describe, beforeEach, it, expect } from '@jest/globals';
 
 describe('CookieParser', () => {

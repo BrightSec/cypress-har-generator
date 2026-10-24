@@ -1,5 +1,5 @@
 import type { Protocol } from 'devtools-protocol';
-import type ProtocolMappingApi from 'devtools-protocol/types/protocol-mapping';
+import type { ProtocolMapping as ProtocolMappingApi } from 'devtools-protocol/types/protocol-mapping.js';
 
 export type NetworkEvents = Pick<
   ProtocolMappingApi.Events,

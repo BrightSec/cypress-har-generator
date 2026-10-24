@@ -1,12 +1,12 @@
-import type { CDPConnection } from './CDPConnection';
-import { Logger } from '../utils/Logger';
-import { RetryStrategy } from './RetryStrategy';
+import type { CDPConnection } from './CDPConnection.ts';
+import { Logger } from '../utils/Logger.ts';
+import { RetryStrategy } from './RetryStrategy.ts';
 import {
   CONNECTED,
   CONNECTION_NOT_ESTABLISHED,
   DISCONNECTED,
   FAILED_ATTEMPT_TO_CONNECT
-} from './messages';
+} from './messages.ts';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { anyFunction, instance, mock, reset, verify, when } from 'ts-mockito';
 import type { Client, Options, VersionResult } from 'chrome-remote-interface';
@@ -44,13 +44,11 @@ describe('CDPConnection', () => {
   let sut!: CDPConnection;
 
   beforeEach(async () => {
-    jest.mock('chrome-remote-interface', () => ({
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      __esModule: true,
+    jest.unstable_mockModule('chrome-remote-interface', () => ({
       default: connect,
       Version: version
     }));
-    sut = new (await import('./CDPConnection')).CDPConnection(
+    sut = new (await import('./CDPConnection.ts')).CDPConnection(
       options,
       instance(loggerMock),
       instance(retryStrategyMock)

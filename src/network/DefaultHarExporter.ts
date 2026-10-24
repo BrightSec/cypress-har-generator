@@ -1,14 +1,14 @@
 /// <reference types="node" preserve="true" />
-import { EntryBuilder } from './EntryBuilder';
-import type { NetworkRequest } from './NetworkRequest';
-import type { HarExporter } from './HarExporter';
-import type { Logger } from '../utils/Logger';
-import { ErrorUtils } from '../utils/ErrorUtils';
+import { EntryBuilder } from './EntryBuilder.ts';
+import type { NetworkRequest } from './NetworkRequest.ts';
+import type { HarExporter } from './HarExporter.ts';
+import type { Logger } from '../utils/Logger.ts';
+import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type {
   DefaultHarExporterOptions,
   Filter,
   Transformer
-} from './DefaultHarExporterOptions';
+} from './DefaultHarExporterOptions.ts';
 import type { Entry } from 'har-format';
 import type { WriteStream } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';

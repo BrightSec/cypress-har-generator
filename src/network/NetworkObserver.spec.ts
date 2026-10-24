@@ -1,9 +1,9 @@
-import { Logger } from '../utils/Logger';
-import { NetworkObserver } from './NetworkObserver';
-import type { NetworkRequest } from './NetworkRequest';
-import type { NetworkObserverOptions } from './NetworkObserverOptions';
-import type { RequestFilter } from './filters';
-import type { Network } from './Network';
+import { Logger } from '../utils/Logger.ts';
+import { NetworkObserver } from './NetworkObserver.ts';
+import type { NetworkRequest } from './NetworkRequest.ts';
+import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
+import type { RequestFilter } from './filters/index.ts';
+import type { Network } from './Network.ts';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
   anyFunction,

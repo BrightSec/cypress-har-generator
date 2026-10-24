@@ -1,6 +1,6 @@
 import externals from 'webpack-node-externals';
 import FileManagerPlugin from 'filemanager-webpack-plugin';
-import type { Configuration } from 'webpack';
+import webpack, { type Configuration } from 'webpack';
 import { resolve } from 'node:path';
 
 const base = (extension: 'js' | 'mjs'): Configuration => ({
@@ -13,13 +13,17 @@ const base = (extension: 'js' | 'mjs'): Configuration => ({
   mode: 'production',
   target: 'node',
   resolve: {
-    extensions: ['.ts']
+    extensions: ['.ts'],
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    extensionAlias: { '.js': ['.ts', '.js'] }
   },
   module: {
     parser: {
       javascript: {
         // `Loader` calls `require` at runtime for user files, which must not be bundled
-        createRequire: false
+        createRequire: false,
+        // webpack would otherwise inline the URL of the source file
+        importMeta: { url: false }
       }
     },
     rules: [
@@ -61,6 +65,22 @@ const commonjs: Configuration = {
   name: 'commonjs',
   externals: externals(),
   plugins: [
+    new webpack.DefinePlugin({
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      'import.meta.url': "require('node:url').pathToFileURL(__filename).href"
+    }),
+    {
+      // the package is an ES module package, so the CommonJS build marks its own folder
+      apply: compiler =>
+        compiler.hooks.thisCompilation.tap('CommonjsType', compilation =>
+          compilation.hooks.processAssets.tap('CommonjsType', () =>
+            compilation.emitAsset(
+              'package.json',
+              new compiler.webpack.sources.RawSource('{ "type": "commonjs" }\n')
+            )
+          )
+        )
+    },
     new FileManagerPlugin({
       events: {
         onStart: [
@@ -70,11 +90,16 @@ const commonjs: Configuration = {
               './commands.js',
               './commands.js.map',
               './commands.mjs',
+              './commands.cjs',
               './commands.mjs.map'
             ]
           }
         ],
-        onEnd: [moveCommands('js')]
+        onEnd: [
+          moveCommands('js'),
+          // the require condition needs a CommonJS file, while `commands.js` stays for paths that bypass `exports`
+          { copy: [{ source: './commands.js', destination: './commands.cjs' }] }
+        ]
       }
     })
   ],

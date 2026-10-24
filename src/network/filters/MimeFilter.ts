@@ -1,5 +1,5 @@
-import { NetworkRequest } from '../NetworkRequest';
-import type { RequestFilter, RequestFilterOptions } from './RequestFilter';
+import { NetworkRequest } from '../NetworkRequest.ts';
+import type { RequestFilter, RequestFilterOptions } from './RequestFilter.ts';
 
 export class MimeFilter implements RequestFilter {
   public apply(

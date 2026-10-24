@@ -1,6 +1,6 @@
-import { DefaultNetwork } from './DefaultNetwork';
-import type { Logger } from '../utils/Logger';
-import { TARGET_OR_BROWSER_CLOSED } from './messages';
+import { DefaultNetwork } from './DefaultNetwork.ts';
+import type { Logger } from '../utils/Logger.ts';
+import { TARGET_OR_BROWSER_CLOSED } from './messages.ts';
 import {
   anyFunction,
   anything,
@@ -21,7 +21,7 @@ import {
   it,
   jest
 } from '@jest/globals';
-import type Protocol from 'devtools-protocol';
+import type { Protocol } from 'devtools-protocol';
 
 describe('DefaultNetwork', () => {
   const clientMock = mock<Client>();

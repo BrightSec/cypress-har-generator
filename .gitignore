@@ -6,6 +6,7 @@
 /out-tsc
 commands.js*
 commands.mjs*
+commands.cjs
 
 # dependencies
 /node_modules

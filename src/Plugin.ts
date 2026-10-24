@@ -1,6 +1,6 @@
 /// <reference types="cypress" preserve="true" />
-import { Logger } from './utils/Logger';
-import { FileManager } from './utils/FileManager';
+import { Logger } from './utils/Logger.ts';
+import { FileManager } from './utils/FileManager.ts';
 import type {
   HarExporter,
   HarExporterFactory,
@@ -8,17 +8,25 @@ import type {
   NetworkObserverOptions,
   Observer,
   ObserverFactory
-} from './network';
-import { HarBuilder, NetworkIdleMonitor, NetworkRequest } from './network';
-import { ErrorUtils } from './utils/ErrorUtils';
-import type { Connection, ConnectionFactory, NetworkOptions } from './cdp';
+} from './network/index.ts';
+import {
+  HarBuilder,
+  NetworkIdleMonitor,
+  NetworkRequest
+} from './network/index.ts';
+import { ErrorUtils } from './utils/ErrorUtils.ts';
+import type {
+  Connection,
+  ConnectionFactory,
+  NetworkOptions
+} from './cdp/index.ts';
 import {
   ADDRESS_OPTION_NAME,
   MAX_NETWORK_IDLE_THRESHOLD,
   MAX_NETWORK_IDLE_DURATION,
   PORT_OPTION_NAME,
   SUPPORTED_BROWSERS
-} from './constants';
+} from './constants.ts';
 import { join } from 'node:path';
 import { EOL } from 'node:os';
 import { setTimeout } from 'node:timers/promises';

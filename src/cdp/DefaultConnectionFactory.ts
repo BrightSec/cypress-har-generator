@@ -1,8 +1,11 @@
-import type { ConnectionFactory, ConnectionOptions } from './ConnectionFactory';
-import { RetryStrategy } from './RetryStrategy';
-import type { Connection } from './Connection';
-import { CDPConnection } from './CDPConnection';
-import { Logger } from '../utils/Logger';
+import type {
+  ConnectionFactory,
+  ConnectionOptions
+} from './ConnectionFactory.ts';
+import { RetryStrategy } from './RetryStrategy.ts';
+import type { Connection } from './Connection.ts';
+import { CDPConnection } from './CDPConnection.ts';
+import { Logger } from '../utils/Logger.ts';
 
 export class DefaultConnectionFactory implements ConnectionFactory {
   constructor(private readonly logger: Logger) {}

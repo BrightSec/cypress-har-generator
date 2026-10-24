@@ -1,5 +1,5 @@
-import type { Network } from '../network';
-import type { NetworkOptions } from './NetworkOptions';
+import type { Network } from '../network/index.ts';
+import type { NetworkOptions } from './NetworkOptions.ts';
 
 export interface Connection {
   open(): Promise<void>;

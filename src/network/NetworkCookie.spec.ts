@@ -1,4 +1,4 @@
-import { CookieAttribute, NetworkCookie } from './NetworkCookie';
+import { CookieAttribute, NetworkCookie } from './NetworkCookie.ts';
 import { describe, beforeEach, it, expect } from '@jest/globals';
 
 describe('NetworkCookie', () => {

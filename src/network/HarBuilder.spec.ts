@@ -1,4 +1,4 @@
-import { HarBuilder } from './HarBuilder';
+import { HarBuilder } from './HarBuilder.ts';
 import type { Entry } from 'har-format';
 import { describe, beforeEach, it, expect } from '@jest/globals';
 
@@ -49,7 +49,8 @@ describe('HarBuilder', () => {
         name,
         version,
         homepage: comment
-      } = await import('../../package.json');
+      } = (await import('../../package.json', { with: { type: 'json' } }))
+        .default;
       // act
       const result = builder.build();
       // assert

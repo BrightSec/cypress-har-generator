@@ -1,7 +1,7 @@
-import { Logger } from '../utils/Logger';
-import { RetryStrategy } from './RetryStrategy';
-import { DefaultConnectionFactory } from './DefaultConnectionFactory';
-import { CDPConnection } from './CDPConnection';
+import { Logger } from '../utils/Logger.ts';
+import { RetryStrategy } from './RetryStrategy.ts';
+import { DefaultConnectionFactory } from './DefaultConnectionFactory.ts';
+import { CDPConnection } from './CDPConnection.ts';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 import { instance, mock } from 'ts-mockito';
 

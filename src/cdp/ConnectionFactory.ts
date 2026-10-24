@@ -1,4 +1,4 @@
-import type { Connection } from './Connection';
+import type { Connection } from './Connection.ts';
 
 export interface ConnectionOptions {
   port: number;

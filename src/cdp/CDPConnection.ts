@@ -1,5 +1,5 @@
-import { RetryStrategy } from './RetryStrategy';
-import { Logger } from '../utils/Logger';
+import { RetryStrategy } from './RetryStrategy.ts';
+import { Logger } from '../utils/Logger.ts';
 import {
   ATTEMPT_TO_CONNECT,
   CONNECTED,
@@ -7,12 +7,12 @@ import {
   DISCONNECTED,
   FAILED_ATTEMPT_TO_CONNECT,
   FAILED_TO_CONNECT
-} from './messages';
-import type { Connection } from './Connection';
-import type { Network } from '../network';
-import { DefaultNetwork } from './DefaultNetwork';
-import { ErrorUtils } from '../utils/ErrorUtils';
-import type { NetworkOptions } from './NetworkOptions';
+} from './messages.ts';
+import type { Connection } from './Connection.ts';
+import type { Network } from '../network/index.ts';
+import { DefaultNetwork } from './DefaultNetwork.ts';
+import { ErrorUtils } from '../utils/ErrorUtils.ts';
+import type { NetworkOptions } from './NetworkOptions.ts';
 import CDP, { Version } from 'chrome-remote-interface';
 import type { Client, Options } from 'chrome-remote-interface';
 

@@ -1,4 +1,4 @@
-module.exports = async entry => {
+export default async entry => {
   try {
     if (entry.response.content?.text) {
       entry.response.content = {

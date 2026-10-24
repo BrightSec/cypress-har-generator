@@ -1,4 +1,4 @@
-import { RetryStrategy } from './RetryStrategy';
+import { RetryStrategy } from './RetryStrategy.ts';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 
 const findArg = <R>(
