@@ -1,0 +1,36 @@
+# Temporary: checks self-deleting temp files on Windows, macOS and FreeBSD. Removed before merge.
+name: os-probe
+on:
+  push:
+    branches: [fix/remove-stale-tmp-files]
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      CYPRESS_INSTALL_BINARY: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: node .github/probe/tmpfile.mjs
+      - run: npm ci
+      - run: npx jest src/utils/FileManager.spec.ts src/network/DefaultHarExporter.spec.ts src/Plugin.spec.ts
+  freebsd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: pkg install -y node24
+          run: |
+            node --version
+            uname -a
+            node .github/probe/tmpfile.mjs
