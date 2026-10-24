@@ -5,6 +5,7 @@
 /tmp
 /out-tsc
 commands.js*
+commands.mjs*
 
 # dependencies
 /node_modules
