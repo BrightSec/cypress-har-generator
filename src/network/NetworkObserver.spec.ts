@@ -6,6 +6,7 @@ import type { Network } from './Network';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
   anyFunction,
+  anyString,
   anything,
   instance,
   mock,
@@ -405,6 +406,32 @@ describe('NetworkObserver', () => {
           `Failed request: 1. Reason: ${loadingFailedEvent.params.errorText}`
         )
       ).once();
+    });
+
+    it('should finish the open requests of a detached target', async () => {
+      // arrange
+      when(networkMock.getRequestBody(anyString())).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb({ ...requestWillBeSentEvent, sessionId: '2' });
+        await cb({
+          ...requestWillBeSentEvent,
+          params: { ...requestWillBeSentEvent.params, requestId: '3' },
+          sessionId: '4'
+        });
+        await cb({
+          method: 'Target.detachedFromTarget',
+          params: { sessionId: '2', targetId: '1' }
+        });
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ requestId: '1' })
+      );
     });
 
     it('should load a response body when content is enabled', async () => {

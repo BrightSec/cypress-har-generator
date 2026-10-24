@@ -3,7 +3,8 @@ import type ProtocolMappingApi from 'devtools-protocol/types/protocol-mapping';
 
 export type NetworkEvents = Pick<
   ProtocolMappingApi.Events,
-  `Network.${string}` & keyof ProtocolMappingApi.Events
+  | (`Network.${string}` & keyof ProtocolMappingApi.Events)
+  | 'Target.detachedFromTarget'
 >;
 export type NetworkEventParams<T extends keyof NetworkEvents> =
   NetworkEvents[T][0];

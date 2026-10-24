@@ -10,6 +10,10 @@ import type { Header } from 'har-format';
 
 export class NetworkObserver implements Observer<NetworkRequest> {
   private readonly _entries: Map<Protocol.Network.RequestId, NetworkRequest>;
+  private readonly _sessions = new Map<
+    Protocol.Network.RequestId,
+    string | undefined
+  >();
   private readonly _extraInfoBuilders: Map<
     Protocol.Network.RequestId,
     ExtraInfoBuilder
@@ -48,6 +52,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     delete this.destination;
     this._entries.clear();
     this._extraInfoBuilders.clear();
+    this._sessions.clear();
   }
 
   public signedExchangeReceived(
@@ -203,6 +208,28 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
     const message = errorText || (canceled && 'Canceled');
     this.logger.debug(`Failed request: ${requestId}. Reason: ${message}`);
+  }
+
+  // Chrome sends no further events for the requests of a target that is gone, e.g. a terminated worker
+  public detachedFromTarget({
+    sessionId
+  }: Protocol.Target.DetachedFromTargetEvent): void {
+    for (const [requestId, session] of this._sessions) {
+      const entry = this._entries.get(requestId);
+
+      if (session !== sessionId || !entry) {
+        continue;
+      }
+
+      this.finishRequest(
+        entry,
+        Math.max(entry.issueTime, entry.responseReceivedTime, entry.endTime),
+        -1
+      );
+      this.logger.debug(
+        `Failed request: ${requestId}. Reason: the target has been detached`
+      );
+    }
   }
 
   public webSocketCreated({
@@ -438,7 +465,10 @@ export class NetworkObserver implements Observer<NetworkRequest> {
       networkRequest
         .waitForCompletion()
         .then(() => this.destination?.(networkRequest))
-        .finally(() => this._entries.delete(networkRequest.requestId));
+        .finally(() => {
+          this._entries.delete(networkRequest.requestId);
+          this._sessions.delete(networkRequest.requestId);
+        });
     }
   }
 
@@ -573,6 +603,17 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
   private handleEvent({ method, params, sessionId }: NetworkEvent): void {
     const methodName = method.substring(method.indexOf('.') + 1);
+
+    if (
+      methodName === 'requestWillBeSent' ||
+      methodName === 'webSocketCreated'
+    ) {
+      const { requestId } = params as
+        | Protocol.Network.RequestWillBeSentEvent
+        | Protocol.Network.WebSocketCreatedEvent;
+
+      this._sessions.set(requestId, sessionId);
+    }
 
     if (typeof (this as any)[methodName] === 'function') {
       (this as any)[methodName](params, sessionId);
