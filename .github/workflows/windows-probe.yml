@@ -22,6 +22,6 @@ jobs:
           npm start > server.log 2>&1 &
           for i in $(seq 120); do curl -sf http://localhost:8080/ >/dev/null && break; sleep 1; done
           before=$(ls "$RUNNER_TEMP" "$TEMP" 2>/dev/null | grep -cE '^[0-9a-f]{16}$' || true)
-          npx cypress run --browser chrome --headless --spec 'cypress/e2e/record-har.cy.ts,cypress/e2e/save-har.cy.ts'
+          ELECTRON_EXTRA_LAUNCH_ARGS=--remote-debugging-port=9223 npx cypress run --browser electron --spec 'cypress/e2e/record-har.cy.ts,cypress/e2e/save-har.cy.ts'
           after=$(ls "$RUNNER_TEMP" "$TEMP" 2>/dev/null | grep -cE '^[0-9a-f]{16}$' || true)
           echo "RESULT temp files before=$before after=$after"
