@@ -5,6 +5,7 @@ import type { DefaultHarExporterOptions } from './DefaultHarExporterOptions';
 import {
   anyFunction,
   anyString,
+  anything,
   instance,
   match,
   mock,
@@ -15,10 +16,12 @@ import {
 } from 'ts-mockito';
 import type { Entry } from 'har-format';
 import { beforeEach, describe, it, jest, expect } from '@jest/globals';
-import type { WriteStream } from 'node:fs';
+import type { Stats, WriteStream } from 'node:fs';
+import type { FileHandle } from 'node:fs/promises';
 import { EOL } from 'node:os';
 
 describe('DefaultHarExporter', () => {
+  const fileMock = mock<FileHandle>();
   const streamMock = mock<WriteStream>();
   const loggerMock = mock<Logger>();
   const networkRequest = new NetworkRequest(
@@ -37,10 +40,13 @@ describe('DefaultHarExporter', () => {
   beforeEach(() => {
     options = {};
     optionsSpy = spy(options);
+    when(fileMock.createWriteStream(anything())).thenReturn(
+      instance(streamMock)
+    );
 
     harExporter = new DefaultHarExporter(
       instance(loggerMock),
-      instance(streamMock),
+      instance(fileMock),
       options
     );
   });
@@ -48,33 +54,29 @@ describe('DefaultHarExporter', () => {
   afterEach(() => {
     predicate.mockRestore();
     transform.mockRestore();
-    reset<DefaultHarExporterOptions | WriteStream | Logger>(
+    reset<DefaultHarExporterOptions | FileHandle | WriteStream | Logger>(
+      fileMock,
       streamMock,
       optionsSpy,
       loggerMock
     );
   });
 
-  describe('path', () => {
-    it('should return the path serializing buffer', () => {
+  describe('read', () => {
+    it('should read the whole file', async () => {
       // arrange
-      const expected = '/path/file';
-      when(streamMock.path).thenReturn(Buffer.from(expected));
+      const expected = 'entry';
+      when(fileMock.stat()).thenResolve({ size: expected.length } as Stats);
+      when(fileMock.read(anything(), 0, expected.length, 0)).thenCall(
+        (buffer: Buffer) => {
+          const bytesRead = buffer.write(expected);
+
+          return Promise.resolve({ buffer, bytesRead });
+        }
+      );
 
       // act
-      const result = harExporter.path;
-
-      // assert
-      expect(result).toBe(expected);
-    });
-
-    it('should return the path', () => {
-      // arrange
-      const expected = '/path/file';
-      when(streamMock.path).thenReturn(expected);
-
-      // act
-      const result = harExporter.path;
+      const result = await harExporter.read();
 
       // assert
       expect(result).toBe(expected);

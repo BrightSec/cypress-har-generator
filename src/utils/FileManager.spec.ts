@@ -1,49 +1,22 @@
 import { FileManager } from './FileManager';
-import { describe, beforeEach, it, expect, jest } from '@jest/globals';
+import { describe, beforeEach, it, expect } from '@jest/globals';
 import { randomBytes } from 'node:crypto';
-import { basename, dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { constants, WriteStream } from 'node:fs';
-import { access, utimes } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { access } from 'node:fs/promises';
 
 describe('FileManager', () => {
   let path!: string;
 
   const data = 'test data';
-  const staleTime = new Date(Date.now() - 2 * 60 * 60 * 1000);
-  const pid = 4242;
   const sut = FileManager.Instance;
-
-  const stubProcess = (alive: boolean) =>
-    jest.spyOn(process, 'kill').mockImplementation(() => {
-      if (!alive) {
-        throw Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
-      }
-
-      return true;
-    });
-
-  const stubExitHandlers = () => {
-    const handlers = new Map<string, () => void>();
-    jest
-      .spyOn(process, 'once')
-      .mockImplementation((event: string | symbol, listener: () => void) => {
-        handlers.set(event.toString(), listener);
-
-        return process;
-      });
-
-    return handlers;
-  };
 
   beforeEach(() => {
     path = join(tmpdir(), randomBytes(16).toString('hex').substring(16));
   });
 
-  afterEach(async () => {
-    jest.restoreAllMocks();
-    await sut.removeFile(path);
-  });
+  afterEach(() => sut.removeFile(path));
 
   describe('readFile', () => {
     it('should return the contents of a file', async () => {
@@ -139,106 +112,29 @@ describe('FileManager', () => {
     });
   });
 
-  describe('createTmpWriteStream', () => {
-    it('should create a new write stream', async () => {
+  describe('createTmpFile', () => {
+    it('should create a temp file that can be written and read', async () => {
+      // arrange
+      const file = await sut.createTmpFile();
+      await file.write(data);
       // act
-      const stream = await sut.createTmpWriteStream();
-      // assert
-      expect(stream).toBeInstanceOf(WriteStream);
-    });
-
-    it('should create a new temp file', async () => {
-      // act
-      const stream = await sut.createTmpWriteStream();
-      // assert
-      await expect(
-        access(stream.path, constants.F_OK)
-      ).resolves.not.toThrowError();
-    });
-
-    it('should create the temp file in its own folder', async () => {
-      // act
-      const stream = await sut.createTmpWriteStream();
-      // assert
-      expect(basename(dirname(stream.path as string))).toMatch(
-        /^cypress-har-generator/
+      const { buffer, bytesRead } = await file.read(
+        Buffer.alloc(data.length),
+        0,
+        data.length,
+        0
       );
+      // assert
+      expect(buffer.toString('utf-8', 0, bytesRead)).toBe(data);
+      await file.close();
     });
 
-    it('should remove a stale temp file of a terminated process', async () => {
-      // arrange
-      const stream = await sut.createTmpWriteStream();
-      path = join(dirname(stream.path as string), `${pid}-0123456789abcdef`);
-      await sut.writeFile(path, data);
-      await utimes(path, staleTime, staleTime);
-      stubProcess(false);
+    it('should leave no temp file on disk', async () => {
       // act
-      await new FileManager().createTmpWriteStream();
+      const file = await sut.createTmpFile();
       // assert
-      await expect(access(path, constants.F_OK)).rejects.toThrow();
-    });
-
-    it('should keep a fresh temp file of a terminated process', async () => {
-      // arrange
-      const stream = await sut.createTmpWriteStream();
-      path = join(dirname(stream.path as string), `${pid}-0123456789abcdef`);
-      await sut.writeFile(path, data);
-      stubProcess(false);
-      // act
-      await new FileManager().createTmpWriteStream();
-      // assert
-      await expect(access(path, constants.F_OK)).resolves.not.toThrowError();
-    });
-
-    it('should keep a stale temp file of a running process', async () => {
-      // arrange
-      const stream = await sut.createTmpWriteStream();
-      path = join(dirname(stream.path as string), `${pid}-0123456789abcdef`);
-      await sut.writeFile(path, data);
-      await utimes(path, staleTime, staleTime);
-      stubProcess(true);
-      // act
-      await new FileManager().createTmpWriteStream();
-      // assert
-      await expect(access(path, constants.F_OK)).resolves.not.toThrowError();
-    });
-
-    it('should remove its temp files when the process exits', async () => {
-      // arrange
-      const handlers = stubExitHandlers();
-      path = (await new FileManager().createTmpWriteStream()).path as string;
-      // act
-      handlers.get('exit')?.();
-      // assert
-      await expect(access(path, constants.F_OK)).rejects.toThrow();
-    });
-
-    it.each(['SIGINT', 'SIGTERM', 'SIGHUP'])(
-      'should remove its temp files and re-raise %s',
-      async signal => {
-        // arrange
-        const handlers = stubExitHandlers();
-        const kill = jest.spyOn(process, 'kill').mockReturnValue(true);
-        jest.spyOn(process, 'listenerCount').mockReturnValue(0);
-        path = (await new FileManager().createTmpWriteStream()).path as string;
-        // act
-        handlers.get(signal)?.();
-        // assert
-        await expect(access(path, constants.F_OK)).rejects.toThrow();
-        expect(kill).toHaveBeenCalledWith(process.pid, signal);
-      }
-    );
-
-    it('should not re-raise a signal that another listener handles', async () => {
-      // arrange
-      const handlers = stubExitHandlers();
-      const kill = jest.spyOn(process, 'kill').mockReturnValue(true);
-      jest.spyOn(process, 'listenerCount').mockReturnValue(1);
-      path = (await new FileManager().createTmpWriteStream()).path as string;
-      // act
-      handlers.get('SIGTERM')?.();
-      // assert
-      expect(kill).not.toHaveBeenCalledWith(process.pid, 'SIGTERM');
+      await expect(file.stat()).resolves.toMatchObject({ nlink: 0 });
+      await file.close();
     });
   });
 });

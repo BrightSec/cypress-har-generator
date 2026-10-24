@@ -1,4 +1,4 @@
-# Temporary: checks temp file cleanup on Windows. Removed before merge.
+# Temporary: checks self-deleting temp files on Windows. Removed before merge.
 name: windows-probe
 on:
   push:
@@ -13,22 +13,14 @@ jobs:
         with:
           node-version-file: .node-version
       - run: npm ci
-      - run: node .github/probe/temporary.mjs
-        continue-on-error: true
-      - run: npx jest
-        continue-on-error: true
-      - run: node .github/probe/node.mjs
-      - name: Start app
+      - run: npx jest src/utils src/network/DefaultHarExporter.spec.ts src/Plugin.spec.ts
+      - run: npm run build
+      - name: e2e
         shell: bash
         run: |
           npm start > server.log 2>&1 &
-          for i in $(seq 120); do curl -sf http://localhost:8080/ >/dev/null && exit 0; sleep 1; done
-          cat server.log; exit 1
-      - run: node .github/probe/cypress.mjs clean
-        continue-on-error: true
-      - run: node .github/probe/cypress.mjs twice
-        continue-on-error: true
-      - run: node .github/probe/cypress.mjs kill-main
-        continue-on-error: true
-      - run: node .github/probe/cypress.mjs kill-plugin
-        continue-on-error: true
+          for i in $(seq 120); do curl -sf http://localhost:8080/ >/dev/null && break; sleep 1; done
+          before=$(ls "$RUNNER_TEMP" "$TEMP" 2>/dev/null | grep -cE '^[0-9a-f]{16}$' || true)
+          npx cypress run --browser chrome --headless --spec 'cypress/e2e/record-har.cy.ts,cypress/e2e/save-har.cy.ts'
+          after=$(ls "$RUNNER_TEMP" "$TEMP" 2>/dev/null | grep -cE '^[0-9a-f]{16}$' || true)
+          echo "RESULT temp files before=$before after=$after"

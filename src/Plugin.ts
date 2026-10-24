@@ -150,7 +150,6 @@ export class Plugin {
 
     if (this.exporter) {
       this.exporter.end();
-      await this.fileManager.removeFile(this.exporter.path);
       delete this.exporter;
     }
   }
@@ -174,7 +173,7 @@ Please refer to the documentation:
 
   private async buildHar(): Promise<string | undefined> {
     if (this.exporter) {
-      const content = await this.fileManager.readFile(this.exporter.path);
+      const content = await this.exporter.read();
 
       if (content) {
         const entries = content

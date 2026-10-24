@@ -12,7 +12,6 @@ import { NetworkRequest } from './network';
 import type { Connection, ConnectionFactory } from './cdp';
 import {
   anyFunction,
-  anyString,
   anything,
   deepEqual,
   instance,
@@ -279,15 +278,12 @@ describe('Plugin', () => {
       when(harExporterFactoryMock.create(anything())).thenResolve(
         resolvableInstance(harExporterMock)
       );
-      when(harExporterMock.path).thenReturn('temp-file.txt');
       plugin.ensureBrowserFlags(chrome, []);
       await plugin.recordHar({
         rootDir: '/'
       });
 
-      when(fileManagerMock.readFile(anyString())).thenResolve(
-        JSON.stringify(entry)
-      );
+      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
       // act
       await plugin.saveHar({
         ...options,
@@ -308,15 +304,12 @@ describe('Plugin', () => {
       when(harExporterFactoryMock.create(anything())).thenResolve(
         resolvableInstance(harExporterMock)
       );
-      when(harExporterMock.path).thenReturn('temp-file.txt');
       plugin.ensureBrowserFlags(chrome, []);
       await plugin.recordHar({
         rootDir: '/'
       });
 
-      when(fileManagerMock.readFile(anyString())).thenResolve(
-        JSON.stringify(entry)
-      );
+      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
       // act
       await plugin.saveHar(options);
       // assert
@@ -339,13 +332,12 @@ describe('Plugin', () => {
       when(harExporterFactoryMock.create(anything())).thenResolve(
         resolvableInstance(harExporterMock)
       );
-      when(harExporterMock.path).thenReturn('temp-file.txt');
       plugin.ensureBrowserFlags(chrome, []);
       await plugin.recordHar({
         rootDir: '/'
       });
 
-      when(fileManagerMock.readFile(anyString())).thenThrow(
+      when(harExporterMock.read()).thenReject(
         new Error('something went wrong')
       );
       // act
@@ -388,21 +380,16 @@ describe('Plugin', () => {
       when(harExporterFactoryMock.create(anything())).thenResolve(
         resolvableInstance(harExporterMock)
       );
-      const tempFilePath = 'temp-file.txt';
-      when(harExporterMock.path).thenReturn(tempFilePath);
       plugin.ensureBrowserFlags(chrome, []);
       await plugin.recordHar({
         rootDir: '/'
       });
 
-      when(fileManagerMock.readFile(anyString())).thenResolve(
-        JSON.stringify(entry)
-      );
+      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
       // act
       await plugin.saveHar(options);
       // assert
       verify(harExporterMock.end()).once();
-      verify(fileManagerMock.removeFile(tempFilePath)).once();
     });
 
     it('should be a no-op if an unsupported browser family is used', async () => {
@@ -477,14 +464,12 @@ describe('Plugin', () => {
       when(harExporterFactoryMock.create(anything())).thenResolve(
         resolvableInstance(harExporterMock)
       );
-      when(harExporterMock.path).thenReturn('temp-file.txt');
       plugin.ensureBrowserFlags(chrome, []);
       await plugin.recordHar(options);
       // act
       await plugin.recordHar(options);
       // assert
       verify(harExporterMock.end()).once();
-      verify(fileManagerMock.removeFile('temp-file.txt')).once();
     });
 
     it('should pass an entry to a exporter', async () => {
@@ -558,7 +543,6 @@ describe('Plugin', () => {
       when(harExporterFactoryMock.create(anything())).thenResolve(
         resolvableInstance(harExporterMock)
       );
-      when(harExporterMock.path).thenReturn('temp-file.txt');
     });
 
     it('should dispose of a exporter', async () => {
