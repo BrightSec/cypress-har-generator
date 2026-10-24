@@ -4,6 +4,7 @@ import { FileManager } from './utils/FileManager';
 import { DefaultConnectionFactory } from './cdp';
 import { DefaultHarExporterFactory, DefaultObserverFactory } from './network';
 import { StringUtils } from './utils/StringUtils';
+import { ConfigUtils } from './utils/ConfigUtils';
 import type { RecordOptions, SaveOptions } from './Plugin';
 
 declare global {
@@ -79,7 +80,7 @@ export const enableExperimentalLifecycle = (
     on('after:spec', (spec: Cypress.Spec, _: CypressCommandLine.RunResult) =>
       plugin.saveHar({
         fileName: StringUtils.normalizeName(spec.name, { ext: '.har' }),
-        outDir: config.env.hars_folders ?? '.'
+        outDir: ConfigUtils.fromNode<string>(config, 'hars_folders') ?? '.'
       })
     );
   }
