@@ -9,11 +9,37 @@
   },
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./commands": {
+      "import": {
+        "types": "./commands.d.mts",
+        "default": "./commands.mjs"
+      },
+      "require": {
+        "types": "./commands.d.ts",
+        "default": "./commands.js"
+      }
+    },
+    "./*": "./*"
+  },
   "files": [
     "dist",
     "commands.js",
     "commands.js.map",
-    "commands.d.ts"
+    "commands.mjs",
+    "commands.mjs.map",
+    "commands.d.ts",
+    "commands.d.mts"
   ],
   "author": {
     "name": "Artem Derevnjuk",
