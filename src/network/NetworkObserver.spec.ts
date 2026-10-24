@@ -739,6 +739,57 @@ describe('NetworkObserver', () => {
         })
       );
     });
+
+    it('should not apply the extra info of an unseen redirect to the redirected request', async () => {
+      // arrange
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentExtraInfoEvent);
+        await cb({
+          ...responseReceivedExtraInfoEvent,
+          params: {
+            ...responseReceivedExtraInfoEvent.params,
+            headers: { Location: 'http://localhost:8080' },
+            statusCode: 302
+          }
+        });
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            redirectHasExtraInfo: true,
+            redirectResponse: {
+              ...response,
+              status: 302,
+              statusText: 'Found',
+              headers: { Location: 'http://localhost:8080' }
+            }
+          }
+        });
+        await cb(requestWillBeSentExtraInfoEvent);
+        await cb(responseReceivedExtraInfoEvent);
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          responseHeaders: [
+            {
+              name: 'Transfer-Encoding',
+              value: 'chunked'
+            }
+          ],
+          statusCode: 200,
+          requestId: '1'
+        })
+      );
+    });
   });
 
   describe('unsubscribe', () => {
