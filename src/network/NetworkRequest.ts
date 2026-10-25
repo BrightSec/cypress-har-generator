@@ -622,6 +622,7 @@ export class NetworkRequest {
 
   public addExtraRequestInfo(extraRequestInfo: RequestExtraInfo): void {
     this.requestHeaders = extraRequestInfo.requestHeaders;
+    this._requestCookies = extraRequestInfo.requestCookies;
     this._hasExtraRequestInfo = true;
     this.requestHeadersText = '';
   }

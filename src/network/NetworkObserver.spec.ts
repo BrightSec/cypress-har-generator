@@ -1,5 +1,6 @@
 import { Logger } from '../utils/Logger';
 import { NetworkObserver } from './NetworkObserver';
+import type { NetworkRequest } from './NetworkRequest';
 import type { NetworkObserverOptions } from './NetworkObserverOptions';
 import type { RequestFilter } from './filters';
 import type { Network } from './Network';
@@ -653,6 +654,70 @@ describe('NetworkObserver', () => {
           requestId: '1'
         })
       );
+    });
+
+    it('should take the request cookies with their attributes from the request extra info', async () => {
+      // arrange
+      const cookie = {
+        domain: 'localhost',
+        path: '/',
+        expires: 1767225600,
+        size: 2,
+        httpOnly: true,
+        secure: true,
+        session: false,
+        sameSite: 'Lax',
+        priority: 'Medium',
+        sourceScheme: 'Secure',
+        sourcePort: 8080
+      };
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb({
+          ...requestWillBeSentExtraInfoEvent,
+          params: {
+            ...requestWillBeSentExtraInfoEvent.params,
+            headers: { Cookie: 'a=1; b=2' },
+            associatedCookies: [
+              {
+                cookie: { ...cookie, name: 'a', value: '1' },
+                blockedReasons: []
+              },
+              {
+                cookie: { ...cookie, name: 'b', value: '2' },
+                blockedReasons: ['SameSiteStrict']
+              }
+            ]
+          }
+        });
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      const [request]: NetworkRequest[] = callback.mock.calls[0] as any;
+      expect(
+        request.requestCookies?.map(c => ({
+          name: c.name,
+          value: c.value,
+          domain: c.domain,
+          path: c.path,
+          httpOnly: c.httpOnly,
+          secure: c.secure,
+          expires: c.expiresDate(new Date())?.toJSON()
+        }))
+      ).toEqual([
+        {
+          name: 'a',
+          value: '1',
+          domain: 'localhost',
+          path: '/',
+          httpOnly: true,
+          secure: true,
+          expires: '2026-01-01T00:00:00.000Z'
+        }
+      ]);
     });
 
     it('should handle a response extra info coming before browser events', async () => {
