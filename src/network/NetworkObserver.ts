@@ -443,7 +443,13 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   }
 
   private loadContent(networkRequest: NetworkRequest): void {
-    if (networkRequest.mimeType && this.options.content) {
+    // A response without a Content-Type has an empty mime type but still has a body,
+    // while a redirect has none: Chrome keeps only the body of the final response.
+    if (
+      this.options.content &&
+      networkRequest.mimeType !== undefined &&
+      !networkRequest.isRedirect()
+    ) {
       networkRequest.setContentData(
         this.network.getResponseBody(networkRequest.requestId)
       );
