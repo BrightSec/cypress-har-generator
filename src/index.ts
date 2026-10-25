@@ -1,11 +1,9 @@
 import { Plugin } from './Plugin.ts';
 import { Logger } from './utils/Logger.ts';
 import { FileManager } from './utils/FileManager.ts';
-import { DefaultConnectionFactory } from './cdp/index.ts';
-import {
-  DefaultHarExporterFactory,
-  DefaultObserverFactory
-} from './network/index.ts';
+import { DefaultConnectionFactory } from './cdp/DefaultConnectionFactory.ts';
+import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.ts';
+import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
 import { ConfigUtils } from './utils/ConfigUtils.ts';
 import { HARS_FOLDER_KEYS } from './constants.ts';

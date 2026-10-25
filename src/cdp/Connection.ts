@@ -1,4 +1,4 @@
-import type { Network } from '../network/index.ts';
+import type { Network } from '../network/Network.ts';
 import type { NetworkOptions } from './NetworkOptions.ts';
 
 export interface Connection {

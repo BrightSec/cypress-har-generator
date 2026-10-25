@@ -2,7 +2,7 @@ import { Logger } from '../utils/Logger.ts';
 import { NetworkObserver } from './NetworkObserver.ts';
 import type { NetworkRequest } from './NetworkRequest.ts';
 import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
-import type { RequestFilter } from './filters/index.ts';
+import type { RequestFilter } from './filters/RequestFilter.ts';
 import type { Network } from './Network.ts';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {

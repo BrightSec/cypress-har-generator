@@ -1,25 +1,21 @@
 /// <reference types="cypress" preserve="true" />
 import { Logger } from './utils/Logger.ts';
 import { FileManager } from './utils/FileManager.ts';
+import type { HarExporter } from './network/HarExporter.ts';
 import type {
-  HarExporter,
   HarExporterFactory,
-  HarExporterOptions,
-  NetworkObserverOptions,
-  Observer,
-  ObserverFactory
-} from './network/index.ts';
-import {
-  HarBuilder,
-  NetworkIdleMonitor,
-  NetworkRequest
-} from './network/index.ts';
+  HarExporterOptions
+} from './network/HarExporterFactory.ts';
+import type { NetworkObserverOptions } from './network/NetworkObserverOptions.ts';
+import type { Observer } from './network/Observer.ts';
+import type { ObserverFactory } from './network/ObserverFactory.ts';
+import { HarBuilder } from './network/HarBuilder.ts';
+import { NetworkIdleMonitor } from './network/NetworkIdleMonitor.ts';
+import { NetworkRequest } from './network/NetworkRequest.ts';
 import { ErrorUtils } from './utils/ErrorUtils.ts';
-import type {
-  Connection,
-  ConnectionFactory,
-  NetworkOptions
-} from './cdp/index.ts';
+import type { Connection } from './cdp/Connection.ts';
+import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
+import type { NetworkOptions } from './cdp/NetworkOptions.ts';
 import {
   ADDRESS_OPTION_NAME,
   MAX_NETWORK_IDLE_THRESHOLD,

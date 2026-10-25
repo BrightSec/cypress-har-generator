@@ -4,7 +4,7 @@ import { ExtraInfoBuilder } from './ExtraInfoBuilder.ts';
 import { CookieAttribute, NetworkCookie } from './NetworkCookie.ts';
 import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
 import type { Observer } from './Observer.ts';
-import type { RequestFilter } from './filters/index.ts';
+import type { RequestFilter } from './filters/RequestFilter.ts';
 import type { Network, NetworkEvent } from './Network.ts';
 import type { Protocol } from 'devtools-protocol';
 import type { Header } from 'har-format';

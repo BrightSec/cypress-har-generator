@@ -2,14 +2,13 @@ import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { Plugin } from './Plugin.ts';
 import type { Logger } from './utils/Logger.ts';
 import type { FileManager } from './utils/FileManager.ts';
-import type {
-  Observer,
-  ObserverFactory,
-  HarExporter,
-  HarExporterFactory
-} from './network/index.ts';
-import { NetworkRequest } from './network/index.ts';
-import type { Connection, ConnectionFactory } from './cdp/index.ts';
+import type { Observer } from './network/Observer.ts';
+import type { ObserverFactory } from './network/ObserverFactory.ts';
+import type { HarExporter } from './network/HarExporter.ts';
+import type { HarExporterFactory } from './network/HarExporterFactory.ts';
+import { NetworkRequest } from './network/NetworkRequest.ts';
+import type { Connection } from './cdp/Connection.ts';
+import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
 import {
   anyFunction,
   anything,

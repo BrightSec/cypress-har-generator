@@ -1,7 +1,7 @@
 import { NetworkObserver } from './NetworkObserver.ts';
 import { Logger } from '../utils/Logger.ts';
 import { NetworkRequest } from './NetworkRequest.ts';
-import { CompositeFilter } from './filters/index.ts';
+import { CompositeFilter } from './filters/CompositeFilter.ts';
 import type { ObserverFactory } from './ObserverFactory.ts';
 import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
 import type { Observer } from './Observer.ts';

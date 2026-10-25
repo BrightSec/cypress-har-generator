@@ -9,7 +9,7 @@ import {
   FAILED_TO_CONNECT
 } from './messages.ts';
 import type { Connection } from './Connection.ts';
-import type { Network } from '../network/index.ts';
+import type { Network } from '../network/Network.ts';
 import { DefaultNetwork } from './DefaultNetwork.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type { NetworkOptions } from './NetworkOptions.ts';

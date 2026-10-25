@@ -1,4 +1,4 @@
-import type { Network, NetworkEvent } from '../network/index.ts';
+import type { Network, NetworkEvent } from '../network/Network.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type { Logger } from '../utils/Logger.ts';
 import {
