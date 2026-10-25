@@ -18,6 +18,19 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   private destination?: (chromeEntry: NetworkRequest) => unknown;
 
   get empty(): boolean {
+    if (this._entries.size && process.env.PROBE_OPEN) {
+      // eslint-disable-next-line no-console
+      console.log(
+        'PROBE open:',
+        [...this._entries.values()]
+          .map(
+            r =>
+              `${r.requestId} ${r.url.slice(0, 80)} status=${r.statusCode} res=${r.resourceSize} end=${r.endTime}`
+          )
+          .join(' | ')
+      );
+    }
+
     return this._entries.size === 0;
   }
 
@@ -67,7 +80,13 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     this.updateNetworkRequestWithResponse(entry, params.info.outerResponse);
   }
 
-  public requestWillBeSent({
+  public requestWillBeSent(e: Protocol.Network.RequestWillBeSentEvent): void {
+    // eslint-disable-next-line no-console
+    if (process.env.PROBE_OPEN && e.request.url.includes('keys')) console.log('PROBE start', Date.now(), e.timestamp);
+    this.requestWillBeSent0(e);
+  }
+
+  public requestWillBeSent0({
     type,
     loaderId,
     initiator,
@@ -443,8 +462,12 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     this.getExtraInfoBuilder(networkRequest.requestId).finished();
 
     if (!this.shouldExcludeRequest(networkRequest)) {
+      const t0 = Date.now();
+      // eslint-disable-next-line no-console
+      if (process.env.PROBE_OPEN && networkRequest.url.includes('keys')) console.log('PROBE finish', t0, networkRequest.endTime);
       networkRequest
         .waitForCompletion()
+        .then(() => { if (process.env.PROBE_OPEN && networkRequest.url.includes('keys')) console.log('PROBE body ms', Date.now() - t0); })
         .then(() => this.destination?.(networkRequest))
         .finally(() => this._entries.delete(networkRequest.requestId));
     }

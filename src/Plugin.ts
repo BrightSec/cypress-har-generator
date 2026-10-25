@@ -122,15 +122,20 @@ export class Plugin {
     try {
       await this.fileManager.createFolder(options.outDir);
 
+      const t0 = Date.now();
       if (options.waitForIdle) {
         await this.waitForNetworkIdle(options);
       }
+      const t1 = Date.now();
 
       const har: string | undefined = await this.buildHar();
+      const t2 = Date.now();
 
       if (har) {
         await this.fileManager.writeFile(filePath, har);
       }
+      // eslint-disable-next-line no-console
+      if (process.env.PROBE_OPEN) console.log('PROBE save', t0, 'idle', t1 - t0, 'build', t2 - t1, 'write', Date.now() - t2, 'len', har?.length);
     } catch (e) {
       const message = ErrorUtils.isError(e) ? e.message : e;
       this.logger.err(

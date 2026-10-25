@@ -48,9 +48,7 @@ jobs:
       matrix:
         cypress: ['default', '15', '14']
         suite: ['default']
-        include:
-          - cypress: 'default'
-            suite: 'lifecycle'
+        run: [1, 2]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,8 +69,8 @@ jobs:
           wait-on-timeout: 120
           start: npm start
           browser: chrome
-          config-file: ${{ matrix.suite == 'lifecycle' && 'cypress.lifecycle.config.ts' || 'cypress.config.ts' }}
-          record: ${{ matrix.cypress == 'default' && matrix.suite == 'default' && github.repository == 'BrightSec/cypress-har-generator' }}
+          config-file: cypress.probe.config.ts
+          record: false
         env:
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          PROBE_OPEN: '1'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
