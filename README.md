@@ -55,10 +55,10 @@ Setting up the plugin takes two steps: installing it in the Cypress config, and 
 Update your `cypress.config.js` file as follows:
 
 ```js
-const { defineConfig } = require('cypress');
-const { install } = require('@neuralegion/cypress-har-generator');
+import { defineConfig } from 'cypress';
+import { install } from '@neuralegion/cypress-har-generator';
 
-module.exports = defineConfig({
+export default defineConfig({
   e2e: {
     setupNodeEvents(on) {
       install(on);
@@ -66,6 +66,8 @@ module.exports = defineConfig({
   }
 });
 ```
+
+> ✴ The plugin ships both ES modules and CommonJS, so a CommonJS config can load it with `require('@neuralegion/cypress-har-generator')` instead.
 
 > ✴ `setupNodeEvents` can be defined in either the e2e or component configuration
 
@@ -82,13 +84,13 @@ module.exports = defineConfig({
 > ⚠ Please note that the `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
 >
 > ```js
-> const { defineConfig } = require('cypress');
-> const {
+> import { defineConfig } from 'cypress';
+> import {
 >   install,
 >   ensureBrowserFlags
-> } = require('@neuralegion/cypress-har-generator');
+> } from '@neuralegion/cypress-har-generator';
 >
-> module.exports = defineConfig({
+> export default defineConfig({
 >   e2e: {
 >     setupNodeEvents(on) {
 >       install(on);
@@ -304,7 +306,12 @@ The function should take an Entry object as a parameter and return the modified.
 
 In this example, the transform function will replace any occurrences of password with `***` in the request body of each entry.
 
-> ✴ The plugin also supports files with `.js`, `.mjs` and `.cjs` extensions.
+> ✴ The plugin also supports files with `.js`, `.mjs` and `.cjs` extensions, written as ES modules or CommonJS. For example, the same filter as a CommonJS module, `include-password.cjs`:
+>
+> ```js
+> module.exports = entry =>
+>   /\"password":/.test(entry.request.postData?.text ?? '');
+> ```
 
 By default, the path is relative to the spec folder. But by providing a `rootDir` it will look for the module in the provided directory:
 
@@ -427,13 +434,13 @@ describe('my tests', () => {
 If you're using Cypress version 6.2.0 or higher, you can set up hooks in a single step, eliminating the need to define them in each spec file. To do this, you need to call `enableExperimentalLifecycle` in addition to `install` as shown below:
 
 ```js
-const { defineConfig } = require('cypress');
-const {
+import { defineConfig } from 'cypress';
+import {
   install,
   enableExperimentalLifecycle
-} = require('@neuralegion/cypress-har-generator');
+} from '@neuralegion/cypress-har-generator';
 
-module.exports = defineConfig({
+export default defineConfig({
   e2e: {
     setupNodeEvents(on, config) {
       install(on);
