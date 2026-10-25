@@ -90,7 +90,9 @@ export class EntryBuilder {
       headers: this.request.requestHeaders,
       queryString: [...(this.request.queryParameters ?? [])],
       cookies: this.buildCookies(this.request.requestCookies ?? []),
-      headersSize: this.request.requestHeadersText?.length ?? -1,
+      headersSize: this.request.requestHeadersText
+        ? this.request.requestHeadersText.length
+        : -1,
       bodySize: await this.requestBodySize()
     };
 
@@ -112,7 +114,9 @@ export class EntryBuilder {
       cookies: this.buildCookies(this.request.responseCookies || []),
       content: await this.buildContent(),
       redirectURL: this.request.responseHeaderValue('Location') ?? '',
-      headersSize: this.request.responseHeadersText?.length ?? -1,
+      headersSize: this.request.responseHeadersText
+        ? this.request.responseHeadersText.length
+        : -1,
       bodySize: this.getResponseBodySize(),
       _transferSize: this.request.transferSize
     };
