@@ -1,4 +1,5 @@
 import { ErrorUtils } from './ErrorUtils';
+import { pathToFileURL } from 'node:url';
 
 export class Loader {
   public static async load<T>(path: string): Promise<T | undefined> {
@@ -12,7 +13,9 @@ export class Loader {
         throw err;
       }
 
-      module = (await import(/* webpackIgnore: true */ path)).default;
+      module = (
+        await import(/* webpackIgnore: true */ pathToFileURL(path).href)
+      ).default;
     }
 
     return this.interopRequireDefault<T | undefined>(module);
@@ -23,6 +26,7 @@ export class Loader {
 
     return !!(
       stack?.includes('[ERR_REQUIRE_ESM]') ||
+      stack?.includes('[ERR_REQUIRE_ASYNC_MODULE]') ||
       stack?.includes(
         'SyntaxError: Cannot use import statement outside a module'
       )
