@@ -632,7 +632,7 @@ export class NetworkRequest {
     if (extraResponseInfo.responseHeadersText) {
       this.responseHeadersText = extraResponseInfo.responseHeadersText;
 
-      if (this.requestHeadersText) {
+      if (!this.requestHeadersText) {
         let requestHeadersText = `${this._requestMethod} ${this.parsedURL.pathname}`;
 
         // eslint-disable-next-line max-depth

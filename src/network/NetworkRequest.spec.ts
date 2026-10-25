@@ -151,12 +151,11 @@ describe('NetworkRequest', () => {
       });
     });
 
-    it('should recalculate request headers text', () => {
+    it('should build request headers text from the extra info headers', () => {
       // arrange
       const requestHeaders = [{ name: 'foo', value: 'bar' }];
       sut.requestMethod = 'GET';
-      sut.requestHeaders = requestHeaders;
-      sut.requestHeadersText = 'GET /?foo=bar HTTP/1.1';
+      sut.addExtraRequestInfo({ requestHeaders });
       const responseHeaders = requestHeaders;
       const responseHeadersText = 'HTTP/1.1 404 Not Found\r\nfoo: bar';
       // act
@@ -166,8 +165,24 @@ describe('NetworkRequest', () => {
       });
       // assert
       expect(sut).toMatchObject({
-        requestHeadersText: 'GET /?foo=bar HTTP/1.1\r\nfoo: bar\r\n'
+        requestHeadersText: 'GET /?foo=bar HTTP/1.1\r\nfoo: bar\r\n',
+        requestHttpVersion: 'HTTP/1.1'
       });
+    });
+
+    it('should keep the request headers text sent by the browser', () => {
+      // arrange
+      const requestHeadersText = 'GET /?foo=bar HTTP/1.1\r\nfoo: baz\r\n';
+      sut.requestMethod = 'GET';
+      sut.requestHeaders = [{ name: 'foo', value: 'baz' }];
+      sut.requestHeadersText = requestHeadersText;
+      // act
+      sut.addExtraResponseInfo({
+        responseHeaders: [],
+        responseHeadersText: 'HTTP/1.1 404 Not Found\r\n'
+      });
+      // assert
+      expect(sut).toMatchObject({ requestHeadersText });
     });
   });
 
