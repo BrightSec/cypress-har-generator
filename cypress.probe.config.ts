@@ -6,7 +6,7 @@ export default defineConfig({
   ...base,
   e2e: {
     ...base.e2e,
-    specPattern: process.env.SPEC ?? 'cypress/e2e/zz-probe.cy.ts',
+    specPattern: process.env.SPEC?.split(',') ?? 'cypress/e2e/**/*.cy.ts',
     setupNodeEvents(on, config) {
       base.e2e?.setupNodeEvents?.(on, config);
       on('before:browser:launch', (browser, launchOptions) => {
@@ -14,6 +14,7 @@ export default defineConfig({
         if (browser.name !== 'electron') {
           launchOptions.args.push('--no-sandbox');
         }
+
         return launchOptions;
       });
     }

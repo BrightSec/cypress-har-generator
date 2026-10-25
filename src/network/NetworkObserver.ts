@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { Logger } from '../utils/Logger';
 import { NetworkRequest } from './NetworkRequest';
 import { ExtraInfoBuilder } from './ExtraInfoBuilder';
@@ -25,7 +26,9 @@ export class NetworkObserver implements Observer<NetworkRequest> {
         [...this._entries.values()]
           .map(
             r =>
-              `${r.requestId} ${r.url.slice(0, 80)} status=${r.statusCode} res=${r.resourceSize} end=${r.endTime}`
+              `${r.requestId} ${r.url.slice(0, 80)} status=${
+                r.statusCode
+              } res=${r.resourceSize} end=${r.endTime}`
           )
           .join(' | ')
       );
@@ -82,7 +85,14 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
   public requestWillBeSent(e: Protocol.Network.RequestWillBeSentEvent): void {
     // eslint-disable-next-line no-console
-    if (process.env.PROBE_OPEN && e.request.url.includes('keys')) console.log('PROBE start', Date.now(), e.timestamp);
+    if (process.env.PROBE_OPEN && /keys|unknown-non/.test(e.request.url))
+      console.log(
+        'PROBE start',
+        Date.now(),
+        e.requestId,
+        e.request.url,
+        e.timestamp
+      );
     this.requestWillBeSent0(e);
   }
 
@@ -213,6 +223,16 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     timestamp
   }: Protocol.Network.LoadingFailedEvent): void {
     const entry: NetworkRequest | undefined = this._entries.get(requestId);
+    // eslint-disable-next-line no-console
+    if (process.env.PROBE_OPEN)
+      console.log(
+        'PROBE failed',
+        Date.now(),
+        requestId,
+        errorText,
+        'known',
+        !!entry
+      );
     if (!entry) {
       return;
     }
@@ -464,10 +484,14 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     if (!this.shouldExcludeRequest(networkRequest)) {
       const t0 = Date.now();
       // eslint-disable-next-line no-console
-      if (process.env.PROBE_OPEN && networkRequest.url.includes('keys')) console.log('PROBE finish', t0, networkRequest.endTime);
+      if (process.env.PROBE_OPEN && networkRequest.url.includes('keys'))
+        console.log('PROBE finish', t0, networkRequest.endTime);
       networkRequest
         .waitForCompletion()
-        .then(() => { if (process.env.PROBE_OPEN && networkRequest.url.includes('keys')) console.log('PROBE body ms', Date.now() - t0); })
+        .then(() => {
+          if (process.env.PROBE_OPEN && networkRequest.url.includes('keys'))
+            console.log('PROBE body ms', Date.now() - t0);
+        })
         .then(() => this.destination?.(networkRequest))
         .finally(() => this._entries.delete(networkRequest.requestId));
     }

@@ -46,9 +46,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cypress: ['default', '15', '14']
+        cypress: ['15']
         suite: ['default']
-        run: [1, 2]
+        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,4 +73,5 @@ jobs:
           record: false
         env:
           PROBE_OPEN: '1'
+          SPEC: 'cypress/e2e/record-har.cy.ts,cypress/e2e/record-network-issues.cy.ts'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
