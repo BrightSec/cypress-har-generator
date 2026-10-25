@@ -649,6 +649,17 @@ export class NetworkRequest {
 
         this.requestHeadersText = requestHeadersText;
       }
+
+      // The status text is everything after the code in the status line.
+      this.statusText = extraResponseInfo.responseHeadersText
+        .split('\r')[0]
+        .split(' ')
+        .slice(2)
+        .join(' ');
+    }
+
+    if (extraResponseInfo.statusCode) {
+      this.statusCode = extraResponseInfo.statusCode;
     }
 
     this._hasExtraResponseInfo = true;
