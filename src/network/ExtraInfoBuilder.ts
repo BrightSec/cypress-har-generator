@@ -1,8 +1,10 @@
 import { NetworkRequest } from './NetworkRequest';
+import type { NetworkCookie } from './NetworkCookie';
 import type { Header } from 'har-format';
 
 export interface RequestExtraInfo {
   requestHeaders: Header[];
+  requestCookies?: NetworkCookie[];
 }
 
 export interface ResponseExtraInfo {

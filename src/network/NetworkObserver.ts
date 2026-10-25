@@ -1,6 +1,7 @@
 import { Logger } from '../utils/Logger';
 import { NetworkRequest } from './NetworkRequest';
 import { ExtraInfoBuilder } from './ExtraInfoBuilder';
+import { CookieAttribute, NetworkCookie } from './NetworkCookie';
 import type { NetworkObserverOptions } from './NetworkObserverOptions';
 import type { Observer } from './Observer';
 import type { RequestFilter } from './filters';
@@ -340,10 +341,15 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
   public requestWillBeSentExtraInfo({
     requestId,
-    headers
+    headers,
+    associatedCookies
   }: Protocol.Network.RequestWillBeSentExtraInfoEvent): void {
     this.getExtraInfoBuilder(requestId).addRequestExtraInfo({
-      requestHeaders: this.headersMapToHeadersArray(headers)
+      requestHeaders: this.headersMapToHeadersArray(headers),
+      // A cookie with a blocked reason was not sent with the request.
+      requestCookies: associatedCookies
+        ?.filter(({ blockedReasons }) => !blockedReasons.length)
+        .map(({ cookie }) => this.createCookie(cookie))
     });
   }
 
@@ -548,6 +554,47 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     }
 
     networkRequest.protocol = response.protocol ?? '';
+  }
+
+  private createCookie({
+    name,
+    value,
+    domain,
+    path,
+    expires,
+    session,
+    httpOnly,
+    secure,
+    sameSite,
+    size
+  }: Protocol.Network.Cookie): NetworkCookie {
+    const cookie = new NetworkCookie(name, value);
+
+    cookie.size = size;
+    cookie.addAttribute(CookieAttribute.DOMAIN, domain);
+    cookie.addAttribute(CookieAttribute.PATH, path);
+
+    if (!session) {
+      // CDP gives the expiration time in seconds since the epoch.
+      cookie.addAttribute(
+        CookieAttribute.EXPIRES,
+        new Date(expires * 1000).toUTCString()
+      );
+    }
+
+    if (httpOnly) {
+      cookie.addAttribute(CookieAttribute.HTTPONLY);
+    }
+
+    if (secure) {
+      cookie.addAttribute(CookieAttribute.SECURE);
+    }
+
+    if (sameSite) {
+      cookie.addAttribute(CookieAttribute.SAMESITE, sameSite);
+    }
+
+    return cookie;
   }
 
   private headersMapToHeadersArray(
