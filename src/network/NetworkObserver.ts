@@ -442,12 +442,16 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
     this.getExtraInfoBuilder(networkRequest.requestId).finished();
 
-    if (!this.shouldExcludeRequest(networkRequest)) {
-      networkRequest
-        .waitForCompletion()
-        .then(() => this.destination?.(networkRequest))
-        .finally(() => this._entries.delete(networkRequest.requestId));
+    if (this.shouldExcludeRequest(networkRequest)) {
+      this._entries.delete(networkRequest.requestId);
+
+      return;
     }
+
+    networkRequest
+      .waitForCompletion()
+      .then(() => this.destination?.(networkRequest))
+      .finally(() => this._entries.delete(networkRequest.requestId));
   }
 
   private loadContent(networkRequest: NetworkRequest): void {
