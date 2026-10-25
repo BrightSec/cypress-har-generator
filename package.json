@@ -132,7 +132,7 @@
     ]
   },
   "lint-staged": {
-    "*.ts": [
+    "*.{ts,mts,cts}": [
       "eslint --fix"
     ],
     "*.{ts,mts,cts,js,json,md}": [

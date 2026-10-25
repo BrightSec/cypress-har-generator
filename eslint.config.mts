@@ -5,10 +5,17 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/.*', 'tmp/**', 'dist/**', 'coverage/**', 'example/**']
+    ignores: [
+      '**/.*',
+      'eslint.config.mts',
+      'tmp/**',
+      'dist/**',
+      'coverage/**',
+      'example/**'
+    ]
   },
   {
-    files: ['**/*.ts', '**/*.mts'],
+    files: ['**/*.ts', '**/*.mts', '**/*.cts'],
     extends: [
       prettier,
       eslint.configs.recommended,
@@ -24,7 +31,7 @@ export default tseslint.config(
     },
     settings: {
       'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.mts']
+        '@typescript-eslint/parser': ['.ts', '.mts', '.cts']
       },
       'import/resolver': {
         typescript: {
@@ -217,7 +224,6 @@ export default tseslint.config(
   },
   {
     files: [
-      'eslint.config.mts',
       'jest.config.mts',
       'webpack.config.ts',
       'cypress.config.ts',
