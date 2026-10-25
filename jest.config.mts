@@ -5,11 +5,10 @@ const config: Config = {
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
     // ts-jest rewrites the `.ts` import extensions to `.js`
-    // eslint-disable-next-line @typescript-eslint/naming-convention
+
     '^(\\.{1,2}/.*)\\.js$': '$1'
   },
   transform: {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     '^.+\\.ts$': [
       'ts-jest',
       { tsconfig: './tsconfig.json', isolatedModules: true, useESM: true }

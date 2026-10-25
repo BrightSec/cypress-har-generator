@@ -47,10 +47,8 @@ describe('NetworkObserver', () => {
     status: 200,
     statusText: 'OK',
     headers: {
-      /* eslint-disable @typescript-eslint/naming-convention */
       'Content-Length': '1777',
       'Content-Type': 'text/html; charset=UTF-8'
-      /* eslint-enable @typescript-eslint/naming-convention */
     },
     mimeType: 'text/html',
     connectionReused: false,
@@ -70,9 +68,7 @@ describe('NetworkObserver', () => {
         url: 'http://localhost:8080/',
         method: 'GET',
         headers: {
-          /* eslint-disable @typescript-eslint/naming-convention */
           'Upgrade-Insecure-Requests': '1'
-          /* eslint-enable @typescript-eslint/naming-convention */
         },
         initialPriority: 'VeryHigh'
       },
@@ -118,7 +114,6 @@ describe('NetworkObserver', () => {
     params: {
       requestId: '1',
       headers: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         'Transfer-Encoding': 'chunked'
       },
       resourceIPAddressSpace: 'Local',

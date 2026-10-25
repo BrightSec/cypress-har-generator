@@ -31,7 +31,6 @@ export default defineConfig({
       install(on);
 
       on('task', {
-        /* eslint-disable @typescript-eslint/naming-convention */
         async 'fs:match'({
           path,
           regexp
@@ -68,7 +67,6 @@ export default defineConfig({
         'fs:tmpdir'(): string {
           return tmpdir();
         }
-        /* eslint-enable @typescript-eslint/naming-convention */
       });
     }
   }

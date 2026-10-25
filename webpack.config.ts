@@ -14,7 +14,7 @@ const base = (extension: 'js' | 'mjs'): Configuration => ({
   target: 'node',
   resolve: {
     extensions: ['.ts'],
-    // eslint-disable-next-line @typescript-eslint/naming-convention
+
     extensionAlias: { '.js': ['.ts', '.js'] }
   },
   module: {
@@ -66,7 +66,6 @@ const commonjs: Configuration = {
   externals: externals(),
   plugins: [
     new webpack.DefinePlugin({
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       'import.meta.url': "require('node:url').pathToFileURL(__filename).href"
     }),
     {

@@ -1,38 +1,26 @@
 import eslint from '@eslint/js';
-import prettier from 'eslint-config-prettier';
+import prettier from 'eslint-config-prettier/flat';
 import importPlugin from 'eslint-plugin-import';
+import { defineConfig, globalIgnores } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
-  {
-    ignores: [
-      '**/.*',
-      'eslint.config.mts',
-      'tmp/**',
-      'dist/**',
-      'coverage/**',
-      'example/**'
-    ]
-  },
+export default defineConfig(
+  globalIgnores(['**/.*', 'tmp/', 'dist/', 'coverage/', 'example/']),
   {
     files: ['**/*.ts', '**/*.mts', '**/*.cts'],
     extends: [
-      prettier,
       eslint.configs.recommended,
       importPlugin.flatConfigs.typescript,
       tseslint.configs.recommended,
-      tseslint.configs.eslintRecommended
+      prettier
     ],
     languageOptions: {
       parserOptions: {
-        project: ['tsconfig.json'],
+        projectService: true,
         tsconfigRootDir: import.meta.dirname
       }
     },
     settings: {
-      'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.mts', '.cts']
-      },
       'import/resolver': {
         typescript: {
           project: ['tsconfig.json']
@@ -118,6 +106,11 @@ export default tseslint.config(
           selector: 'parameter',
           format: ['camelCase'],
           leadingUnderscore: 'allow'
+        },
+        {
+          selector: ['objectLiteralProperty', 'objectLiteralMethod'],
+          modifiers: ['requiresQuotes'],
+          format: null
         }
       ],
       '@typescript-eslint/no-inferrable-types': [
@@ -224,6 +217,7 @@ export default tseslint.config(
   },
   {
     files: [
+      'eslint.config.mts',
       'jest.config.mts',
       'webpack.config.ts',
       'cypress.config.ts',

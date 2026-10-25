@@ -53,10 +53,9 @@ const sseDispatcher = (res: Response) => {
 };
 app.get('/api/events', (req: Request, res: Response) => {
   const headers = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     'Content-Type': 'text/event-stream',
     'Connection': 'keep-alive',
-    // eslint-disable-next-line @typescript-eslint/naming-convention
+
     'Cache-Control': 'no-cache'
   };
   res.writeHead(200, headers);
