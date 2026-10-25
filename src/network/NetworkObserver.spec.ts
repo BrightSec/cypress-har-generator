@@ -688,6 +688,52 @@ describe('NetworkObserver', () => {
       );
     });
 
+    it.each([
+      { order: 'after', extraInfoFirst: false },
+      { order: 'before', extraInfoFirst: true }
+    ])(
+      'should take the status from the response extra info coming $order the response',
+      async ({ extraInfoFirst }) => {
+        // arrange
+        const notModifiedExtraInfoEvent = {
+          ...responseReceivedExtraInfoEvent,
+          params: {
+            ...responseReceivedExtraInfoEvent.params,
+            statusCode: 304,
+            headersText: 'HTTP/1.1 304 Not Modified\r\n\r\n'
+          }
+        };
+        const revalidatedResponseEvent = {
+          ...responseReceivedEvent,
+          params: { ...responseReceivedEvent.params, hasExtraInfo: true }
+        };
+        when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+          await cb(requestWillBeSentEvent);
+          await cb(
+            extraInfoFirst
+              ? notModifiedExtraInfoEvent
+              : revalidatedResponseEvent
+          );
+          await cb(
+            extraInfoFirst
+              ? revalidatedResponseEvent
+              : notModifiedExtraInfoEvent
+          );
+          await cb(loadingFinishedEvent);
+        });
+        // act
+        await sut.subscribe(callback);
+        // assert
+        expect(callback).toHaveBeenCalledWith(
+          expect.objectContaining({
+            statusCode: 304,
+            statusText: 'Not Modified',
+            requestId: '1'
+          })
+        );
+      }
+    );
+
     it('should handle a redirected response', async () => {
       // arrange
       when(networkMock.getRequestBody('1')).thenResolve({

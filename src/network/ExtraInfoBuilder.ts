@@ -8,6 +8,7 @@ export interface RequestExtraInfo {
 export interface ResponseExtraInfo {
   responseHeaders: Header[];
   responseHeadersText?: string;
+  statusCode?: number;
 }
 
 export class ExtraInfoBuilder {

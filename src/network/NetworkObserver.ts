@@ -350,11 +350,13 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   public responseReceivedExtraInfo({
     requestId,
     headers,
-    headersText
+    headersText,
+    statusCode
   }: Protocol.Network.ResponseReceivedExtraInfoEvent): void {
     this.getExtraInfoBuilder(requestId).addResponseExtraInfo({
       responseHeaders: this.headersMapToHeadersArray(headers),
-      responseHeadersText: headersText
+      responseHeadersText: headersText,
+      statusCode
     });
   }
 
@@ -513,8 +515,14 @@ export class NetworkObserver implements Observer<NetworkRequest> {
       networkRequest.url = response.url;
     }
     networkRequest.mimeType = response.mimeType;
-    networkRequest.statusCode = response.status;
-    networkRequest.statusText = response.statusText;
+    // The extra info carries the status sent over the wire, e.g. 304 for a
+    // revalidated cached response that the response itself reports as 200.
+    if (!networkRequest.statusCode) {
+      networkRequest.statusCode = response.status;
+    }
+    if (!networkRequest.statusText) {
+      networkRequest.statusText = response.statusText;
+    }
 
     if (!networkRequest.hasExtraResponseInfo) {
       networkRequest.responseHeaders = this.headersMapToHeadersArray(
