@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig(
   globalIgnores(['**/.*', 'tmp/', 'dist/', 'coverage/', 'example/']),
   {
-    files: ['**/*.ts', '**/*.mts', '**/*.cts'],
+    files: ['**/*.ts', '**/*.cts'],
     extends: [
       eslint.configs.recommended,
       importPlugin.flatConfigs.typescript,
@@ -217,8 +217,8 @@ export default defineConfig(
   },
   {
     files: [
-      'eslint.config.mts',
-      'jest.config.mts',
+      'eslint.config.ts',
+      'jest.config.ts',
       'webpack.config.ts',
       'cypress.config.ts',
       'cypress/**/*.ts',

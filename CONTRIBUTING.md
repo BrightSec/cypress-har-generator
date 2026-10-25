@@ -208,7 +208,7 @@ $ npm run e2e -- --spec cypress/e2e/har-creator.cy.ts
 
 This project uses [ESLint](https://eslint.org) to ensure code consistency and quality.
 
-> ⚡ Custom configurations can be set in the `eslint.config.mts` file located in the project's root directory.
+> ⚡ Custom configurations can be set in the `eslint.config.ts` file located in the project's root directory.
 
 To lint the entire project, run the command in the terminal:
 
