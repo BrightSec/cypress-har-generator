@@ -7,6 +7,7 @@ import type { Network } from './Network';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
   anyFunction,
+  anyString,
   anything,
   instance,
   mock,
@@ -448,6 +449,60 @@ describe('NetworkObserver', () => {
       // act
       await sut.subscribe(callback);
       // assert
+      verify(networkMock.getResponseBody('1')).once();
+    });
+
+    it('should load a response body when the response has no mime type', async () => {
+      // arrange
+      when(optionsSpy.content).thenReturn(true);
+      when(networkMock.getResponseBody('1')).thenResolve({
+        body: 'ok',
+        base64Encoded: false
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb({
+          ...responseReceivedEvent,
+          params: {
+            ...responseReceivedEvent.params,
+            response: { ...response, mimeType: '' }
+          }
+        });
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      verify(networkMock.getResponseBody('1')).once();
+    });
+
+    it('should skip a response body of a redirect', async () => {
+      // arrange
+      when(optionsSpy.content).thenReturn(true);
+      when(networkMock.getResponseBody(anyString())).thenResolve({
+        body: '<html></html>',
+        base64Encoded: false
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            redirectResponse: {
+              ...response,
+              status: 302,
+              headers: { Location: 'http://localhost:8080/' }
+            }
+          }
+        });
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      verify(networkMock.getResponseBody('1:redirected.0')).never();
       verify(networkMock.getResponseBody('1')).once();
     });
 

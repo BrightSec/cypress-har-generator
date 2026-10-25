@@ -45,6 +45,7 @@ export class NetworkRequest {
   private _requestFormData: Promise<string | undefined> =
     Promise.resolve(undefined);
   private _formParametersPromise?: Promise<Param[]>;
+  private _isRedirect: boolean = false;
 
   private _signedExchangeInfo?: Protocol.Network.SignedExchangeInfo;
 
@@ -618,6 +619,11 @@ export class NetworkRequest {
 
   public markAsRedirect(redirectCount: number): void {
     this._requestId = `${this.requestId}:redirected.${redirectCount}`;
+    this._isRedirect = true;
+  }
+
+  public isRedirect(): boolean {
+    return this._isRedirect;
   }
 
   public addExtraRequestInfo(extraRequestInfo: RequestExtraInfo): void {
