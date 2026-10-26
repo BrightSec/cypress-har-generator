@@ -68,6 +68,13 @@ describe('Record HAR', () => {
 
     cy.get('a[href$=large-content]').click();
 
+    // ADHOC: downloading 150MB through the Cypress proxy takes 4-8s on a CI runner and sometimes over 20s,
+    // so wait for the page to receive it, leaving `maxWaitDuration` only for the plugin to fetch and save the body
+    cy.get('#result', { timeout: 60000 }).should(
+      'have.text',
+      'Found 1000 keys'
+    );
+
     cy.saveHar({
       waitForIdle: true,
       maxWaitDuration: 20000
