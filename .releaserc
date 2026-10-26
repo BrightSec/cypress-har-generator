@@ -75,6 +75,11 @@
     "+([0-9])?(.{+([0-9]),x}).x",
     {
       "name": "master"
+    },
+    {
+      "name": "next",
+      "channel": "next",
+      "prerelease": "rc"
     }
   ],
   "ci": true

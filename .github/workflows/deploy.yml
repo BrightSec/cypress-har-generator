@@ -17,7 +17,11 @@ jobs:
       # a maintenance release (e.g. from 4.x or 4.2.x) goes to `latest-4` so it does not move `latest`
       - id: resolve
         run: |
-          if [ "$TARGET_REF" = master ]; then tag=latest; else tag="latest-${TARGET_REF%%.*}"; fi
+          case "$TARGET_REF" in
+            master) tag=latest ;;
+            next) tag=next ;;
+            *) tag="latest-${TARGET_REF%%.*}" ;;
+          esac
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
   install-deps:
