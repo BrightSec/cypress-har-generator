@@ -1,22 +1,21 @@
-import { FileManager } from './FileManager';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
+import type { FileHandle } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { constants } from 'node:fs';
-import * as fsPromises from 'node:fs/promises';
-import { access, type FileHandle } from 'node:fs/promises';
 
-jest.mock('node:fs/promises', () => {
-  const actual =
-    jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
+const actual = await import('node:fs/promises');
 
-  return {
-    ...actual,
-    open: jest.fn(actual.open),
-    unlink: jest.fn(actual.unlink)
-  };
-});
+jest.unstable_mockModule('node:fs/promises', () => ({
+  ...actual,
+  open: jest.fn(actual.open),
+  unlink: jest.fn(actual.unlink)
+}));
+
+const fsPromises = await import('node:fs/promises');
+const { access } = fsPromises;
+const { FileManager } = await import('./FileManager.ts');
 
 describe('FileManager', () => {
   let path!: string;
@@ -77,14 +76,14 @@ describe('FileManager', () => {
       // act
       await sut.removeFile(path);
       // assert
-      await expect(access(path, constants.F_OK)).rejects.toThrowError();
+      await expect(access(path, constants.F_OK)).rejects.toThrow();
     });
 
     it('should do nothing if the file does not exist', async () => {
       // act
       await sut.removeFile(path);
       // assert
-      await expect(access(path, constants.F_OK)).rejects.toThrowError();
+      await expect(access(path, constants.F_OK)).rejects.toThrow();
     });
   });
 
@@ -111,7 +110,7 @@ describe('FileManager', () => {
       // act
       await sut.createFolder(path);
       // assert
-      await expect(access(path, constants.F_OK)).resolves.not.toThrowError();
+      await expect(access(path, constants.F_OK)).resolves.not.toThrow();
     });
 
     it('should do nothing if the folder already exists', async () => {
@@ -120,7 +119,7 @@ describe('FileManager', () => {
       // act
       await sut.createFolder(path);
       // assert
-      await expect(access(path, constants.F_OK)).resolves.not.toThrowError();
+      await expect(access(path, constants.F_OK)).resolves.not.toThrow();
     });
   });
 

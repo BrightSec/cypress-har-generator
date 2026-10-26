@@ -1,4 +1,4 @@
-import { StringUtils } from './StringUtils';
+import { StringUtils } from './StringUtils.ts';
 import { describe, expect, it } from '@jest/globals';
 
 describe('StringUtils', () => {

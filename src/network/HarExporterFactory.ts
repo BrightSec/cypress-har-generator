@@ -1,4 +1,4 @@
-import type { HarExporter } from './HarExporter';
+import type { HarExporter } from './HarExporter.ts';
 
 export interface HarExporterOptions {
   rootDir: string;

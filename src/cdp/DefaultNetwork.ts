@@ -1,13 +1,13 @@
-import type { Network, NetworkEvent } from '../network';
-import { ErrorUtils } from '../utils/ErrorUtils';
-import type { Logger } from '../utils/Logger';
+import type { Network, NetworkEvent } from '../network/Network.ts';
+import { ErrorUtils } from '../utils/ErrorUtils.ts';
+import type { Logger } from '../utils/Logger.ts';
 import {
   TARGET_OR_BROWSER_CLOSED,
   UNABLE_TO_ATTACH_TO_TARGET
-} from './messages';
-import type { NetworkOptions } from './NetworkOptions';
+} from './messages.ts';
+import type { NetworkOptions } from './NetworkOptions.ts';
 import type { Client, EventMessage } from 'chrome-remote-interface';
-import type Protocol from 'devtools-protocol';
+import type { Protocol } from 'devtools-protocol';
 
 export class DefaultNetwork implements Network {
   private readonly DOMAIN = 'Network';

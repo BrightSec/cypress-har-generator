@@ -1,9 +1,9 @@
-import { Logger } from '../utils/Logger';
-import { NetworkObserver } from './NetworkObserver';
-import type { NetworkRequest } from './NetworkRequest';
-import type { NetworkObserverOptions } from './NetworkObserverOptions';
-import type { RequestFilter } from './filters';
-import type { Network } from './Network';
+import { Logger } from '../utils/Logger.ts';
+import { NetworkObserver } from './NetworkObserver.ts';
+import type { NetworkRequest } from './NetworkRequest.ts';
+import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
+import type { RequestFilter } from './filters/RequestFilter.ts';
+import type { Network } from './Network.ts';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
   anyFunction,
@@ -47,10 +47,8 @@ describe('NetworkObserver', () => {
     status: 200,
     statusText: 'OK',
     headers: {
-      /* eslint-disable @typescript-eslint/naming-convention */
       'Content-Length': '1777',
       'Content-Type': 'text/html; charset=UTF-8'
-      /* eslint-enable @typescript-eslint/naming-convention */
     },
     mimeType: 'text/html',
     connectionReused: false,
@@ -70,9 +68,7 @@ describe('NetworkObserver', () => {
         url: 'http://localhost:8080/',
         method: 'GET',
         headers: {
-          /* eslint-disable @typescript-eslint/naming-convention */
           'Upgrade-Insecure-Requests': '1'
-          /* eslint-enable @typescript-eslint/naming-convention */
         },
         initialPriority: 'VeryHigh'
       },
@@ -118,7 +114,6 @@ describe('NetworkObserver', () => {
     params: {
       requestId: '1',
       headers: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         'Transfer-Encoding': 'chunked'
       },
       resourceIPAddressSpace: 'Local',

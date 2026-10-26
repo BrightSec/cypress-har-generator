@@ -1,8 +1,8 @@
-import type { FileManager } from '../utils/FileManager';
-import { DefaultHarExporterFactory } from './DefaultHarExporterFactory';
-import { DefaultHarExporter } from './DefaultHarExporter';
-import { Loader } from '../utils/Loader';
-import type { Logger } from '../utils/Logger';
+import type { FileManager } from '../utils/FileManager.ts';
+import { DefaultHarExporterFactory } from './DefaultHarExporterFactory.ts';
+import { DefaultHarExporter } from './DefaultHarExporter.ts';
+import { Loader } from '../utils/Loader.ts';
+import type { Logger } from '../utils/Logger.ts';
 import { instance, mock, reset, spy, verify, when } from 'ts-mockito';
 import {
   jest,

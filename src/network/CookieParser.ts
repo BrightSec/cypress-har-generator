@@ -1,4 +1,4 @@
-import { NetworkCookie } from './NetworkCookie';
+import { NetworkCookie } from './NetworkCookie.ts';
 
 interface KeyValue {
   key: string;
@@ -57,7 +57,6 @@ export class CookieParser {
     this._input = headerValue;
     this._cookies = [];
     this._lastCookie = undefined;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this._originalInputLength = this._input.length;
   }
 

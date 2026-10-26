@@ -1,11 +1,11 @@
-import { NetworkObserver } from './NetworkObserver';
-import { Logger } from '../utils/Logger';
-import { NetworkRequest } from './NetworkRequest';
-import { CompositeFilter } from './filters';
-import type { ObserverFactory } from './ObserverFactory';
-import type { NetworkObserverOptions } from './NetworkObserverOptions';
-import type { Observer } from './Observer';
-import type { Network } from './Network';
+import { NetworkObserver } from './NetworkObserver.ts';
+import { Logger } from '../utils/Logger.ts';
+import { NetworkRequest } from './NetworkRequest.ts';
+import { CompositeFilter } from './filters/CompositeFilter.ts';
+import type { ObserverFactory } from './ObserverFactory.ts';
+import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
+import type { Observer } from './Observer.ts';
+import type { Network } from './Network.ts';
 
 export class DefaultObserverFactory implements ObserverFactory {
   private readonly defaultRequestFilter = new CompositeFilter();

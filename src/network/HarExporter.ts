@@ -1,4 +1,4 @@
-import type { NetworkRequest } from './NetworkRequest';
+import type { NetworkRequest } from './NetworkRequest.ts';
 
 export interface HarExporter {
   read(): Promise<string>;

@@ -1,6 +1,6 @@
-import { CompositeFilter } from './CompositeFilter';
-import { NetworkRequest } from '../NetworkRequest';
-import type { RequestFilter } from './RequestFilter';
+import { CompositeFilter } from './CompositeFilter.ts';
+import { NetworkRequest } from '../NetworkRequest.ts';
+import type { RequestFilter } from './RequestFilter.ts';
 import { instance, mock, reset, verify, when } from 'ts-mockito';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 

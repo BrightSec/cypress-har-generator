@@ -1,7 +1,7 @@
-import { StringUtils } from './utils/StringUtils';
-import { type BrowserConfigSource, ConfigUtils } from './utils/ConfigUtils';
-import { HARS_FOLDER_KEYS } from './constants';
-import type { RecordOptions, SaveOptions } from './Plugin';
+import { StringUtils } from './utils/StringUtils.ts';
+import { type BrowserConfigSource, ConfigUtils } from './utils/ConfigUtils.ts';
+import { HARS_FOLDER_KEYS } from './constants.ts';
+import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 Cypress.Commands.add(
   'recordHar',
@@ -41,7 +41,6 @@ Cypress.Commands.add(
   }
 );
 
-Cypress.Commands.add(
-  'disposeOfHar',
-  (): Cypress.Chainable => cy.task('disposeOfHar')
+Cypress.Commands.add('disposeOfHar', (): Cypress.Chainable =>
+  cy.task('disposeOfHar')
 );

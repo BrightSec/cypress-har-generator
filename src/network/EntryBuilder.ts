@@ -1,6 +1,6 @@
-import { NetworkRequest } from './NetworkRequest';
-import { NetworkCookie } from './NetworkCookie';
-import type { ContentData } from './NetworkRequest';
+import { NetworkRequest } from './NetworkRequest.ts';
+import { NetworkCookie } from './NetworkCookie.ts';
+import type { ContentData } from './NetworkRequest.ts';
 import type {
   Content,
   Cookie,

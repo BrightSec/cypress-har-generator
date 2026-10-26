@@ -1,5 +1,5 @@
-import { enableExperimentalLifecycle } from '.';
-import { Plugin } from './Plugin';
+import { enableExperimentalLifecycle } from './index.ts';
+import { Plugin } from './Plugin.ts';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 
 describe('enableExperimentalLifecycle', () => {

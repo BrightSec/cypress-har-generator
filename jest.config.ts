@@ -1,17 +1,21 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    // ts-jest rewrites the `.ts` import extensions to `.js`
+
+    '^(\\.{1,2}/.*)\\.js$': '$1'
+  },
   transform: {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    '^.+\\.[tj]sx?$': [
+    '^.+\\.ts$': [
       'ts-jest',
-      { tsconfig: './tsconfig.json', isolatedModules: true }
+      { tsconfig: './tsconfig.json', isolatedModules: true, useESM: true }
     ]
   },
   maxWorkers: '25%',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  moduleFileExtensions: ['ts', 'js', 'json'],
   testPathIgnorePatterns: ['<rootDir>/node_modules/'],
   collectCoverageFrom: ['src/**/*.ts', '!**/index.ts']
 };

@@ -1,6 +1,6 @@
-import { NetworkRequest } from '../NetworkRequest';
-import { StatusCodeFilter } from './StatusCodeFilter';
-import type { RequestFilterOptions } from './RequestFilter';
+import { NetworkRequest } from '../NetworkRequest.ts';
+import { StatusCodeFilter } from './StatusCodeFilter.ts';
+import type { RequestFilterOptions } from './RequestFilter.ts';
 import { describe, beforeEach, it, expect } from '@jest/globals';
 import { instance, mock, reset, when } from 'ts-mockito';
 

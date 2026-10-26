@@ -1,7 +1,7 @@
-import type { NetworkObserverOptions } from './NetworkObserverOptions';
-import type { Observer } from './Observer';
-import { NetworkRequest } from './NetworkRequest';
-import type { Network } from './Network';
+import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
+import type { Observer } from './Observer.ts';
+import { NetworkRequest } from './NetworkRequest.ts';
+import type { Network } from './Network.ts';
 
 export interface ObserverFactory {
   createNetworkObserver(

@@ -1,4 +1,4 @@
-import { install } from './src';
+import { install } from './src/index.ts';
 import { defineConfig } from 'cypress';
 import { access, constants, unlink, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -31,7 +31,6 @@ export default defineConfig({
       install(on);
 
       on('task', {
-        /* eslint-disable @typescript-eslint/naming-convention */
         async 'fs:match'({
           path,
           regexp
@@ -68,7 +67,6 @@ export default defineConfig({
         'fs:tmpdir'(): string {
           return tmpdir();
         }
-        /* eslint-enable @typescript-eslint/naming-convention */
       });
     }
   }

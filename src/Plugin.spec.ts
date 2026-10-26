@@ -1,15 +1,14 @@
-import type { RecordOptions, SaveOptions } from './Plugin';
-import { Plugin } from './Plugin';
-import type { Logger } from './utils/Logger';
-import type { FileManager } from './utils/FileManager';
-import type {
-  Observer,
-  ObserverFactory,
-  HarExporter,
-  HarExporterFactory
-} from './network';
-import { NetworkRequest } from './network';
-import type { Connection, ConnectionFactory } from './cdp';
+import type { RecordOptions, SaveOptions } from './Plugin.ts';
+import { Plugin } from './Plugin.ts';
+import type { Logger } from './utils/Logger.ts';
+import type { FileManager } from './utils/FileManager.ts';
+import type { Observer } from './network/Observer.ts';
+import type { ObserverFactory } from './network/ObserverFactory.ts';
+import type { HarExporter } from './network/HarExporter.ts';
+import type { HarExporterFactory } from './network/HarExporterFactory.ts';
+import { NetworkRequest } from './network/NetworkRequest.ts';
+import type { Connection } from './cdp/Connection.ts';
+import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
 import {
   anyFunction,
   anything,
@@ -211,7 +210,7 @@ describe('Plugin', () => {
       // act
       const act = () => plugin.ensureBrowserFlags(electron, args);
       // assert
-      expect(act).toThrowError(
+      expect(act).toThrow(
         `Missing '--remote-debugging-port' command line switch for Electron browser`
       );
     });

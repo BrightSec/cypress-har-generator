@@ -1,6 +1,6 @@
-import { NetworkRequest } from './NetworkRequest';
-import { NetworkIdleMonitor } from './NetworkIdleMonitor';
-import type { Observer } from './Observer';
+import { NetworkRequest } from './NetworkRequest.ts';
+import { NetworkIdleMonitor } from './NetworkIdleMonitor.ts';
+import type { Observer } from './Observer.ts';
 import {
   jest,
   describe,

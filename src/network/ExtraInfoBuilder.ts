@@ -1,5 +1,5 @@
-import { NetworkRequest } from './NetworkRequest';
-import type { NetworkCookie } from './NetworkCookie';
+import { NetworkRequest } from './NetworkRequest.ts';
+import type { NetworkCookie } from './NetworkCookie.ts';
 import type { Header } from 'har-format';
 
 export interface RequestExtraInfo {

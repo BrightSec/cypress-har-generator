@@ -1,7 +1,6 @@
-import { Loader } from './Loader';
+import { Loader } from './Loader.ts';
 import { jest, describe, it, expect, afterEach } from '@jest/globals';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 describe('Loader', () => {
   const modulePath = './exampleModule';
@@ -41,12 +40,9 @@ describe('Loader', () => {
           },
           { virtual: true }
         );
-        jest.doMock(
-          pathToFileURL(path).href,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          () => ({ __esModule: true, default: module }),
-          { virtual: true }
-        );
+        jest.unstable_mockModule(path, () => ({ default: module }), {
+          virtual: true
+        });
 
         // act
         const result = await Loader.load<string>(path);

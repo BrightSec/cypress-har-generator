@@ -1,9 +1,9 @@
-import '../../src/commands';
-import { HARS_FOLDER_KEYS } from '../../src/constants';
+import '../../src/commands.ts';
+import { HARS_FOLDER_KEYS } from '../../src/constants.ts';
 import {
   type BrowserConfigSource,
   ConfigUtils
-} from '../../src/utils/ConfigUtils';
+} from '../../src/utils/ConfigUtils.ts';
 import { Har } from 'har-format';
 import like from 'chai-like';
 import things from 'chai-things';

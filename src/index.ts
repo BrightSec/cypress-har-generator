@@ -1,12 +1,13 @@
-import { Plugin } from './Plugin';
-import { Logger } from './utils/Logger';
-import { FileManager } from './utils/FileManager';
-import { DefaultConnectionFactory } from './cdp';
-import { DefaultHarExporterFactory, DefaultObserverFactory } from './network';
-import { StringUtils } from './utils/StringUtils';
-import { ConfigUtils } from './utils/ConfigUtils';
-import { HARS_FOLDER_KEYS } from './constants';
-import type { RecordOptions, SaveOptions } from './Plugin';
+import { Plugin } from './Plugin.ts';
+import { Logger } from './utils/Logger.ts';
+import { FileManager } from './utils/FileManager.ts';
+import { DefaultConnectionFactory } from './cdp/DefaultConnectionFactory.ts';
+import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.ts';
+import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
+import { StringUtils } from './utils/StringUtils.ts';
+import { ConfigUtils } from './utils/ConfigUtils.ts';
+import { HARS_FOLDER_KEYS } from './constants.ts';
+import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -110,4 +111,4 @@ export const ensureBrowserFlags = (
   );
 };
 
-export type { SaveOptions, RecordOptions } from './Plugin';
+export type { SaveOptions, RecordOptions } from './Plugin.ts';

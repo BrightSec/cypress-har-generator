@@ -1,9 +1,12 @@
-import { CookieParser } from './CookieParser';
-import { NetworkCookie } from './NetworkCookie';
-import { StringUtils } from '../utils/StringUtils';
-import type { RequestExtraInfo, ResponseExtraInfo } from './ExtraInfoBuilder';
+import { CookieParser } from './CookieParser.ts';
+import { NetworkCookie } from './NetworkCookie.ts';
+import { StringUtils } from '../utils/StringUtils.ts';
+import type {
+  RequestExtraInfo,
+  ResponseExtraInfo
+} from './ExtraInfoBuilder.ts';
 import type { Header, Param, QueryString } from 'har-format';
-import type Protocol from 'devtools-protocol';
+import type { Protocol } from 'devtools-protocol';
 
 export interface ContentData {
   error?: string;

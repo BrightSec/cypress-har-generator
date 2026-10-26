@@ -1,8 +1,8 @@
-import type { NetworkObserverOptions } from './NetworkObserverOptions';
-import { DefaultObserverFactory } from './DefaultObserverFactory';
-import { Logger } from '../utils/Logger';
-import { NetworkObserver } from './NetworkObserver';
-import type { Network } from './Network';
+import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
+import { DefaultObserverFactory } from './DefaultObserverFactory.ts';
+import { Logger } from '../utils/Logger.ts';
+import { NetworkObserver } from './NetworkObserver.ts';
+import type { Network } from './Network.ts';
 import { describe, beforeEach, it, expect } from '@jest/globals';
 import { instance, mock } from 'ts-mockito';
 

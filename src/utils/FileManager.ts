@@ -1,5 +1,5 @@
 /// <reference types="node" preserve="true" />
-import { Logger } from './Logger';
+import { Logger } from './Logger.ts';
 import {
   access,
   writeFile,

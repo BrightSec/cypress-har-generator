@@ -1,12 +1,12 @@
-import { Logger } from '../utils/Logger';
-import { NetworkRequest } from './NetworkRequest';
-import { ExtraInfoBuilder } from './ExtraInfoBuilder';
-import { CookieAttribute, NetworkCookie } from './NetworkCookie';
-import type { NetworkObserverOptions } from './NetworkObserverOptions';
-import type { Observer } from './Observer';
-import type { RequestFilter } from './filters';
-import type { Network, NetworkEvent } from './Network';
-import type Protocol from 'devtools-protocol';
+import { Logger } from '../utils/Logger.ts';
+import { NetworkRequest } from './NetworkRequest.ts';
+import { ExtraInfoBuilder } from './ExtraInfoBuilder.ts';
+import { CookieAttribute, NetworkCookie } from './NetworkCookie.ts';
+import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
+import type { Observer } from './Observer.ts';
+import type { RequestFilter } from './filters/RequestFilter.ts';
+import type { Network, NetworkEvent } from './Network.ts';
+import type { Protocol } from 'devtools-protocol';
 import type { Header } from 'har-format';
 
 export class NetworkObserver implements Observer<NetworkRequest> {
