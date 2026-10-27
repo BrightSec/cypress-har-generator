@@ -37,6 +37,17 @@ describe('NetworkRequest', () => {
   });
 
   describe('addEventSourceMessage', () => {
+    it('should store the message time as wall-clock time', () => {
+      // arrange
+      sut.setIssueTime(208215.856474, 1673020881.302266);
+      // act
+      sut.addEventSourceMessage(208215.857187, 'data', '1', 'test');
+      // assert
+      expect(sut.eventSourceMessages).toMatchObject([
+        { time: expect.closeTo(1673020881.302979, 6) }
+      ]);
+    });
+
     it('should add an event source message', () => {
       // arrange
       const time = 208215.857187;
@@ -57,6 +68,36 @@ describe('NetworkRequest', () => {
           }
         ]
       });
+    });
+  });
+
+  describe('addProtocolFrame', () => {
+    it('should store the frame time as wall-clock time', () => {
+      // arrange
+      sut.setIssueTime(208215.856474, 1673020881.302266);
+      // act
+      sut.addProtocolFrame(
+        { mask: false, opcode: 1, payloadData: 'test' },
+        208215.857187,
+        true
+      );
+      // assert
+      expect(sut.frames).toMatchObject([
+        { time: expect.closeTo(1673020881.302979, 6) }
+      ]);
+    });
+  });
+
+  describe('addProtocolFrameError', () => {
+    it('should store the frame time as wall-clock time', () => {
+      // arrange
+      sut.setIssueTime(208215.856474, 1673020881.302266);
+      // act
+      sut.addProtocolFrameError('error', 208215.857187);
+      // assert
+      expect(sut.frames).toMatchObject([
+        { time: expect.closeTo(1673020881.302979, 6) }
+      ]);
     });
   });
 
