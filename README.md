@@ -44,7 +44,7 @@ To install the plugin as development dependency, run the following command:
 $ npm i --save-dev @neuralegion/cypress-har-generator
 ```
 
-> ✴ TypeScript projects need TypeScript 5.0 or higher. The type declarations import their siblings with a `.ts` extension, which earlier versions reject with `TS2691: An import path cannot end with a '.ts' extension` unless `skipLibCheck` is enabled.
+> ✴ The plugin requires Cypress 14.0.0 or later. If you are on an earlier Cypress version, stay on version 5 of the plugin.
 
 > ✴ For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
 
@@ -72,16 +72,6 @@ export default defineConfig({
 > ✴ The plugin ships both ES modules and CommonJS, so a CommonJS config can load it with `require('@neuralegion/cypress-har-generator')` instead.
 
 > ✴ `setupNodeEvents` can be defined in either the e2e or component configuration
-
-> ✴ Before Cypress 10.0.0, the plugin is installed in the `cypress/plugins/index.js` file instead (for details see [the migration guide](https://docs.cypress.io/guides/references/migration-guide#Plugins-File-Removed)):
->
-> ```js
-> const { install } = require('@neuralegion/cypress-har-generator');
->
-> module.exports = on => {
->   install(on);
-> };
-> ```
 
 > ⚠ Please note that the `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
 >
@@ -115,7 +105,7 @@ Add the following line to your [support file](https://docs.cypress.io/app/core-c
 import '@neuralegion/cypress-har-generator/commands';
 ```
 
-> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. Before Cypress 10.0.0, the default support file is `cypress/support/index.js`, and Cypress 10.0.0 and later no longer load it. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
+> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
 
 The import also adds the types of the commands, so TypeScript knows `cy.recordHar`, `cy.saveHar` and `cy.disposeOfHar` without any further configuration.
 
@@ -433,7 +423,7 @@ describe('my tests', () => {
 });
 ```
 
-If you're using Cypress version 6.2.0 or higher, you can set up hooks in a single step, eliminating the need to define them in each spec file. To do this, you need to call `enableExperimentalLifecycle` in addition to `install` as shown below:
+You can set up hooks in a single step, eliminating the need to define them in each spec file. To do this, you need to call `enableExperimentalLifecycle` in addition to `install` as shown below:
 
 ```js
 import { defineConfig } from 'cypress';

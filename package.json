@@ -1,6 +1,6 @@
 {
   "name": "@neuralegion/cypress-har-generator",
-  "version": "5.19.2",
+  "version": "6.0.0-rc.4",
   "private": false,
   "description": "The Cypress plugin for generating HTTP Archive (HAR) files is a tool that allows developers and QA engineers to capture detailed information about network requests made during the execution of Cypress tests.",
   "repository": {
@@ -30,7 +30,7 @@
         "default": "./commands.cjs"
       }
     },
-    "./*": "./*"
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -91,7 +91,6 @@
     "@types/chai-like": "^1.1.1",
     "@types/chai-things": "^0.0.38",
     "@types/express": "^4.17.15",
-    "@types/har-format": "^1.2.8",
     "@types/node": "~24.19.2",
     "@types/webpack": "^5.28.0",
     "@types/webpack-node-externals": "^2.5.3",
@@ -100,7 +99,6 @@
     "chai-things": "^0.2.0",
     "conventional-changelog-conventionalcommits": "9.3.1",
     "cypress": "16.2.0",
-    "devtools-protocol": "~0.0.1040073",
     "eslint": "~9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^3.5.1",
@@ -147,11 +145,14 @@
     }
   },
   "peerDependencies": {
-    "cypress": ">=4.4.1 <12.12.0 || >=12.17.0"
+    "cypress": ">=14.0.0"
   },
   "dependencies": {
+    "@types/chrome-remote-interface": "~0.34.0",
+    "@types/har-format": "^1.2.8",
     "chalk": "^4.1.2",
     "chrome-remote-interface": "~0.34.0",
+    "devtools-protocol": "~0.0.1040073",
     "tslib": "^2.4.0"
   },
   "type": "module"
