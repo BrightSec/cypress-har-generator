@@ -155,5 +155,8 @@
     "devtools-protocol": "~0.0.1040073",
     "tslib": "^2.4.0"
   },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "type": "module"
 }
