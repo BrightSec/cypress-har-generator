@@ -332,6 +332,96 @@ describe('NetworkObserver', () => {
       );
     });
 
+    it('should keep the outer response of a SXG instead of its redirect response', async () => {
+      // arrange
+      when(networkMock.getRequestBody(anyString())).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb({
+          method: 'Network.signedExchangeReceived',
+          params: {
+            requestId: '1',
+            info: {
+              outerResponse: response
+            }
+          }
+        });
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            redirectResponse: {
+              ...response,
+              status: 303,
+              statusText: 'See Other'
+            }
+          }
+        });
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: '1:redirected.0',
+          resourceType: 'SignedExchange',
+          statusCode: 200,
+          statusText: 'OK'
+        })
+      );
+    });
+
+    it('should count the transfer size of a SXG to its outer request', async () => {
+      // arrange
+      const transferSizes = new Map<string, number>();
+      callback.mockImplementation(request => {
+        const { requestId, transferSize } = request as NetworkRequest;
+        transferSizes.set(requestId, transferSize);
+      });
+      when(networkMock.getRequestBody(anyString())).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb({
+          method: 'Network.signedExchangeReceived',
+          params: {
+            requestId: '1',
+            info: {
+              outerResponse: response
+            }
+          }
+        });
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            redirectResponse: response
+          }
+        });
+        await cb(responseReceivedEvent);
+        await new Promise(resolve => setTimeout(resolve, 10));
+        await cb({
+          ...loadingFinishedEvent,
+          params: {
+            ...loadingFinishedEvent.params,
+            encodedDataLength: 1777
+          }
+        });
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      expect(Object.fromEntries(transferSizes)).toEqual({
+        '1:redirected.0': 1777,
+        '1': 0
+      });
+    });
+
     it('should change a resource priority', async () => {
       // arrange
       when(networkMock.getRequestBody('1')).thenResolve({

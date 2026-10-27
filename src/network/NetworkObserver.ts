@@ -442,6 +442,20 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
     this.getExtraInfoBuilder(networkRequest.requestId).finished();
 
+    // Chrome reports the transfer size of a SXG with the loadingFinished of the request
+    // it redirects to, so the SXG entry is written once that request finishes.
+    if (networkRequest.signedExchangeInfo && networkRequest.isRedirect()) {
+      return;
+    }
+
+    if (networkRequest.redirectSource?.signedExchangeInfo) {
+      this.writeRequest(networkRequest.redirectSource);
+    }
+
+    this.writeRequest(networkRequest);
+  }
+
+  private writeRequest(networkRequest: NetworkRequest): void {
     if (this.shouldExcludeRequest(networkRequest)) {
       this._entries.delete(networkRequest.requestId);
 

@@ -52,8 +52,6 @@ export class NetworkRequest {
 
   private _signedExchangeInfo?: Protocol.Network.SignedExchangeInfo;
 
-  // TODO: use to finalize a response in the `requestWillBeSent` event handler or
-  //  update `transferSize` for the chain of redirects
   get signedExchangeInfo() {
     return this._signedExchangeInfo;
   }
