@@ -86,7 +86,7 @@ export class Plugin {
   public async recordHar(options: RecordOptions): Promise<void> {
     if (!this.addr) {
       throw new Error(
-        `Please call the 'ensureBrowserFlags' before attempting to start the recording.`
+        `The plugin's 'before:browser:launch' listener did not run, so the browser was started without a debugging port. Another 'before:browser:launch' listener may have replaced it: see https://github.com/cypress-io/cypress/issues/5240.`
       );
     }
 
