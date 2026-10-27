@@ -1,6 +1,6 @@
 {
   "name": "@neuralegion/cypress-har-generator",
-  "version": "6.0.0-rc.19",
+  "version": "6.0.0-rc.20",
   "private": false,
   "description": "The Cypress plugin for generating HTTP Archive (HAR) files is a tool that allows developers and QA engineers to capture detailed information about network requests made during the execution of Cypress tests.",
   "repository": {
