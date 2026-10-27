@@ -20,7 +20,11 @@ describe('HostFilter', () => {
       {},
       { includeHosts: undefined },
       { includeHosts: null },
-      { includeHosts: [] }
+      { includeHosts: [] },
+      { excludeHosts: undefined },
+      { excludeHosts: null },
+      { excludeHosts: [] },
+      { includeHosts: [], excludeHosts: [] }
     ])(
       'should return false when the filter is not applicable (options: %j)',
       options => {
@@ -36,7 +40,9 @@ describe('HostFilter', () => {
     it.each([
       { includeHosts: ['example.com'] },
       { includeHosts: [/example\.com$/] },
-      { includeHosts: ['example.com', 'sub.example.com'] }
+      { includeHosts: ['example.com', 'sub.example.com'] },
+      { excludeHosts: ['example.com'] },
+      { includeHosts: [], excludeHosts: [/example\.com$/] }
     ])(
       'should return true when the filter is applicable (options: %j)',
       options => {
@@ -170,6 +176,95 @@ describe('HostFilter', () => {
         new URL('https://api.example.com')
       );
       const options = { includeHosts: ['example.com', 'api.example.com'] };
+      // act
+      const result = sut.apply(instance(networkRequestMock), options);
+      // assert
+      expect(result).toBe(true);
+    });
+
+    it.each([
+      { input: 'https://example.com', pattern: 'example.com' },
+      { input: 'http://localhost:8080', pattern: 'localhost' },
+      { input: 'https://sub.example.com', pattern: /example\.com$/ },
+      { input: 'https://cdn.example.net', pattern: '^cdn\\.' }
+    ])(
+      'should return false if the host is excluded (url: $input, pattern: $pattern)',
+      ({ input, pattern }) => {
+        // arrange
+        when(networkRequestMock.parsedURL).thenReturn(new URL(input));
+        const options = { excludeHosts: [pattern] };
+        // act
+        const result = sut.apply(instance(networkRequestMock), options);
+        // assert
+        expect(result).toBe(false);
+      }
+    );
+
+    it.each([
+      'https://evil-example.com',
+      'https://example.com.attacker.net',
+      'https://sub.example.com'
+    ])('should return true if the host is not excluded (url: %s)', input => {
+      // arrange
+      when(networkRequestMock.parsedURL).thenReturn(new URL(input));
+      const options = { excludeHosts: ['example.com'] };
+      // act
+      const result = sut.apply(instance(networkRequestMock), options);
+      // assert
+      expect(result).toBe(true);
+    });
+
+    it('should return false if the host is both included and excluded', () => {
+      // arrange
+      when(networkRequestMock.parsedURL).thenReturn(
+        new URL('https://analytics.example.com')
+      );
+      const options = {
+        includeHosts: [/example\.com$/],
+        excludeHosts: ['analytics.example.com']
+      };
+      // act
+      const result = sut.apply(instance(networkRequestMock), options);
+      // assert
+      expect(result).toBe(false);
+    });
+
+    it('should return true if the host is included and not excluded', () => {
+      // arrange
+      when(networkRequestMock.parsedURL).thenReturn(
+        new URL('https://api.example.com')
+      );
+      const options = {
+        includeHosts: [/example\.com$/],
+        excludeHosts: ['analytics.example.com']
+      };
+      // act
+      const result = sut.apply(instance(networkRequestMock), options);
+      // assert
+      expect(result).toBe(true);
+    });
+
+    it('should return false if the host is not excluded but not included', () => {
+      // arrange
+      when(networkRequestMock.parsedURL).thenReturn(
+        new URL('https://other.net')
+      );
+      const options = {
+        includeHosts: ['example.com'],
+        excludeHosts: ['analytics.example.com']
+      };
+      // act
+      const result = sut.apply(instance(networkRequestMock), options);
+      // assert
+      expect(result).toBe(false);
+    });
+
+    it('should ignore empty included hosts when hosts are excluded', () => {
+      // arrange
+      when(networkRequestMock.parsedURL).thenReturn(
+        new URL('https://example.com')
+      );
+      const options = { includeHosts: [], excludeHosts: ['other.net'] };
       // act
       const result = sut.apply(instance(networkRequestMock), options);
       // assert

@@ -6,16 +6,27 @@ import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 Cypress.Commands.add(
   'recordHar',
-  (options?: Partial<RecordOptions>): Cypress.Chainable =>
-    cy.task('recordHar', {
+  (options?: Partial<RecordOptions>): Cypress.Chainable => {
+    const { includeBaseUrlHost, ...recordOptions } = options ?? {};
+    const includeHosts = HostPattern.withBaseUrlHost(
+      recordOptions.includeHosts,
+      includeBaseUrlHost,
+      Cypress.config('baseUrl')
+    );
+
+    return cy.task('recordHar', {
       content: true,
       rootDir: StringUtils.dirname(Cypress.spec.absolute),
-      ...options,
-      excludePaths: options?.excludePaths?.map(x =>
+      ...recordOptions,
+      excludePaths: recordOptions.excludePaths?.map(x =>
         StringUtils.toRegexSource(x)
       ),
-      includeHosts: options?.includeHosts?.map(x => HostPattern.toSource(x))
-    })
+      includeHosts: includeHosts?.map(x => HostPattern.toSource(x)),
+      excludeHosts: recordOptions.excludeHosts?.map(x =>
+        HostPattern.toSource(x)
+      )
+    });
+  }
 );
 
 Cypress.Commands.add(

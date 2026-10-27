@@ -7,6 +7,11 @@ export interface NetworkObserverOptions {
    * A regular expression, or any other string as its source, is tested against the host with its port.
    */
   includeHosts?: (string | RegExp)[];
+  /**
+   * Does not record requests to these hosts, even when {@link includeHosts} has them.
+   * The patterns match as in {@link includeHosts}.
+   */
+  excludeHosts?: (string | RegExp)[];
   includeMimes?: string[];
   excludeStatusCodes?: number[];
   /**

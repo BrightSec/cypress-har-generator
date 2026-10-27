@@ -34,9 +34,20 @@ export interface SaveOptions {
   maxWaitDuration?: number;
 }
 
+export interface HostScopeOptions {
+  /**
+   * Adds the host of the Cypress `baseUrl`, with its port, to {@link NetworkObserverOptions.includeHosts},
+   * so only requests to the app under test and the hosts given there are recorded.
+   * Throws a `TypeError` when `baseUrl` is not set.
+   * @defaultValue false
+   */
+  includeBaseUrlHost?: boolean;
+}
+
 export type RecordOptions = NetworkObserverOptions &
   HarExporterOptions &
-  NetworkOptions;
+  NetworkOptions &
+  HostScopeOptions;
 
 interface Addr {
   port: number;

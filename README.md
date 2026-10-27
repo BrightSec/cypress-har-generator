@@ -225,6 +225,22 @@ cy.recordHar({ includeHosts: [/.*\.execute-api\.eu-west-1\.amazonaws\.com/] });
 
 A host name, such as `'api.example.com'`, `'localhost:8080'` or `'[::1]'`, matches only that host, ignoring case, and any port unless the name has one. It does not match `evil-api.example.com` or `api.example.com.attacker.net`, nor subdomains: use a regular expression for those, such as `/(^|\.)example\.com(:\d+)?$/`, which is tested against the host with its port. Any other string is read as the source of a regular expression.
 
+To exclude requests on specific hosts, such as analytics, CDNs or auth providers, pass `excludeHosts`, whose patterns match as in `includeHosts`. A host excluded is not recorded, even when `includeHosts` has it:
+
+```js
+cy.recordHar({
+  includeHosts: [/(^|\.)example\.com(:\d+)?$/],
+  excludeHosts: ['analytics.example.com']
+});
+```
+
+To record only requests to the app under test, set `includeBaseUrlHost`, which adds the host of the Cypress `baseUrl`, with its port, to `includeHosts`. It throws a `TypeError` when `baseUrl` is not set:
+
+```js
+// with `baseUrl: 'http://localhost:8080'`, records only requests to `localhost:8080` and `api.example.com`
+cy.recordHar({ includeBaseUrlHost: true, includeHosts: ['api.example.com'] });
+```
+
 To exclude some requests, you can pass an array of patterns specifying a list of paths using the `excludePaths` to be excluded from the logs:
 
 ```js

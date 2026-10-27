@@ -5,6 +5,7 @@ import { DefaultConnectionFactory } from './cdp/DefaultConnectionFactory.ts';
 import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.ts';
 import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
+import { HostPattern } from './utils/HostPattern.ts';
 import { ConfigUtils } from './utils/ConfigUtils.ts';
 import { DEPRECATED_HARS_FOLDER_KEYS, HARS_FOLDER_KEYS } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
@@ -164,9 +165,18 @@ const enableLifecycle = (
     waitForIdle,
     minIdleDuration,
     maxWaitDuration,
+    includeBaseUrlHost,
     ...recordOptions
   }: Omit<InstallOptions, 'lifecycle'> = {}
 ): void => {
+  if (includeBaseUrlHost !== undefined) {
+    recordOptions.includeHosts = HostPattern.withBaseUrlHost(
+      recordOptions.includeHosts,
+      includeBaseUrlHost,
+      config.baseUrl
+    );
+  }
+
   // FIXME: `isInteractive` is always true. For details see https://github.com/cypress-io/cypress/issues/20789
   if (!config.isTextTerminal && !config.experimentalInteractiveRunEvents) {
     Logger.Instance.warn(
@@ -216,4 +226,4 @@ export const ensureBrowserFlags = (
   );
 };
 
-export type { SaveOptions, RecordOptions } from './Plugin.ts';
+export type { SaveOptions, RecordOptions, HostScopeOptions } from './Plugin.ts';
