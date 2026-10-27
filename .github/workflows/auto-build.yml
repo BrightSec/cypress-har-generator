@@ -36,6 +36,55 @@ jobs:
       - name: Execute ${{ matrix.target }} npm script
         run: npm run ${{ matrix.target }}
 
+  # type-checks the packed plugin in a new project with `skipLibCheck: false`, so the published types must stand
+  # on their own for every TypeScript major users run
+  types:
+    name: types (typescript ${{ matrix.typescript }}, ${{ matrix.resolution }})
+    runs-on: ubuntu-latest
+    needs: install-deps
+    strategy:
+      fail-fast: false
+      matrix:
+        typescript: ['4.9', '5.0', '6.0']
+        resolution: ['node', 'node16']
+        exclude:
+          # TypeScript 6 deprecates `node` resolution
+          - typescript: '6.0'
+            resolution: 'node'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        uses: ./.github/workflows/composite/npm
+
+      - name: Pack the plugin
+        run: npm run build && npm pack --pack-destination "$RUNNER_TEMP"
+
+      - name: Type-check a consumer project
+        working-directory: ${{ runner.temp }}
+        env:
+          CYPRESS_INSTALL_BINARY: 0
+        run: |
+          mkdir consumer && cd consumer
+          npm init -y > /dev/null
+          npm i ../neuralegion-cypress-har-generator-*.tgz cypress@14 @types/node@20 typescript@${{ matrix.typescript }}
+          cat > index.ts <<'EOF'
+          import { install } from '@neuralegion/cypress-har-generator';
+          import type { RecordOptions } from '@neuralegion/cypress-har-generator';
+          import '@neuralegion/cypress-har-generator/commands';
+
+          const options: RecordOptions = { rootDir: '.', content: true };
+          export const setup = (on: Cypress.PluginEvents): void => install(on);
+          cy.recordHar(options);
+          cy.saveHar({ outDir: './hars' });
+          // @ts-expect-error fails if the command types are missing
+          cy.saveHar({ unknown: true });
+          EOF
+          module=${{ matrix.resolution == 'node' && 'commonjs' || 'node16' }}
+          npx tsc --noEmit --strict --skipLibCheck false --target es2020 --types node,cypress \
+            --module "$module" --moduleResolution ${{ matrix.resolution }} index.ts
+
   # `default` is the Cypress version the repository depends on; the earlier majors are ones users still run,
   # where options come from `env` (before 16) instead of or as well as `expose`
   # the `lifecycle` suite runs with `enableExperimentalLifecycle`, which the default suite cannot enable

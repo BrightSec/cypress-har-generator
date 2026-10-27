@@ -220,6 +220,7 @@ export default defineConfig(
       'eslint.config.ts',
       'jest.config.ts',
       'webpack.config.ts',
+      'rollup.config.ts',
       'cypress.config.ts',
       'cypress/**/*.ts',
       '**/*.spec.ts'
