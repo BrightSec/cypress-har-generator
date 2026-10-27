@@ -34,6 +34,7 @@ The plugin allows you to record network requests from multiple targets such as p
   - [saveHar](#savehar)
   - [disposeOfHar](#disposeofhar)
 - [Example Usage](#example-usage)
+- [Migrating to v6](#migrating-to-v6)
 - [License](#license)
 
 ## Install
@@ -453,6 +454,10 @@ export default defineConfig({
 > ⚠ Please note, to utilize this experimental mechanism for setting up lifecycle, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
 
 > ✴ If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `enableExperimentalLifecycle` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
+
+## Migrating to v6
+
+- Only `@neuralegion/cypress-har-generator`, `@neuralegion/cypress-har-generator/commands` and `@neuralegion/cypress-har-generator/package.json` can be imported. Deep imports of any other file, such as `@neuralegion/cypress-har-generator/dist/index.js` or `@neuralegion/cypress-har-generator/commands.js`, fail with `ERR_PACKAGE_PATH_NOT_EXPORTED`; import the package root or `@neuralegion/cypress-har-generator/commands` instead.
 
 ## License
 
