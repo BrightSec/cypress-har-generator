@@ -33,6 +33,7 @@ The plugin allows you to record network requests from multiple targets such as p
   - [recordHar](#recordhar)
   - [saveHar](#savehar)
   - [disposeOfHar](#disposeofhar)
+  - [replayHar](#replayhar)
 - [Example Usage](#example-usage)
 - [License](#license)
 
@@ -427,6 +428,32 @@ describe('my tests', () => {
   });
 });
 ```
+
+### replayHar
+
+Serves the requests of the test with the responses recorded in a HAR file, as Playwright's [`routeFromHAR`](https://playwright.dev/docs/mock#mocking-with-har-files) does, so you can record a HAR once and replay it as a network mock in later runs. It is built on `cy.intercept()`, so it works in any browser and does not need a recording to be active. The path is relative to the project root:
+
+```js
+cy.replayHar('cypress/hars/products.har');
+cy.visit('/products');
+```
+
+A request is served by the entry with the same method, URL and body. A JSON body matches regardless of its formatting, and the fragment of the URL is ignored. When several entries match, they are served in the recorded order, and the last one keeps being served after that. The response is served with the recorded status, headers and body, and a body recorded in base64 is decoded. An entry with the status `0`, i.e. a request that got no response, fails with a network error.
+
+By default, a request that no entry matches fails with a network error. To pass it on to your other `cy.intercept()` handlers and the network instead, pass `notFound: 'fallback'`:
+
+```js
+cy.replayHar('cypress/hars/products.har', { notFound: 'fallback' });
+```
+
+To serve only some requests from the HAR, pass a glob pattern or a regular expression in `url`, as for `cy.intercept()`. The other requests reach the network as usual:
+
+```js
+cy.replayHar('cypress/hars/products.har', { url: '**/api/**' });
+```
+
+> [!NOTE]
+> WebSocket and server-sent event entries are not served: `cy.intercept()` cannot reply with WebSocket frames or an event stream, and a HAR keeps no body for an event stream. `cy.intercept()` takes one value per header, so of several recorded `Set-Cookie` headers only the first one is served. The status text and the timings of the recorded response are not replayed.
 
 ## Example Usage
 

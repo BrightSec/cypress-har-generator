@@ -7,6 +7,9 @@ import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
 import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
+import { HarReader } from './replay/HarReader.ts';
+import type { ReplayOptions } from './replay/ReplayOptions.ts';
+import type { Entry } from 'har-format';
 import picomatch from 'picomatch';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
@@ -17,6 +20,12 @@ declare global {
       saveHar(options?: Partial<SaveOptions>): Chainable<Subject>;
       recordHar(options?: Partial<RecordOptions>): Chainable<Subject>;
       disposeOfHar(): Chainable<Subject>;
+      /**
+       * Serves the matching requests with the responses recorded in a HAR file, which works without recording.
+       * @param path - The path to the HAR file, relative to the project root.
+       * @param options - See {@link ReplayOptions}.
+       */
+      replayHar(path: string, options?: ReplayOptions): Chainable<null>;
     }
   }
 }
@@ -28,6 +37,7 @@ const plugin = new Plugin(
   new DefaultObserverFactory(Logger.Instance),
   new DefaultHarExporterFactory(FileManager.Instance, Logger.Instance)
 );
+const harReader = new HarReader(FileManager.Instance);
 
 /**
  * Besides `lifecycle`, takes the options of `cy.recordHar()` and `cy.saveHar()` for the HAR recorded for each spec,
@@ -78,7 +88,9 @@ export const install = (
       await plugin.disposeOfHar();
 
       return null;
-    }
+    },
+    readHar: (path: string): Promise<Entry[]> =>
+      harReader.read(resolve(config.projectRoot, path))
   });
 
   on(
@@ -168,3 +180,4 @@ const specFolder = (
 };
 
 export type { SaveOptions, RecordOptions } from './Plugin.ts';
+export type { ReplayOptions, NotFoundAction } from './replay/ReplayOptions.ts';

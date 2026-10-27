@@ -1,6 +1,7 @@
 import { install } from './index.ts';
 import { Plugin } from './Plugin.ts';
 import { Logger } from './utils/Logger.ts';
+import { HarReader } from './replay/HarReader.ts';
 import { DEFAULT_EXCLUDE_PATHS } from './constants.ts';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { join, resolve } from 'node:path';
@@ -292,5 +293,26 @@ describe('install', () => {
       excludePaths: ['^\\/__(cypress[\\w-]*)?\\/'],
       rootDir: '/project/cypress/e2e'
     });
+  });
+
+  it('should read the HAR to replay relative to the project root', async () => {
+    // arrange
+    const entries = [{ request: { url: 'https://example.com/' } }];
+    const read = jest
+      .spyOn(HarReader.prototype, 'read')
+      .mockResolvedValue(entries as never);
+    const { handlers, on } = createEvents();
+    install(on, config);
+    const tasks = handlers.get('task') as unknown as Record<
+      string,
+      (path: string) => Promise<unknown>
+    >;
+
+    // act
+    const result = await tasks.readHar('hars/example.har');
+
+    // assert
+    expect(read).toHaveBeenCalledWith(join(projectRoot, 'hars/example.har'));
+    expect(result).toBe(entries);
   });
 });
