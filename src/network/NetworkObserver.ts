@@ -500,7 +500,8 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     if (
       this.options.content &&
       networkRequest.mimeType !== undefined &&
-      !networkRequest.isRedirect()
+      !networkRequest.isRedirect() &&
+      !this.shouldExcludeRequest(networkRequest)
     ) {
       networkRequest.setContentData(
         this.network.getResponseBody(networkRequest.requestId)
