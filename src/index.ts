@@ -119,6 +119,32 @@ const warnAboutDeprecatedConfig = (
       'The `hars_folders` variable is deprecated and will be removed in version 6. Rename it to `hars_folder`, or `CYPRESS_HARS_FOLDERS` to `CYPRESS_hars_folder`.'
     );
   }
+
+  if (!config.version) {
+    return;
+  }
+
+  if (!supportsExpose(config.version)) {
+    Logger.Instance.deprecate(
+      'cypress-version',
+      `Cypress ${config.version} is deprecated: version 6 of the plugin requires Cypress 15.10.0 or later, which adds \`Cypress.expose()\`.`
+    );
+  } else if (
+    ConfigUtils.fromNode({ expose: config.expose }, HARS_FOLDER_KEYS) ===
+      undefined &&
+    ConfigUtils.fromNode({ env: config.env }, HARS_FOLDER_KEYS) !== undefined
+  ) {
+    Logger.Instance.deprecate(
+      'hars_folder-env',
+      'Reading `hars_folder` from `env`, `--env` or `CYPRESS_hars_folder` is deprecated and will be removed in version 6. Set it in `expose`, or pass `--expose hars_folder=...`, instead.'
+    );
+  }
+};
+
+const supportsExpose = (version: string): boolean => {
+  const [major = 0, minor = 0]: number[] = version.split('.').map(Number);
+
+  return major > 15 || (major === 15 && minor >= 10);
 };
 
 const enableLifecycle = (

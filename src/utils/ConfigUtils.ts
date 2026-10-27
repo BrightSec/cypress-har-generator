@@ -13,6 +13,7 @@ export class ConfigUtils {
   // `Cypress.env()` is deprecated since Cypress 15.10, throws when `allowCypressEnv` is false and is removed in
   // Cypress 16, so a value is read from `Cypress.expose()` first and from `Cypress.env()` only where it still works.
   // Keys are tried in the given order, so a current name can be listed before the names it replaced.
+  // The `Cypress.env()` fallback is deprecated and will be removed in version 6, which requires Cypress 15.10.
   public static fromBrowser<T>(
     source: BrowserConfigSource,
     keys: string[]

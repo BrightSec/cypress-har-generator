@@ -44,6 +44,9 @@ To install the plugin as development dependency, run the following command:
 $ npm i --save-dev @neuralegion/cypress-har-generator
 ```
 
+> [!WARNING]
+> Cypress versions before 15.10.0 are deprecated. Version 6 of the plugin requires Cypress 15.10.0 or later, and the plugin warns when `install` receives the config of an earlier version, as in `install(on, config)`.
+
 > [!NOTE]
 > For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
 
@@ -160,6 +163,9 @@ $ cypress run --browser chrome --expose hars_folder=cypress/hars
 ```
 
 On Cypress versions before 16, the plugin also reads `hars_folder` from the `env` object, the `--env` option, or the `CYPRESS_hars_folder` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
+
+> [!WARNING]
+> Reading `hars_folder` from `env`, `--env` or `CYPRESS_hars_folder` is deprecated and will be removed in version 6, which reads it only from `expose`. On Cypress 15.10.0 and later, the plugin warns about it when `install` receives the config, as in `install(on, config)`.
 
 > [!WARNING]
 > `hars_folder` was previously named `hars_folders`. The old name is still supported and used when `hars_folder` is not set, but it is deprecated and will be removed in version 6. The plugin warns about it when `install` receives the config, as in `install(on, config)`. Please rename it in your configuration. Likewise, the `CYPRESS_HARS_FOLDERS` environment variable is deprecated; use `CYPRESS_hars_folder` instead.

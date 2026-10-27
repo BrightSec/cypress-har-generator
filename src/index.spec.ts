@@ -89,6 +89,75 @@ describe('install', () => {
     expect(deprecate).not.toHaveBeenCalled();
     deprecate.mockRestore();
   });
+
+  it.each(['14.5.4', '15.9.0'])(
+    'should warn that Cypress %s is deprecated',
+    version => {
+      // arrange
+      const deprecate = jest
+        .spyOn(Logger.Instance, 'deprecate')
+        .mockImplementation(() => undefined);
+      const { on } = createEvents();
+
+      // act
+      install(on, { ...config, version } as Cypress.PluginConfigOptions);
+
+      // assert
+      expect(deprecate).toHaveBeenCalledWith(
+        'cypress-version',
+        expect.stringContaining('15.10.0')
+      );
+      deprecate.mockRestore();
+    }
+  );
+
+  it.each([
+    { version: '15.10.0', env: { hars_folder: 'hars' } },
+    { version: '16.2.0', env: { HARS_FOLDER: 'hars' }, expose: {} }
+  ])(
+    'should warn that reading hars_folder from env is deprecated in %j',
+    source => {
+      // arrange
+      const deprecate = jest
+        .spyOn(Logger.Instance, 'deprecate')
+        .mockImplementation(() => undefined);
+      const { on } = createEvents();
+
+      // act
+      install(on, { ...config, ...source } as Cypress.PluginConfigOptions);
+
+      // assert
+      expect(deprecate).toHaveBeenCalledWith(
+        'hars_folder-env',
+        expect.stringContaining('expose')
+      );
+      expect(deprecate).not.toHaveBeenCalledWith(
+        'cypress-version',
+        expect.anything()
+      );
+      deprecate.mockRestore();
+    }
+  );
+
+  it('should not warn when hars_folder is exposed on Cypress 15.10', () => {
+    // arrange
+    const deprecate = jest
+      .spyOn(Logger.Instance, 'deprecate')
+      .mockImplementation(() => undefined);
+    const { on } = createEvents();
+
+    // act
+    install(on, {
+      ...config,
+      version: '15.10.0',
+      expose: { hars_folder: 'hars' },
+      env: { hars_folder: 'other' }
+    } as unknown as Cypress.PluginConfigOptions);
+
+    // assert
+    expect(deprecate).not.toHaveBeenCalled();
+    deprecate.mockRestore();
+  });
 });
 
 describe('enableExperimentalLifecycle', () => {
