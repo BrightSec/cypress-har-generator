@@ -1,4 +1,5 @@
 import { StringUtils } from './utils/StringUtils.ts';
+import { HostPattern } from './utils/HostPattern.ts';
 import { type BrowserConfigSource, ConfigUtils } from './utils/ConfigUtils.ts';
 import { HARS_FOLDER_KEYS } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
@@ -13,9 +14,7 @@ Cypress.Commands.add(
       excludePaths: options?.excludePaths?.map(x =>
         StringUtils.toRegexSource(x)
       ),
-      includeHosts: options?.includeHosts?.map(x =>
-        StringUtils.toRegexSource(x)
-      )
+      includeHosts: options?.includeHosts?.map(x => HostPattern.toSource(x))
     })
 );
 
