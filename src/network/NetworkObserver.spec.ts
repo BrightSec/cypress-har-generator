@@ -824,6 +824,29 @@ describe('NetworkObserver', () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
+    it('should not load a response body of a filtered out request', async () => {
+      // arrange
+      when(optionsSpy.content).thenReturn(true);
+      when(requestFilterMock.wouldApply(anything())).thenReturn(true);
+      when(requestFilterMock.apply(anything(), anything())).thenReturn(false);
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: ''
+      });
+      when(networkMock.getResponseBody('1')).thenResolve({
+        body: '<html></html>',
+        base64Encoded: false
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      verify(networkMock.getResponseBody('1')).never();
+    });
+
     it('should not keep a filtered out request pending', async () => {
       // arrange
       when(requestFilterMock.wouldApply(anything())).thenReturn(true);
