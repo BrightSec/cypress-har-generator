@@ -16,8 +16,8 @@ const createEvents = () => {
 describe('install', () => {
   const projectRoot = resolve('/project');
   const config = {
-    isTextTerminal: true,
     projectRoot,
+    isTextTerminal: true,
     specPattern: 'cypress/e2e/**/*.cy.ts'
   } as Cypress.PluginConfigOptions;
 
