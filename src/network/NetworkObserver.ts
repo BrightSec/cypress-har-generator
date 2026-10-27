@@ -19,7 +19,11 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   private destination?: (chromeEntry: NetworkRequest) => unknown;
 
   get empty(): boolean {
-    return this._entries.size === 0;
+    // Like Chrome's network idle, a WebSocket does not count as a pending request,
+    // since it may stay open for the whole page lifetime.
+    return [...this._entries.values()].every(
+      (entry: NetworkRequest): boolean => entry.resourceType === 'WebSocket'
+    );
   }
 
   constructor(
@@ -50,6 +54,15 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     // a `Network.getResponseBody` still pending on a detached session.
     await Promise.allSettled(this._pendingWrites);
     await this.network.detachFromTargets();
+    // DevTools exports a WebSocket that is still open with the frames received so far.
+    await Promise.all(
+      [...this._entries.values()]
+        .filter(
+          (entry: NetworkRequest): boolean =>
+            entry.resourceType === 'WebSocket' && entry.endTime === -1
+        )
+        .map((entry: NetworkRequest): Promise<void> => this.writeRequest(entry))
+    );
     delete this.destination;
     this._entries.clear();
     this._extraInfoBuilders.clear();
@@ -224,6 +237,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
       '',
       initiator
     );
+    entry.resourceType = 'WebSocket';
     this.startRequest(entry);
   }
 
@@ -460,7 +474,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     this.writeRequest(networkRequest);
   }
 
-  private writeRequest(networkRequest: NetworkRequest): void {
+  private async writeRequest(networkRequest: NetworkRequest): Promise<void> {
     if (this.shouldExcludeRequest(networkRequest)) {
       this._entries.delete(networkRequest.requestId);
 
@@ -476,6 +490,8 @@ export class NetworkObserver implements Observer<NetworkRequest> {
       });
 
     this._pendingWrites.add(pending);
+
+    await pending;
   }
 
   private loadContent(networkRequest: NetworkRequest): void {

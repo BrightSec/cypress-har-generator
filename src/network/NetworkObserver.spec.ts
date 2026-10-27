@@ -150,6 +150,55 @@ describe('NetworkObserver', () => {
     }
   };
 
+  const webSocketEvents = [
+    {
+      method: 'Network.webSocketCreated',
+      params: {
+        requestId: '2',
+        url: 'ws://localhost:8080/ws'
+      }
+    },
+    {
+      method: 'Network.webSocketWillSendHandshakeRequest',
+      params: {
+        requestId: '2',
+        timestamp: 1,
+        wallTime: 1,
+        request: {
+          headers: {
+            Upgrade: 'websocket'
+          }
+        }
+      }
+    },
+    {
+      method: 'Network.webSocketHandshakeResponseReceived',
+      params: {
+        requestId: '2',
+        timestamp: 2,
+        response: {
+          status: 101,
+          statusText: 'Switching Protocols',
+          headers: {
+            Upgrade: 'websocket'
+          }
+        }
+      }
+    },
+    {
+      method: 'Network.webSocketFrameReceived',
+      params: {
+        requestId: '2',
+        timestamp: 3,
+        response: {
+          opcode: 1,
+          mask: false,
+          payloadData: 'test'
+        }
+      }
+    }
+  ];
+
   let sut!: NetworkObserver;
   let options!: NetworkObserverOptions;
   let optionsSpy!: NetworkObserverOptions;
@@ -196,6 +245,20 @@ describe('NetworkObserver', () => {
       const result = sut.empty;
       // assert
       expect(result).toBe(false);
+    });
+
+    it('should return true when only a WebSocket is open', async () => {
+      // arrange
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        for (const event of webSocketEvents) {
+          await cb(event);
+        }
+      });
+      await sut.subscribe(callback);
+      // act
+      const result = sut.empty;
+      // assert
+      expect(result).toBe(true);
     });
 
     it('should attach to network events', async () => {
@@ -1087,6 +1150,46 @@ describe('NetworkObserver', () => {
       await sut.unsubscribe();
       // assert
       verify(networkMock.detachFromTargets()).once();
+    });
+
+    it('should write a WebSocket that is still open with its frames', async () => {
+      // arrange
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        for (const event of webSocketEvents) {
+          await cb(event);
+        }
+      });
+      await sut.subscribe(callback);
+      // act
+      await sut.unsubscribe();
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: '2',
+          url: 'ws://localhost:8080/ws',
+          statusCode: 101,
+          frames: [expect.objectContaining({ type: 'response', data: 'test' })]
+        })
+      );
+    });
+
+    it('should not write a closed WebSocket again', async () => {
+      // arrange
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        for (const event of webSocketEvents) {
+          await cb(event);
+        }
+        await cb({
+          method: 'Network.webSocketClosed',
+          params: { requestId: '2', timestamp: 4 }
+        });
+      });
+      await sut.subscribe(callback);
+      // act
+      await sut.unsubscribe();
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
     });
 
     it('should write a finished request whose response body is still loading', async () => {
