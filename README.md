@@ -233,6 +233,13 @@ To exclude some requests, you can pass an array of patterns specifying a list of
 cy.recordHar({ excludePaths: [/^\/login/, /logout$/] });
 ```
 
+By default, `excludePaths` is `[/^\/__(cypress[\w-]*)?\//]`, which leaves out the requests Cypress itself makes on your app's origin, such as `/__/`, `/__cypress/` and `/__cypress-cy-prompt/`. Passing `excludePaths` replaces this default, so add the pattern to your list to keep excluding them, or pass an empty array to record them:
+
+```js
+cy.recordHar({ excludePaths: [/^\/__(cypress[\w-]*)?\//, /^\/login/] });
+cy.recordHar({ excludePaths: [] });
+```
+
 You can also pass an array of MIME types for which to record requests:
 
 ```js

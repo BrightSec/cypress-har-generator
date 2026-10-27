@@ -28,6 +28,17 @@ export default defineConfig({
         if (!urls.includes(`${config.baseUrl}/`)) {
           throw new Error(`${harPath} has no entry for ${config.baseUrl}/`);
         }
+
+        // the runner loads its own scripts, such as `/__cypress-cy-prompt/`, when a spec starts
+        const internal: string[] = urls.filter(url =>
+          /^\/__(cypress[\w-]*)?\//.test(new URL(url).pathname)
+        );
+
+        if (internal.length) {
+          throw new Error(
+            `${harPath} has Cypress internal requests: ${internal.join(', ')}`
+          );
+        }
       });
     }
   }

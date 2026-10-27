@@ -124,6 +124,35 @@ describe('Record HAR', () => {
     })
   );
 
+  it('excludes the Cypress internal requests by default', () => {
+    cy.recordHar();
+
+    cy.visit('/');
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('not.be.empty')
+      .and('not.contain.something.like', {
+        request: { url: /^https?:\/\/[^/]+\/__(cypress[\w-]*)?\// }
+      });
+  });
+
+  it('records the Cypress internal requests when the excluded paths are empty', () => {
+    cy.recordHar({ excludePaths: [] });
+
+    cy.visit('/');
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: { url: /^https?:\/\/[^/]+\/__(cypress[\w-]*)?\// }
+      });
+  });
+
   it('excludes a request by its path', () => {
     cy.recordHar({ excludePaths: [/^\/api\/products$/, '^\\/api\\/users$'] });
 

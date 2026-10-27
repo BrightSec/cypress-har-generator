@@ -5,7 +5,7 @@ import { DefaultConnectionFactory } from './cdp/DefaultConnectionFactory.ts';
 import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.ts';
 import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
-import { HARS_FOLDER_KEY } from './constants.ts';
+import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 declare global {
@@ -103,6 +103,7 @@ const enableLifecycle = (
     on('before:spec', (spec: Cypress.Spec) =>
       plugin.recordHar({
         content: true,
+        excludePaths: [...DEFAULT_EXCLUDE_PATHS],
         rootDir: StringUtils.dirname(spec.absolute)
       })
     );

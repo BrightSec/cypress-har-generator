@@ -1,5 +1,5 @@
 import { StringUtils } from './utils/StringUtils.ts';
-import { HARS_FOLDER_KEY } from './constants.ts';
+import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 Cypress.Commands.add(
@@ -9,7 +9,7 @@ Cypress.Commands.add(
       content: true,
       rootDir: StringUtils.dirname(Cypress.spec.absolute),
       ...options,
-      excludePaths: options?.excludePaths?.map(x =>
+      excludePaths: (options?.excludePaths ?? DEFAULT_EXCLUDE_PATHS).map(x =>
         StringUtils.toRegexSource(x)
       ),
       includeHosts: options?.includeHosts?.map(x =>

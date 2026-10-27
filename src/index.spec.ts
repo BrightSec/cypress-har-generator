@@ -92,6 +92,7 @@ describe('install', () => {
     // assert
     expect(recordHar).toHaveBeenCalledWith({
       content: true,
+      excludePaths: ['^\\/__(cypress[\\w-]*)?\\/'],
       rootDir: '/project/cypress/e2e'
     });
   });
