@@ -5,8 +5,7 @@ import { DefaultConnectionFactory } from './cdp/DefaultConnectionFactory.ts';
 import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.ts';
 import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
-import { ConfigUtils } from './utils/ConfigUtils.ts';
-import { DEPRECATED_HARS_FOLDER_KEYS, HARS_FOLDER_KEYS } from './constants.ts';
+import { HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 declare global {
@@ -86,21 +85,8 @@ export const install = (
     }
   );
 
-  warnAboutDeprecatedConfig(config);
-
   if (lifecycle) {
     enableLifecycle(on, config);
-  }
-};
-
-const warnAboutDeprecatedConfig = (
-  config: Cypress.PluginConfigOptions
-): void => {
-  if (ConfigUtils.fromNode(config, DEPRECATED_HARS_FOLDER_KEYS) !== undefined) {
-    Logger.Instance.deprecate(
-      'hars_folders',
-      'The `hars_folders` variable is deprecated and will be removed in version 6. Rename it to `hars_folder`, or `CYPRESS_HARS_FOLDERS` to `CYPRESS_hars_folder`.'
-    );
   }
 };
 
@@ -117,14 +103,13 @@ const enableLifecycle = (
     on('before:spec', (spec: Cypress.Spec) =>
       plugin.recordHar({
         content: true,
-        includeBlobs: true,
         rootDir: StringUtils.dirname(spec.absolute)
       })
     );
     on('after:spec', (spec: Cypress.Spec, _: CypressCommandLine.RunResult) =>
       plugin.saveHar({
         fileName: StringUtils.normalizeName(spec.name, { ext: '.har' }),
-        outDir: ConfigUtils.fromNode<string>(config, HARS_FOLDER_KEYS) ?? '.'
+        outDir: config.expose?.[HARS_FOLDER_KEY] ?? '.'
       })
     );
   }

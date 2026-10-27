@@ -16,29 +16,29 @@ describe('BlobFilter', () => {
   afterEach(() => reset(networkRequestMock));
 
   describe('wouldApply', () => {
-    it('should return true when the filter is applicable', () => {
-      // act
-      const result = sut.wouldApply({ includeBlobs: false });
-      // assert
-      expect(result).toBe(true);
-    });
-
     it.each([
       {},
       { includeBlobs: undefined },
       { includeBlobs: null },
-      { includeBlobs: true }
+      { includeBlobs: false }
     ])(
-      'should return false when the filter is not applicable (options: %j)',
+      'should return true when the filter is applicable (options: %j)',
       options => {
         // act
         const result = sut.wouldApply(
           options as unknown as RequestFilterOptions
         );
         // assert
-        expect(result).toBe(false);
+        expect(result).toBe(true);
       }
     );
+
+    it('should return false when the filter is not applicable', () => {
+      // act
+      const result = sut.wouldApply({ includeBlobs: true });
+      // assert
+      expect(result).toBe(false);
+    });
   });
 
   describe('apply', () => {

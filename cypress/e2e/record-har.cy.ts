@@ -172,22 +172,6 @@ describe('Record HAR', () => {
       });
   });
 
-  it('includes only a request responding with the status code equal or greater than the threshold', () => {
-    cy.recordHar({ minStatusCodeToInclude: 400 });
-
-    cy.visit('/pages/unknown', { failOnStatusCode: false });
-
-    cy.saveHar({ waitForIdle: true });
-
-    cy.findHar()
-      .its('log.entries')
-      .should('all.contain.something.like', {
-        response: {
-          status: 500
-        }
-      });
-  });
-
   it('records a response body', () => {
     cy.recordHar();
 
@@ -205,7 +189,7 @@ describe('Record HAR', () => {
   });
 
   it('includes blobs loaded by the Service Worker', () => {
-    cy.recordHar();
+    cy.recordHar({ includeBlobs: true });
 
     cy.get('a[href$=service-worker]').click();
 

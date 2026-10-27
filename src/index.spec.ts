@@ -1,6 +1,5 @@
 import { install } from './index.ts';
 import { Plugin } from './Plugin.ts';
-import { Logger } from './utils/Logger.ts';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 
 const createEvents = () => {
@@ -53,46 +52,29 @@ describe('install', () => {
   });
 
   it.each([
-    { env: { hars_folders: 'hars' } },
-    { expose: { HARS_FOLDERS: 'hars' } }
+    { source: { expose: { hars_folder: 'hars' } }, expected: 'hars' },
+    { source: { env: { hars_folder: 'hars' } }, expected: '.' },
+    { source: { expose: { HARS_FOLDER: 'hars' } }, expected: '.' }
   ])(
-    'should warn that hars_folders is deprecated when it is set in %j',
-    source => {
+    'should save the HAR of each spec to $expected when the config has $source',
+    async ({ source, expected }) => {
       // arrange
-      const deprecate = jest
-        .spyOn(Logger.Instance, 'deprecate')
-        .mockImplementation(() => undefined);
-      const { on } = createEvents();
-
-      // act
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
       install(on, { ...config, ...source } as Cypress.PluginConfigOptions);
 
+      // act
+      await handlers.get('after:spec')?.({ name: 'spec.cy.ts' }, {});
+
       // assert
-      expect(deprecate).toHaveBeenCalledWith(
-        'hars_folders',
-        expect.stringContaining('hars_folder')
+      expect(saveHar).toHaveBeenCalledWith(
+        expect.objectContaining({ outDir: expected })
       );
-      deprecate.mockRestore();
+      saveHar.mockRestore();
     }
   );
-
-  it('should not warn about hars_folders when only hars_folder is set', () => {
-    // arrange
-    const deprecate = jest
-      .spyOn(Logger.Instance, 'deprecate')
-      .mockImplementation(() => undefined);
-    const { on } = createEvents();
-
-    // act
-    install(on, {
-      ...config,
-      env: { hars_folder: 'hars' }
-    } as unknown as Cypress.PluginConfigOptions);
-
-    // assert
-    expect(deprecate).not.toHaveBeenCalled();
-    deprecate.mockRestore();
-  });
 
   it('should start recording in the folder of the spec before it runs', async () => {
     // arrange
@@ -110,7 +92,6 @@ describe('install', () => {
     // assert
     expect(recordHar).toHaveBeenCalledWith({
       content: true,
-      includeBlobs: true,
       rootDir: '/project/cypress/e2e'
     });
   });
