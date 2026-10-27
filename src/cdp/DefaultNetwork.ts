@@ -6,7 +6,8 @@ import {
   UNABLE_TO_ATTACH_TO_TARGET
 } from './messages.ts';
 import type { NetworkOptions } from './NetworkOptions.ts';
-import type { Client, EventMessage } from 'chrome-remote-interface';
+import type { CDPClient } from './CDPClient.ts';
+import type { EventMessage } from 'chrome-remote-interface';
 import type { Protocol } from 'devtools-protocol';
 
 export class DefaultNetwork implements Network {
@@ -38,7 +39,7 @@ export class DefaultNetwork implements Network {
   >();
 
   constructor(
-    private readonly cdp: Client,
+    private readonly cdp: CDPClient,
     private readonly logger: Logger,
     private readonly options?: NetworkOptions
   ) {}

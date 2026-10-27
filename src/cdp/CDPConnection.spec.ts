@@ -7,6 +7,7 @@ import {
   DISCONNECTED,
   FAILED_ATTEMPT_TO_CONNECT
 } from './messages.ts';
+import type { CDPClient } from './CDPClient.ts';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { anyFunction, instance, mock, reset, verify, when } from 'ts-mockito';
 import type { Client, Options, VersionResult } from 'chrome-remote-interface';
@@ -35,7 +36,7 @@ type CDP = {
 describe('CDPConnection', () => {
   const loggerMock = mock<Logger>();
   const retryStrategyMock = mock<RetryStrategy>();
-  const clientMock = mock<Client>();
+  const clientMock = mock<CDPClient>();
   const version = jest.fn<(options?: Options) => Promise<VersionResult>>();
   const connect = jest.fn<CDP>();
   const webSocketDebuggerUrl = 'ws://localhost:9222/devtools/browser/1';
@@ -58,7 +59,7 @@ describe('CDPConnection', () => {
   afterEach(() => {
     jest.resetModules();
     jest.resetAllMocks();
-    reset<Logger | RetryStrategy | Client>(
+    reset<Logger | RetryStrategy | CDPClient>(
       loggerMock,
       retryStrategyMock,
       clientMock
