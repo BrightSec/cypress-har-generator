@@ -435,8 +435,8 @@ describe('EntryBuilder', () => {
           {
             data,
             opcode,
-            time: expect.closeTo(1673020881.302979, 6),
             mask,
+            time: expect.closeTo(1673020881.302979, 6),
             type: 'response'
           }
         ]
@@ -459,10 +459,10 @@ describe('EntryBuilder', () => {
       expect(entry).toMatchObject({
         _eventSourceMessages: [
           {
-            time: expect.closeTo(1673020881.302979, 6),
             eventName,
             eventId,
-            data
+            data,
+            time: expect.closeTo(1673020881.302979, 6)
           }
         ]
       });

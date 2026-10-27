@@ -614,7 +614,7 @@ export class NetworkRequest {
     eventId: string,
     data: string
   ) {
-    const message = { time: this.getWallTime(time), eventName, eventId, data };
+    const message = { eventName, eventId, data, time: this.getWallTime(time) };
     this._eventSourceMessages.push(message);
   }
 
