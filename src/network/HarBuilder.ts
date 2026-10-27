@@ -16,7 +16,13 @@ export class HarBuilder {
           version,
           comment
         },
+        // Entries are recorded as requests finish; HAR 1.2 orders them by start time.
         entries: this.entries
+          .slice()
+          .sort(
+            (a, b) =>
+              Date.parse(a.startedDateTime) - Date.parse(b.startedDateTime)
+          )
       }
     };
   }
