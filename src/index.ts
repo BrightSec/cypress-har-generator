@@ -7,6 +7,7 @@ import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
 import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
+import { join } from 'node:path';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -130,10 +131,28 @@ const enableLifecycle = (
         minIdleDuration,
         maxWaitDuration,
         fileName: StringUtils.normalizeName(spec.name, { ext: '.har' }),
-        outDir: config.expose?.[HARS_FOLDER_KEY] ?? '.'
+        outDir: join(
+          config.expose?.[HARS_FOLDER_KEY] ?? '.',
+          specFolder(spec, config.specPattern)
+        )
       })
     );
   }
+};
+
+// keeps the folders below the fixed start of `specPattern`, so specs with the same name in different folders do not overwrite each other's HAR
+const specFolder = (
+  spec: Cypress.Spec,
+  specPattern: string | string[]
+): string => {
+  const relative = spec.relative.replaceAll('\\', '/');
+  const [base = '']: string[] = [specPattern]
+    .flat()
+    .map(pattern => StringUtils.globBase(pattern))
+    .filter(prefix => relative.startsWith(prefix))
+    .sort((a, b) => b.length - a.length);
+
+  return StringUtils.dirname(relative.slice(base.length));
 };
 
 /**

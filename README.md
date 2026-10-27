@@ -123,6 +123,13 @@ The import also adds the types of the commands, so TypeScript knows `cy.recordHa
 
 Once installed, the plugin records a HAR file for each spec and saves it when the spec ends, with no changes to your test files. The HAR is saved even when a run is stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast).
 
+Each HAR is named after its spec and keeps the spec's folder below the fixed start of `specPattern`, so specs with the same name in different folders get their own files. For example, with `specPattern: 'cypress/e2e/**/*.cy.ts'`:
+
+| Spec                            | HAR                                |
+| ------------------------------- | ---------------------------------- |
+| `cypress/e2e/login.cy.ts`       | `{hars_folder}/login.cy.har`       |
+| `cypress/e2e/admin/login.cy.ts` | `{hars_folder}/admin/login.cy.har` |
+
 > [!IMPORTANT]
 > To record a HAR for each spec in the interactive mode (`cypress open`), you must enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
 
@@ -136,7 +143,7 @@ install(on, config, {
 });
 ```
 
-The HAR is named after the spec and written to `hars_folder`, so `fileName` and `outDir` are not accepted. As with `cy.recordHar()`, the `filter` and `transform` paths are relative to the spec folder unless `rootDir` is set, for example to `config.projectRoot`.
+The HAR is always named after the spec and written to `hars_folder`, so `fileName` and `outDir` are not accepted. As with `cy.recordHar()`, the `filter` and `transform` paths are relative to the spec folder unless `rootDir` is set, for example to `config.projectRoot`.
 
 To control what is recorded and when with the [commands](#commands) instead, turn this off:
 
