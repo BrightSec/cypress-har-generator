@@ -494,6 +494,25 @@ describe('NetworkObserver', () => {
       ).once();
     });
 
+    it('should keep the failure reason of a failed request', async () => {
+      // arrange
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(loadingFailedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          failDescription: loadingFailedEvent.params.errorText
+        })
+      );
+    });
+
     it('should load a response body when content is enabled', async () => {
       // arrange
       when(optionsSpy.content).thenReturn(true);

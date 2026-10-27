@@ -268,6 +268,16 @@ export class NetworkRequest {
     this._resourceType = resourceType ?? 'Other';
   }
 
+  private _failDescription?: string;
+
+  get failDescription(): string | undefined {
+    return this._failDescription;
+  }
+
+  set failDescription(value: string | undefined) {
+    this._failDescription = value;
+  }
+
   private _redirectSource?: NetworkRequest;
 
   get redirectSource() {

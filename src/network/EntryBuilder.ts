@@ -126,7 +126,10 @@ export class EntryBuilder {
         ? this.request.responseHeadersText.length
         : -1,
       bodySize: this.getResponseBodySize(),
-      _transferSize: this.request.transferSize
+      _transferSize: this.request.transferSize,
+      ...(this.request.failDescription
+        ? { _error: this.request.failDescription }
+        : {})
     };
   }
 
