@@ -1,5 +1,6 @@
 import { install } from './index.ts';
 import { Plugin } from './Plugin.ts';
+import { Logger } from './utils/Logger.ts';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 
 const createEvents = () => {
@@ -49,6 +50,48 @@ describe('install', () => {
     expect(() =>
       install(on, undefined as unknown as Cypress.PluginConfigOptions)
     ).toThrow(TypeError);
+  });
+
+  it.each([
+    { env: { hars_folders: 'hars' } },
+    { expose: { HARS_FOLDERS: 'hars' } }
+  ])(
+    'should warn that hars_folders is deprecated when it is set in %j',
+    source => {
+      // arrange
+      const deprecate = jest
+        .spyOn(Logger.Instance, 'deprecate')
+        .mockImplementation(() => undefined);
+      const { on } = createEvents();
+
+      // act
+      install(on, { ...config, ...source } as Cypress.PluginConfigOptions);
+
+      // assert
+      expect(deprecate).toHaveBeenCalledWith(
+        'hars_folders',
+        expect.stringContaining('hars_folder')
+      );
+      deprecate.mockRestore();
+    }
+  );
+
+  it('should not warn about hars_folders when only hars_folder is set', () => {
+    // arrange
+    const deprecate = jest
+      .spyOn(Logger.Instance, 'deprecate')
+      .mockImplementation(() => undefined);
+    const { on } = createEvents();
+
+    // act
+    install(on, {
+      ...config,
+      env: { hars_folder: 'hars' }
+    } as unknown as Cypress.PluginConfigOptions);
+
+    // assert
+    expect(deprecate).not.toHaveBeenCalled();
+    deprecate.mockRestore();
   });
 
   it('should start recording in the folder of the spec before it runs', async () => {

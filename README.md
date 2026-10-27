@@ -168,7 +168,7 @@ $ cypress run --browser chrome --expose hars_folder=cypress/hars
 
 On Cypress versions before 16, the plugin also reads `hars_folder` from the `env` object, the `--env` option, or the `CYPRESS_hars_folder` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
 
-> ⚠ **Notice:** `hars_folder` was previously named `hars_folders`. The old name is still supported and used when `hars_folder` is not set, but it is deprecated and may be removed in a future major release. Please rename it in your configuration. Likewise, the `CYPRESS_HARS_FOLDERS` environment variable is deprecated; use `CYPRESS_hars_folder` instead.
+> ⚠ **Notice:** `hars_folder` was previously named `hars_folders`. The old name is still supported and used when `hars_folder` is not set, but it is deprecated and will be removed in version 6. The plugin warns about it when `install` receives the config, as in `install(on, config)`. Please rename it in your configuration. Likewise, the `CYPRESS_HARS_FOLDERS` environment variable is deprecated; use `CYPRESS_hars_folder` instead.
 
 Finally, to start running your tests, use the following command:
 
@@ -243,7 +243,7 @@ For example, to only include requests that have a status code of 400 or greater,
 cy.recordHar({ minStatusCodeToInclude: 400 });
 ```
 
-> ✴ As of version 6, this option will be removed. Use `excludeStatusCodes` instead.
+> ⚠ `minStatusCodeToInclude` is deprecated and will be removed in version 6, and the plugin warns when it is used. Use `excludeStatusCodes` instead.
 
 Alternatively, you can have more granular control over the requests to exclude by passing an array of status codes you want to exclude from the recorded HAR file.
 
@@ -259,7 +259,7 @@ By default, when you use `recordHar` command, it will include the blob requests 
 cy.recordHar({ includeBlobs: false });
 ```
 
-> ✴ As of version 6, this flag will be disabled by default.
+> ⚠ Version 6 changes the default of `includeBlobs` to `false`, and the plugin warns when it is not set. To keep recording blob requests after upgrading, pass `includeBlobs: true`.
 
 You can specify the `filter` option as a path to a module that exports a function (it can be sync or async) to filter out unwanted entries from the HAR. The function should take an [Entry object](http://www.softwareishard.com/blog/har-12-spec/#entries) as a parameter and return a boolean indicating whether the entry should be included in the final HAR or not.
 

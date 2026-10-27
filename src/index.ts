@@ -6,7 +6,7 @@ import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.t
 import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
 import { ConfigUtils } from './utils/ConfigUtils.ts';
-import { HARS_FOLDER_KEYS } from './constants.ts';
+import { DEPRECATED_HARS_FOLDER_KEYS, HARS_FOLDER_KEYS } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 declare global {
@@ -86,8 +86,21 @@ export const install = (
     }
   );
 
+  warnAboutDeprecatedConfig(config);
+
   if (lifecycle) {
     enableLifecycle(on, config);
+  }
+};
+
+const warnAboutDeprecatedConfig = (
+  config: Cypress.PluginConfigOptions
+): void => {
+  if (ConfigUtils.fromNode(config, DEPRECATED_HARS_FOLDER_KEYS) !== undefined) {
+    Logger.Instance.deprecate(
+      'hars_folders',
+      'The `hars_folders` variable is deprecated and will be removed in version 6. Rename it to `hars_folder`, or `CYPRESS_HARS_FOLDERS` to `CYPRESS_hars_folder`.'
+    );
   }
 };
 
