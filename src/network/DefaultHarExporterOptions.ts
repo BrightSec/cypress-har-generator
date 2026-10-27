@@ -6,4 +6,5 @@ export type Transformer = (entry: Entry) => Promise<Entry> | Entry;
 export interface DefaultHarExporterOptions {
   filter?: Filter;
   transform?: Transformer;
+  transformPath?: string;
 }

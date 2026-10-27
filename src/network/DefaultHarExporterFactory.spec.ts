@@ -76,6 +76,7 @@ describe('DefaultHarExporterFactory', () => {
 
       // assert
       expect(result).toBeInstanceOf(DefaultHarExporter);
+      expect(result).toHaveProperty('options.transformPath', 'transform.js');
       verify(loaderSpy.load('/root/predicate.js')).once();
       verify(loaderSpy.load('/root/transform.js')).once();
     });
