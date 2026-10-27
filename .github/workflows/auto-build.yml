@@ -36,8 +36,7 @@ jobs:
       - name: Execute ${{ matrix.target }} npm script
         run: npm run ${{ matrix.target }}
 
-  # `default` is the Cypress version the repository depends on; the earlier majors are ones users still run,
-  # where options come from `env` (before 16) instead of or as well as `expose`
+  # `default` is the Cypress version the repository depends on; 15.10 is the earliest version the plugin supports
   # the `lifecycle` suite runs with `enableExperimentalLifecycle`, which the default suite cannot enable
   e2e:
     name: e2e (cypress ${{ matrix.cypress }}${{ matrix.suite == 'lifecycle' && ', lifecycle' || '' }})
@@ -46,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cypress: ['default', '15', '14']
+        cypress: ['default', '15.10']
         suite: ['default']
         include:
           - cypress: 'default'

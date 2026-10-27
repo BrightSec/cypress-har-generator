@@ -2,16 +2,6 @@ import { install } from './src/index.ts';
 import { defineConfig } from 'cypress';
 import { access, constants, unlink, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
-
-// `expose` exists since Cypress 15.10 and `env` is what earlier versions read, so the e2e suite can run on both
-const { version } = createRequire(join(process.cwd(), 'package.json'))(
-  'cypress/package.json'
-) as { version: string };
-const [major, minor]: number[] = version.split('.').map(Number);
-const variables = { hars_folder: 'cypress/hars' };
-const exposeSupported = major > 15 || (major === 15 && minor >= 10);
 
 export default defineConfig({
   projectId: 'ir8zwo',
@@ -23,7 +13,7 @@ export default defineConfig({
     baseUrl: 'http://localhost:8080',
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/e2e/**/*.cy.ts',
-    ...(exposeSupported ? { expose: variables } : { env: variables }),
+    expose: { hars_folder: 'cypress/hars' },
     setupNodeEvents(
       on: Cypress.PluginEvents,
       _: Cypress.PluginConfigOptions

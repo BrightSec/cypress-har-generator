@@ -47,6 +47,33 @@ describe('install', () => {
       TypeError
     );
   });
+
+  it.each([
+    { source: { expose: { hars_folder: 'hars' } }, expected: 'hars' },
+    { source: { env: { hars_folder: 'hars' } }, expected: '.' },
+    { source: { expose: { HARS_FOLDER: 'hars' } }, expected: '.' }
+  ])(
+    'should save the HAR of each spec to $expected when the config has $source',
+    async ({ source, expected }) => {
+      // arrange
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
+      install(on, { ...config, ...source } as Cypress.PluginConfigOptions, {
+        lifecycle: true
+      });
+
+      // act
+      await handlers.get('after:spec')?.({ name: 'spec.cy.ts' }, {});
+
+      // assert
+      expect(saveHar).toHaveBeenCalledWith(
+        expect.objectContaining({ outDir: expected })
+      );
+      saveHar.mockRestore();
+    }
+  );
 });
 
 describe('enableExperimentalLifecycle', () => {

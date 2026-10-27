@@ -46,7 +46,7 @@ $ npm i --save-dev @neuralegion/cypress-har-generator
 
 The plugin requires:
 
-- Cypress 14.0.0 or later
+- Cypress 15.10.0 or later
 - TypeScript 5.0 or later, in TypeScript projects
 
 If your project uses older versions, stay on version 5 of the plugin.
@@ -139,7 +139,7 @@ describe('my tests', () => {
 
 By default, the plugin will save the generated HAR file to the root of your project with a file name that includes the current spec's name (e.g. `{specName}.har`).
 
-You can also specify a different destination folder for the generated HAR file by setting the `hars_folder` field in the `expose` object in your Cypress config file (Cypress 15.10 and later):
+You can also specify a different destination folder for the generated HAR file by setting the `hars_folder` field in the `expose` object in your Cypress config file:
 
 ```json
 {
@@ -154,8 +154,6 @@ Alternatively, you can pass the `hars_folder` variable in the CLI using the `--e
 ```bash
 $ cypress run --browser chrome --expose hars_folder=cypress/hars
 ```
-
-On Cypress versions before 16, the plugin also reads `hars_folder` from the `env` object, the `--env` option, or the `CYPRESS_hars_folder` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
 
 Finally, to start running your tests, use the following command:
 
