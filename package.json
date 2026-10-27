@@ -30,7 +30,7 @@
         "default": "./commands.cjs"
       }
     },
-    "./*": "./*"
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
