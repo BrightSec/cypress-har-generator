@@ -194,6 +194,29 @@ describe('DefaultHarExporter', () => {
       verify(streamMock.write(anyString(), anyFunction())).never();
     });
 
+    it('should warn once and skip the entries when the transformation returns no entry', async () => {
+      // arrange
+      when(streamMock.writable).thenReturn(true);
+      when(streamMock.write(anyString(), anyFunction())).thenCall(
+        (_, callback) => callback()
+      );
+      when(optionsSpy.transform).thenReturn(transform);
+      when(optionsSpy.transformPath).thenReturn('transform.js');
+      transform.mockReturnValue(undefined as unknown as Entry);
+
+      // act
+      await harExporter.write(networkRequest);
+      await harExporter.write(networkRequest);
+
+      // assert
+      verify(streamMock.write(anyString(), anyFunction())).never();
+      verify(
+        loggerMock.warn(
+          match(/'transform.js' returned undefined.*return entry/)
+        )
+      ).once();
+    });
+
     it('should not write the entry to the buffer if the predicate returns true', async () => {
       // arrange
       when(streamMock.writable).thenReturn(true);

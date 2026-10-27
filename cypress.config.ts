@@ -1,6 +1,6 @@
 import { install } from './src/index.ts';
 import { defineConfig } from 'cypress';
-import { access, constants, unlink, readFile } from 'node:fs/promises';
+import { access, constants, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 
 export default defineConfig({
@@ -47,11 +47,7 @@ export default defineConfig({
           }
         },
         async 'fs:remove'(path: string): Promise<null> {
-          try {
-            await unlink(path);
-          } catch {
-            // noop
-          }
+          await rm(path, { recursive: true, force: true });
 
           return null;
         },

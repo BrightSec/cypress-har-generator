@@ -1,3 +1,5 @@
+import { Entry } from 'har-format';
+
 describe('Save HAR', () => {
   beforeEach(() => {
     Cypress.expose('hars_folder', undefined);
@@ -64,6 +66,23 @@ describe('Save HAR', () => {
       });
   });
 
+  it('saves a HAR file to the nested hars_folder that does not exist yet', () => {
+    cy.recordHar();
+
+    cy.visit('/');
+    cy.get('a[href$=fetch]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 1);
+
+    cy.get<{ outDir: string; fileName: string }>('@options').then(options => {
+      const root = `${options.outDir}/${options.fileName}.nested`;
+
+      cy.remove(root).then(() => Cypress.expose('hars_folder', `${root}/a/b`));
+      cy.saveHar();
+      cy.exists(`${root}/a/b/${options.fileName}`).should('be.true');
+      cy.remove(root);
+    });
+  });
+
   it('saves a HAR file to the custom folder', () => {
     cy.recordHar();
 
@@ -108,5 +127,31 @@ describe('Save HAR', () => {
       const path = `${options.outDir}/${fileName}.har`;
       cy.exists(path).should('be.true');
     });
+  });
+
+  it('saves a large response body without waiting for idle', () => {
+    const size = 50 * 1024 ** 2;
+
+    cy.recordHar({
+      maxTotalBufferSize: 256 * 1024 ** 2,
+      maxResourceBufferSize: 256 * 1024 ** 2
+    });
+
+    cy.get('a[href$=large-body]').click();
+    cy.get('#result', { timeout: 30000 }).should(
+      'have.text',
+      `Received ${size} characters`
+    );
+
+    cy.saveHar();
+
+    cy.findHar()
+      .its('log.entries')
+      .should((entries: Entry[]) => {
+        const entry = entries.find(({ request }: Entry) =>
+          request.url.endsWith('/api/large-body')
+        );
+        expect(entry?.response.content.text).to.have.length(size);
+      });
   });
 });

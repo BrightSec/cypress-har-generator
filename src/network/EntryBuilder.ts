@@ -64,18 +64,26 @@ export class EntryBuilder {
       return -1;
     }
 
-    return this.request.transferSize - this.request.responseHeadersText.length;
+    const bodySize: number =
+      this.request.transferSize - this.request.responseHeadersText.length;
+
+    // The transfer size does not always cover the headers, e.g. Chrome reports
+    // none for a WebSocket handshake or a CORS preflight.
+    return bodySize < 0 ? -1 : bodySize;
   }
 
   private getResponseCompression(): number | undefined {
     if (this.request.statusCode === 304 || this.request.statusCode === 206) {
       return undefined;
     }
-    if (!this.request.responseHeadersText) {
+
+    const bodySize: number = this.getResponseBodySize();
+
+    if (bodySize === -1) {
       return undefined;
     }
 
-    return this.request.resourceSize - this.getResponseBodySize();
+    return this.request.resourceSize - bodySize;
   }
 
   private toMilliseconds(time: number): number {
@@ -118,7 +126,10 @@ export class EntryBuilder {
         ? this.request.responseHeadersText.length
         : -1,
       bodySize: this.getResponseBodySize(),
-      _transferSize: this.request.transferSize
+      _transferSize: this.request.transferSize,
+      ...(this.request.failDescription
+        ? { _error: this.request.failDescription }
+        : {})
     };
   }
 

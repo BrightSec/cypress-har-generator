@@ -1,5 +1,21 @@
 import { Entry } from 'har-format';
 
+const openWebSocket = () =>
+  cy.window().then(
+    win =>
+      new Cypress.Promise<void>(resolve => {
+        const socket = new win.WebSocket(`ws://${win.location.host}/ws`);
+        let received = 0;
+
+        socket.onmessage = () => {
+          if (++received === 2) {
+            socket.close();
+            resolve();
+          }
+        };
+      })
+  );
+
 describe('Record HAR', () => {
   beforeEach(() => cy.visit('/'));
 
@@ -327,6 +343,111 @@ describe('Record HAR', () => {
       });
   });
 
+  it('records the WebSocket frame times as wall-clock time', () => {
+    const startedAt = Date.now() / 1000;
+
+    cy.recordHar();
+
+    openWebSocket();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .then((entries: Entry[]) => {
+        const times = entries.flatMap(({ _webSocketMessages }: Entry) =>
+          ((_webSocketMessages ?? []) as { time: number }[]).map(
+            ({ time }) => time
+          )
+        );
+
+        expect(times).to.have.length.gte(2);
+        times.forEach(time =>
+          expect(time).to.be.within(startedAt - 1, Date.now() / 1000 + 1)
+        );
+      });
+  });
+
+  it('records the Server-Sent Event times as wall-clock time', () => {
+    const startedAt = Date.now() / 1000;
+
+    cy.recordHar();
+
+    cy.get('a[href$=server-sent-events]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 2);
+    cy.get('button').click();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .then((entries: Entry[]) => {
+        const times = entries.flatMap(({ _eventSourceMessages }: Entry) =>
+          ((_eventSourceMessages ?? []) as { time: number }[]).map(
+            ({ time }) => time
+          )
+        );
+
+        expect(times).to.have.length.gte(2);
+        times.forEach(time =>
+          expect(time).to.be.within(startedAt - 1, Date.now() / 1000 + 1)
+        );
+      });
+  });
+
+  it('records no response body size below -1', () => {
+    cy.recordHar();
+
+    openWebSocket();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', { response: { status: 101 } })
+      .then((entries: Entry[]) =>
+        entries.forEach(({ request, response }: Entry) =>
+          expect(response.bodySize, request.url).to.be.gte(-1)
+        )
+      );
+  });
+
+  it('sorts the entries by start time', () => {
+    cy.recordHar();
+
+    cy.window().then(
+      win =>
+        new Cypress.Promise<void>(resolve => {
+          const slow = win.fetch('/api/delay/500');
+
+          win.setTimeout(
+            () =>
+              Promise.all([slow, win.fetch('/api/delay/0')]).then(() =>
+                resolve()
+              ),
+            50
+          );
+        })
+    );
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .then((entries: Entry[]) => {
+        const urls = entries
+          .map(({ request }: Entry) => request.url)
+          .filter(url => url.includes('/api/delay/'));
+        const times = entries.map(({ startedDateTime }: Entry) =>
+          Date.parse(startedDateTime)
+        );
+
+        expect(urls).to.have.length(2);
+        expect(urls[0]).to.match(/\/api\/delay\/500$/);
+        expect(times).to.deep.equal([...times].sort((a, b) => a - b));
+      });
+  });
+
   it('records the WebSocket frames', () => {
     cy.recordHar();
 
@@ -340,7 +461,7 @@ describe('Record HAR', () => {
       .its('log.entries')
       .should('contain.something.like', {
         request: {
-          url: 'ws://localhost:8080/ws'
+          url: /\/ws$/
         },
         response: {
           status: 101
@@ -351,6 +472,34 @@ describe('Record HAR', () => {
           ({ _webSocketMessages }: Entry) =>
             (_webSocketMessages as unknown[]).length > 0
         );
+        const webSocketMessages = expected?._webSocketMessages;
+        expect(webSocketMessages).to.contain.something.like({
+          type: 'response',
+          data: /^This is a message at time/
+        });
+        expect(webSocketMessages).to.contain.something.like({
+          type: 'request',
+          data: 'Hello Server!'
+        });
+      });
+  });
+
+  it('records the WebSocket frames when the socket is still open', () => {
+    cy.recordHar();
+
+    cy.get('a[href$=websocket]').click();
+    cy.get('ul > li').should('have.length.gte', 2);
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should((data: Entry[]) => {
+        const expected = data.find(
+          ({ request, response }: Entry) =>
+            request.url.endsWith('/ws') && response.status === 101
+        );
+        expect(expected).to.have.property('_resourceType', 'WebSocket');
         const webSocketMessages = expected?._webSocketMessages;
         expect(webSocketMessages).to.contain.something.like({
           type: 'response',

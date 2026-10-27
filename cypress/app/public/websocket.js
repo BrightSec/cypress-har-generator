@@ -1,5 +1,5 @@
 const button = document.querySelector('button');
-const socket = new WebSocket('ws://localhost:8080/ws');
+const socket = new WebSocket(`ws://${location.host}/ws`);
 const eventList = document.querySelector('ul');
 
 socket.onopen = () => {

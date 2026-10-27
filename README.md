@@ -123,7 +123,20 @@ The import also adds the types of the commands, so TypeScript knows `cy.recordHa
 
 Once installed, the plugin records a HAR file for each spec and saves it when the spec ends, with no changes to your test files. The HAR is saved even when a run is stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast).
 
-> ⚠ Please note, to record a HAR for each spec in the interactive mode (`cypress open`), you must enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
+> [!IMPORTANT]
+> To record a HAR for each spec in the interactive mode (`cypress open`), you must enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
+
+The same options as [`cy.recordHar()`](#recordhar) and [`cy.saveHar()`](#savehar) can be passed to `install`, and they apply to the HAR of each spec:
+
+```js
+install(on, config, {
+  includeHosts: ['api.example.com'],
+  maxTotalBufferSize: 100 * 1024 ** 2,
+  waitForIdle: true
+});
+```
+
+The HAR is named after the spec and written to `hars_folder`, so `fileName` and `outDir` are not accepted. As with `cy.recordHar()`, the `filter` and `transform` paths are relative to the spec folder unless `rootDir` is set, for example to `config.projectRoot`.
 
 To control what is recorded and when with the [commands](#commands) instead, turn this off:
 
@@ -260,15 +273,18 @@ By default, the recorded HAR file leaves out blob requests, as they only make se
 cy.recordHar({ includeBlobs: true });
 ```
 
-You can specify the `filter` option as a path to a module that exports a function (it can be sync or async) to filter out unwanted entries from the HAR. The function should take an [Entry object](http://www.softwareishard.com/blog/har-12-spec/#entries) as a parameter and return a boolean indicating whether the entry should be included in the final HAR or not.
+You can specify the `filter` option as a path to a module that exports a function (it can be sync or async) to filter out unwanted entries from the HAR. The function should take an [Entry object](http://www.softwareishard.com/blog/har-12-spec/#entries) as a parameter and return a boolean indicating whether the entry should be excluded from the final HAR.
+
+> [!NOTE]
+> Unlike `Array.prototype.filter`, returning `true` drops the entry and returning `false` keeps it.
 
 Here's an example of how to use the `filter` option:
 
 ```js
-cy.recordHar({ filter: '../support/include-password.ts' });
+cy.recordHar({ filter: '../support/exclude-password.ts' });
 ```
 
-And here's an example of what the `include-password.ts` filter module might look like:
+And here's an example of what the `exclude-password.ts` filter module might look like:
 
 ```ts
 import { Entry } from 'har-format';
@@ -282,7 +298,7 @@ export default async (entry: Entry) => {
 };
 ```
 
-In this example, the `filter` function will only exclude entries in the HAR where the request body contains a JSON object with a password field.
+In this example, the `filter` function excludes the entries whose request body contains a JSON object with a password field, and keeps all the others.
 
 You can also modify the entries before saving the HAR by using the `transform` option. This option should be set to a path to a module that exports a function, similar to the filter option, to change the Entry object as desired.
 
@@ -295,31 +311,36 @@ Here's a simple example of what the `remove-sensitive-data.ts` module might look
 ```ts
 import { Entry } from 'har-format';
 
-const PASSWORD_REGEXP = /("password":\s*")\w+("\s*)/;
+const JSON_PASSWORD_REGEXP = /("password"\s*:\s*)"(?:[^"\\]|\\.)*"/g;
+const FORM_PASSWORD_REGEXP = /((?:^|&)password=)[^&]*/g;
 
 export default async (entry: Entry) => {
-  try {
-    // Remove sensitive information from the request body
-    if (entry.request.postData?.text) {
-      entry.request.postData.text = entry.request.postData.text.replace(
-        PASSWORD_REGEXP,
-        '$1***$2'
-      );
-    }
+  const { postData } = entry.request;
 
-    return entry;
-  } catch {
-    return entry;
+  // Remove sensitive information from the request body
+  if (postData?.text) {
+    postData.text = postData.text
+      .replace(JSON_PASSWORD_REGEXP, '$1"***"')
+      .replace(FORM_PASSWORD_REGEXP, '$1***');
   }
+
+  // Form requests also carry the parsed fields in `params`
+  postData?.params?.forEach(param => {
+    if (param.name === 'password') {
+      param.value = '***';
+    }
+  });
+
+  return entry;
 };
 ```
 
 The function should take an Entry object as a parameter and return the modified.
 
-In this example, the transform function will replace any occurrences of password with `***` in the request body of each entry.
+In this example, the transform function will replace the value of every `password` field in a JSON or form request body with `***`.
 
 > [!TIP]
-> The plugin also supports files with `.js`, `.mjs` and `.cjs` extensions, written as ES modules or CommonJS. For example, the same filter as a CommonJS module, `include-password.cjs`:
+> The plugin also supports files with `.js`, `.mjs` and `.cjs` extensions, written as ES modules or CommonJS. For example, the same filter as a CommonJS module, `exclude-password.cjs`:
 >
 > ```js
 > module.exports = entry =>
@@ -330,7 +351,7 @@ By default, the path is relative to the spec folder. But by providing a `rootDir
 
 ```js
 cy.recordHar({
-  filter: 'cypress/support/include-password.ts',
+  filter: 'cypress/support/exclude-password.ts',
   rootDir: Cypress.config('projectRoot')
 });
 ```
@@ -421,14 +442,14 @@ describe('my tests', () => {
 });
 ```
 
-You can also generate a HAR file only for Chrome browser sessions, if it is not interactive run, and only if the test has failed:
+You can also generate a HAR file only for Chromium-based browser sessions (Chrome, Edge, and Electron), if it is not interactive run, and only if the test has failed:
 
 ```js
 describe('my tests', () => {
   beforeEach(() => {
     const isInteractive = Cypress.config('isInteractive');
-    const isChrome = Cypress.browser.name === 'chrome';
-    if (!isInteractive && isChrome) {
+    const isChromium = Cypress.browser.family === 'chromium';
+    if (!isInteractive && isChromium) {
       cy.recordHar();
     }
   });
@@ -436,8 +457,8 @@ describe('my tests', () => {
   afterEach(function () {
     const { state } = this.currentTest;
     const isInteractive = Cypress.config('isInteractive');
-    const isChrome = Cypress.browser.name === 'chrome';
-    if (!isInteractive && isChrome && state !== 'passed') {
+    const isChromium = Cypress.browser.family === 'chromium';
+    if (!isInteractive && isChromium && state !== 'passed') {
       cy.saveHar();
     }
   });

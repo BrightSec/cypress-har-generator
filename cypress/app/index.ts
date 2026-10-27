@@ -39,6 +39,7 @@ app.get('/', (_: Request, res: Response) =>
       { id: 'server-sent-events', name: 'Server-sent events' },
       { id: 'websocket', name: 'WebSocket' },
       { id: 'large-content', name: 'Large content' },
+      { id: 'large-body', name: 'Large body' },
       { id: 'post-data', name: 'Post data' }
     ]
   })
@@ -93,6 +94,9 @@ app.post(
   (req: Request, res: Response) =>
     res.send(Buffer.isBuffer(req.body) ? req.body.toString() : req.body)
 );
+app.get('/api/delay/:ms', (req: Request, res: Response) => {
+  setTimeout(() => res.json({ delay: req.params.ms }), Number(req.params.ms));
+});
 app.get('/api/keys', (_: Request, res: Response) =>
   res.json({
     keys: Array(1000)
@@ -102,6 +106,10 @@ app.get('/api/keys', (_: Request, res: Response) =>
         id: idx
       }))
   })
+);
+const largeBody = randomBytes(25 * 1024 ** 2).toString('hex');
+app.get('/api/large-body', (_: Request, res: Response) =>
+  res.type('text/plain').send(largeBody)
 );
 
 const server = app.listen(port);

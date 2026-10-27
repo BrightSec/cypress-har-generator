@@ -23,13 +23,13 @@ export enum WebSocketFrameType {
 export interface WebSocket {
   type: WebSocketFrameType;
   data: string;
-  time: Protocol.Network.MonotonicTime;
+  time: Protocol.Network.TimeSinceEpoch;
   opcode: number;
   mask: boolean;
 }
 
 export interface EventSourceMessage {
-  time: number;
+  time: Protocol.Network.TimeSinceEpoch;
   eventName: string;
   eventId: string;
   data: string;
@@ -266,6 +266,16 @@ export class NetworkRequest {
 
   set resourceType(resourceType: Protocol.Network.ResourceType) {
     this._resourceType = resourceType ?? 'Other';
+  }
+
+  private _failDescription?: string;
+
+  get failDescription(): string | undefined {
+    return this._failDescription;
+  }
+
+  set failDescription(value: string | undefined) {
+    this._failDescription = value;
   }
 
   private _redirectSource?: NetworkRequest;
@@ -582,7 +592,7 @@ export class NetworkRequest {
     time: Protocol.Network.MonotonicTime
   ): void {
     this.addFrame({
-      time,
+      time: this.getWallTime(time),
       type: WebSocketFrameType.ERROR,
       data: errorMessage,
       opcode: -1,
@@ -601,7 +611,7 @@ export class NetworkRequest {
 
     this.addFrame({
       type,
-      time,
+      time: this.getWallTime(time),
       data: response.payloadData,
       opcode: response.opcode,
       mask: response.mask
@@ -609,12 +619,12 @@ export class NetworkRequest {
   }
 
   public addEventSourceMessage(
-    time: number,
+    time: Protocol.Network.MonotonicTime,
     eventName: string,
     eventId: string,
     data: string
   ) {
-    const message = { time, eventName, eventId, data };
+    const message = { eventName, eventId, data, time: this.getWallTime(time) };
     this._eventSourceMessages.push(message);
   }
 

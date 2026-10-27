@@ -150,6 +150,55 @@ describe('NetworkObserver', () => {
     }
   };
 
+  const webSocketEvents = [
+    {
+      method: 'Network.webSocketCreated',
+      params: {
+        requestId: '2',
+        url: 'ws://localhost:8080/ws'
+      }
+    },
+    {
+      method: 'Network.webSocketWillSendHandshakeRequest',
+      params: {
+        requestId: '2',
+        timestamp: 1,
+        wallTime: 1,
+        request: {
+          headers: {
+            Upgrade: 'websocket'
+          }
+        }
+      }
+    },
+    {
+      method: 'Network.webSocketHandshakeResponseReceived',
+      params: {
+        requestId: '2',
+        timestamp: 2,
+        response: {
+          status: 101,
+          statusText: 'Switching Protocols',
+          headers: {
+            Upgrade: 'websocket'
+          }
+        }
+      }
+    },
+    {
+      method: 'Network.webSocketFrameReceived',
+      params: {
+        requestId: '2',
+        timestamp: 3,
+        response: {
+          opcode: 1,
+          mask: false,
+          payloadData: 'test'
+        }
+      }
+    }
+  ];
+
   let sut!: NetworkObserver;
   let options!: NetworkObserverOptions;
   let optionsSpy!: NetworkObserverOptions;
@@ -196,6 +245,20 @@ describe('NetworkObserver', () => {
       const result = sut.empty;
       // assert
       expect(result).toBe(false);
+    });
+
+    it('should return true when only a WebSocket is open', async () => {
+      // arrange
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        for (const event of webSocketEvents) {
+          await cb(event);
+        }
+      });
+      await sut.subscribe(callback);
+      // act
+      const result = sut.empty;
+      // assert
+      expect(result).toBe(true);
     });
 
     it('should attach to network events', async () => {
@@ -492,6 +555,25 @@ describe('NetworkObserver', () => {
           `Failed request: 1. Reason: ${loadingFailedEvent.params.errorText}`
         )
       ).once();
+    });
+
+    it('should keep the failure reason of a failed request', async () => {
+      // arrange
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(loadingFailedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          failDescription: loadingFailedEvent.params.errorText
+        })
+      );
     });
 
     it('should load a response body when content is enabled', async () => {
@@ -1068,6 +1150,100 @@ describe('NetworkObserver', () => {
       await sut.unsubscribe();
       // assert
       verify(networkMock.detachFromTargets()).once();
+    });
+
+    it('should write a WebSocket that is still open with its frames', async () => {
+      // arrange
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        for (const event of webSocketEvents) {
+          await cb(event);
+        }
+      });
+      await sut.subscribe(callback);
+      // act
+      await sut.unsubscribe();
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: '2',
+          url: 'ws://localhost:8080/ws',
+          statusCode: 101,
+          frames: [expect.objectContaining({ type: 'response', data: 'test' })]
+        })
+      );
+    });
+
+    it('should not write a closed WebSocket again', async () => {
+      // arrange
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        for (const event of webSocketEvents) {
+          await cb(event);
+        }
+        await cb({
+          method: 'Network.webSocketClosed',
+          params: { requestId: '2', timestamp: 4 }
+        });
+      });
+      await sut.subscribe(callback);
+      // act
+      await sut.unsubscribe();
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('should write a finished request whose response body is still loading', async () => {
+      // arrange
+      const body = { body: '<html></html>', base64Encoded: false };
+      let resolveBody!: (value: typeof body) => void;
+      when(optionsSpy.content).thenReturn(true);
+      when(networkMock.getResponseBody('1')).thenReturn(
+        new Promise(resolve => (resolveBody = resolve))
+      );
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      await sut.subscribe(callback);
+      // act
+      const unsubscribing = sut.unsubscribe();
+      setImmediate(() => resolveBody(body));
+      await unsubscribing;
+      // assert
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ requestId: '1' })
+      );
+      expect(sut.empty).toBe(true);
+    });
+
+    it('should not detach from the targets while a response body is still loading', async () => {
+      // arrange
+      const body = { body: '<html></html>', base64Encoded: false };
+      const order: string[] = [];
+      let resolveBody!: (value: typeof body) => void;
+      when(optionsSpy.content).thenReturn(true);
+      when(networkMock.getResponseBody('1')).thenReturn(
+        new Promise(resolve => (resolveBody = resolve))
+      );
+      when(networkMock.detachFromTargets()).thenCall(async () =>
+        order.push('detach')
+      );
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      await sut.subscribe(callback);
+      // act
+      const unsubscribing = sut.unsubscribe();
+      setImmediate(() => {
+        order.push('body');
+        resolveBody(body);
+      });
+      await unsubscribing;
+      // assert
+      expect(order).toEqual(['body', 'detach']);
     });
   });
 });

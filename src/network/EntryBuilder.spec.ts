@@ -160,18 +160,33 @@ describe('EntryBuilder', () => {
       request.responseHeadersText = 'HTTP/1.1 404 Not Found';
       request.resourceSize = size;
       request.mimeType = mimeType;
-      request.transferSize = size;
+      request.transferSize = request.responseHeadersText.length + 4;
       const entryBuilder = new EntryBuilder(request);
       // act
       const entry = await entryBuilder.build();
       // assert
       expect(entry).toMatchObject({
         response: {
+          bodySize: 4,
           content: {
-            compression: 22
+            compression: 10
           }
         }
       });
+    });
+
+    it('should build an entry with an unknown body size and no compression when the transfer size does not cover the headers', async () => {
+      // arrange
+      request.statusCode = 101;
+      request.responseHeadersText =
+        'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n\r\n';
+      request.transferSize = 0;
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry.response.bodySize).toBe(-1);
+      expect(entry.response.content.compression).toBeUndefined();
     });
 
     it('should build an entry with request cookies', async () => {
@@ -385,6 +400,27 @@ describe('EntryBuilder', () => {
       expect(entry).not.toHaveProperty('connection');
     });
 
+    it('should build an entry with the failure reason of a failed request', async () => {
+      // arrange
+      request.failDescription = 'net::ERR_NAME_NOT_RESOLVED';
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry).toMatchObject({
+        response: { _error: 'net::ERR_NAME_NOT_RESOLVED' }
+      });
+    });
+
+    it('should build an entry omitting the failure reason if the request did not fail', async () => {
+      // arrange
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry.response).not.toHaveProperty('_error');
+    });
+
     it('should build an entry with the request body', async () => {
       // arrange
       const mimeType = 'application/json';
@@ -418,6 +454,7 @@ describe('EntryBuilder', () => {
       const data = 'test';
       const opcode = 1;
       const mask = false;
+      request.setIssueTime(208215.856474, 1673020881.302266);
       request.statusCode = 101;
       request.url = 'ws://example.com';
       request.addProtocolFrame(
@@ -434,8 +471,8 @@ describe('EntryBuilder', () => {
           {
             data,
             opcode,
-            time,
             mask,
+            time: expect.closeTo(1673020881.302979, 6),
             type: 'response'
           }
         ]
@@ -448,6 +485,7 @@ describe('EntryBuilder', () => {
       const data = 'test';
       const eventName = 'data';
       const eventId = '1';
+      request.setIssueTime(208215.856474, 1673020881.302266);
       request.mimeType = 'text/event-stream';
       request.addEventSourceMessage(time, eventName, eventId, data);
       const entryBuilder = new EntryBuilder(request);
@@ -457,10 +495,10 @@ describe('EntryBuilder', () => {
       expect(entry).toMatchObject({
         _eventSourceMessages: [
           {
-            time,
             eventName,
             eventId,
-            data
+            data,
+            time: expect.closeTo(1673020881.302979, 6)
           }
         ]
       });
