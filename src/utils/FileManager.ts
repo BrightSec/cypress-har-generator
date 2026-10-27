@@ -54,7 +54,7 @@ export class FileManager {
         return;
       }
 
-      await mkdir(path);
+      await mkdir(path, { recursive: true });
     } catch (e) {
       Logger.Instance.err(e);
     }

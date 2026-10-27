@@ -113,6 +113,19 @@ describe('FileManager', () => {
       await expect(access(path, constants.F_OK)).resolves.not.toThrow();
     });
 
+    it('should create missing parent folders', async () => {
+      // arrange
+      const nested = join(path, 'hars', 'deep');
+      // act
+      await sut.createFolder(nested);
+      // assert
+      try {
+        await expect(access(nested, constants.F_OK)).resolves.not.toThrow();
+      } finally {
+        await actual.rm(path, { recursive: true, force: true });
+      }
+    });
+
     it('should do nothing if the folder already exists', async () => {
       // arrange
       await sut.createFolder(path);
