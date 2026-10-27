@@ -616,4 +616,74 @@ describe('Record HAR', () => {
         }
       });
   });
+
+  it('records a binary blob request body', () => {
+    cy.recordHar({ content: false });
+
+    cy.get('a[href$=post-data]').click();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: {
+          url: /api\/upload\/blob$/,
+          postData: {
+            text: /^GIF89a/
+          }
+        }
+      });
+  });
+
+  it('records a binary request body greater than maxPostDataSize', () => {
+    cy.recordHar({ content: false, maxPostDataSize: 1 });
+
+    cy.get('a[href$=post-data]').click();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: {
+          url: /api\/upload\/bytes$/,
+          postData: {
+            text: /^GIF89a/
+          }
+        }
+      });
+  });
+
+  [
+    { api: 'fetch', name: 'form-data' },
+    { api: 'XHR', name: 'xhr-form-data' }
+  ].forEach(({ api, name }: { api: string; name: string }) =>
+    it(`records the parameters of a multipart request body with a binary file sent by ${api}`, () => {
+      cy.recordHar({ content: false });
+
+      cy.get('a[href$=post-data]').click();
+
+      cy.saveHar({ waitForIdle: true });
+
+      cy.findHar()
+        .its('log.entries')
+        .should('contain.something.like', {
+          request: {
+            url: new RegExp(`api/upload/${name}$`),
+            postData: {
+              params: [
+                { name: 'field', value: 'value' },
+                {
+                  name: 'file',
+                  fileName: 'image.gif',
+                  contentType: 'image/gif',
+                  value: /^GIF89a/
+                }
+              ]
+            }
+          }
+        });
+    })
+  );
 });
