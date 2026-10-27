@@ -47,48 +47,6 @@ describe('install', () => {
       TypeError
     );
   });
-
-  it.each([
-    { env: { hars_folders: 'hars' } },
-    { expose: { HARS_FOLDERS: 'hars' } }
-  ])(
-    'should warn that hars_folders is deprecated when it is set in %j',
-    source => {
-      // arrange
-      const deprecate = jest
-        .spyOn(Logger.Instance, 'deprecate')
-        .mockImplementation(() => undefined);
-      const { on } = createEvents();
-
-      // act
-      install(on, { ...config, ...source } as Cypress.PluginConfigOptions);
-
-      // assert
-      expect(deprecate).toHaveBeenCalledWith(
-        'hars_folders',
-        expect.stringContaining('hars_folder')
-      );
-      deprecate.mockRestore();
-    }
-  );
-
-  it('should not warn about hars_folders when only hars_folder is set', () => {
-    // arrange
-    const deprecate = jest
-      .spyOn(Logger.Instance, 'deprecate')
-      .mockImplementation(() => undefined);
-    const { on } = createEvents();
-
-    // act
-    install(on, {
-      ...config,
-      env: { hars_folder: 'hars' }
-    } as unknown as Cypress.PluginConfigOptions);
-
-    // assert
-    expect(deprecate).not.toHaveBeenCalled();
-    deprecate.mockRestore();
-  });
 });
 
 describe('enableExperimentalLifecycle', () => {
@@ -132,7 +90,6 @@ describe('enableExperimentalLifecycle', () => {
     // assert
     expect(recordHar).toHaveBeenCalledWith({
       content: true,
-      includeBlobs: true,
       rootDir: '/project/cypress/e2e'
     });
   });
