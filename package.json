@@ -76,7 +76,7 @@
     "test:cov": "NODE_OPTIONS='--experimental-vm-modules' jest --coverage",
     "start": "node --experimental-transform-types cypress/app/index.ts --port 8080",
     "e2e": "cypress run --browser chrome --headless",
-    "build": "NODE_OPTIONS='--experimental-transform-types' webpack --config webpack.config.ts && rollup --config rollup.config.ts",
+    "build": "NODE_OPTIONS='--experimental-transform-types' webpack --config webpack.config.ts",
     "prepublishOnly": "node --run build",
     "prepare": "git config core.hooksPath .githooks"
   },
@@ -114,8 +114,6 @@
     "lint-staged": "^13.0.3",
     "minimist": "^1.2.7",
     "prettier": "~3.9.10",
-    "rollup": "4.65.1",
-    "rollup-plugin-dts": "6.5.1",
     "semantic-release": "^25.0.9",
     "ts-jest": "^29.4.15",
     "ts-loader": "^9.3.1",
