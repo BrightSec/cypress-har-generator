@@ -493,7 +493,7 @@ describe('Plugin', () => {
       const act = () => plugin.recordHar(options);
       // assert
       await expect(act).rejects.toThrow(
-        "Please call the 'ensureBrowserFlags' before attempting to start the recording."
+        "The plugin's 'before:browser:launch' listener did not run"
       );
     });
 
