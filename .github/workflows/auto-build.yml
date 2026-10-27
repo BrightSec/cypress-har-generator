@@ -36,8 +36,8 @@ jobs:
       - name: Execute ${{ matrix.target }} npm script
         run: npm run ${{ matrix.target }}
 
-  # type-checks the packed plugin in a new project with `skipLibCheck: false`, so the published types must stand
-  # on their own for every TypeScript major users run
+  # type-checks the packed plugin in a new project, so the public types must resolve for every TypeScript major
+  # users run; the wrong options catch types that silently resolve to `any`
   types:
     name: types (typescript ${{ matrix.typescript }}, ${{ matrix.resolution }})
     runs-on: ubuntu-latest
@@ -78,11 +78,13 @@ jobs:
           export const setup = (on: Cypress.PluginEvents): void => install(on);
           cy.recordHar(options);
           cy.saveHar({ outDir: './hars' });
-          // @ts-expect-error fails if the command types are missing
-          cy.saveHar({ unknown: true });
+          // @ts-expect-error wrong option type
+          cy.recordHar({ content: 'yes' });
+          // @ts-expect-error wrong option type
+          cy.saveHar({ outDir: 1 });
           EOF
           module=${{ matrix.resolution == 'node' && 'commonjs' || 'node16' }}
-          npx tsc --noEmit --strict --skipLibCheck false --target es2020 --types node,cypress \
+          npx tsc --noEmit --strict --skipLibCheck --target es2020 --types node,cypress \
             --module "$module" --moduleResolution ${{ matrix.resolution }} index.ts
 
   # `default` is the Cypress version the repository depends on; the earlier majors are ones users still run,

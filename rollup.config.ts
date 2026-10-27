@@ -1,8 +1,8 @@
 import { dts } from 'rollup-plugin-dts';
 import type { RollupOptions } from 'rollup';
 
-// Bundles the public types into one file, so consumers with `skipLibCheck: false` never type-check
-// internal declarations, which import dev-only types and use `.ts` extensions that TypeScript 4 rejects
+// Bundles the public types into one file without imports of internal declarations, whose `.ts` extensions
+// TypeScript 4 cannot resolve, which turns the option types into `any`
 export default {
   input: 'dist/index.d.ts',
   output: { file: 'dist/index.d.ts', format: 'es' },
