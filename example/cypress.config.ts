@@ -19,8 +19,8 @@ export default defineConfig({
       on: Cypress.PluginEvents,
       config: Cypress.PluginConfigOptions
     ): void {
-      // Install the plugin to record a HAR file with the commands
-      install(on, config, { lifecycle: false });
+      // Install the plugin to record a HAR file for each spec
+      install(on, config);
     }
   }
 });

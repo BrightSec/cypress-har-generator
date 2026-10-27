@@ -2,15 +2,7 @@
 // before running the tests below.
 
 describe('Logging In - XHR Web Form', () => {
-  before(() => {
-    // start recording
-    cy.recordHar();
-  });
-
-  after(() => {
-    // HAR will be saved as `Logging In - XHR Web Form.cy.har`
-    cy.saveHar();
-  });
+  // the HAR is saved as `cypress/hars/logging-in-xhr-web-form.cy.har`
 
   // normally sensitive information like username and password
   // should be passed via environment variables

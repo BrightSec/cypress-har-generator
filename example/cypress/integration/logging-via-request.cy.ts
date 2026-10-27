@@ -2,15 +2,7 @@ describe('Logging in using XHR request', () => {
   const username = 'jane.lane';
   const password = 'password123';
 
-  before(() => {
-    // start recording
-    cy.recordHar();
-  });
-
-  after(() => {
-    // HAR will be saved as `Logging in using XHR request.cy.har`
-    cy.saveHar();
-  });
+  // the HAR is saved as `cypress/hars/logging-via-request.cy.har`
 
   it('can bypass the UI and yet still log in', () => {
     // oftentimes once we have a proper e2e test around logging in
