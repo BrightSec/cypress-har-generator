@@ -24,7 +24,6 @@ import {
   SUPPORTED_BROWSERS
 } from './constants.ts';
 import { join } from 'node:path';
-import { EOL } from 'node:os';
 import { setTimeout } from 'node:timers/promises';
 
 export interface SaveOptions {
@@ -134,7 +133,7 @@ export class Plugin {
 
       await this.stopObserving();
 
-      const har: string | undefined = await this.buildHar();
+      const har: AsyncIterable<string> | undefined = await this.buildHar();
 
       if (har) {
         await this.fileManager.writeFile(filePath, har);
@@ -201,23 +200,10 @@ Please refer to the documentation:
     return process.env.ELECTRON_EXTRA_LAUNCH_ARGS.split(' ');
   }
 
-  private async buildHar(): Promise<string | undefined> {
-    if (this.exporter) {
-      const content = await this.exporter.read();
+  private async buildHar(): Promise<AsyncIterable<string> | undefined> {
+    const entries = await this.exporter?.read();
 
-      if (content) {
-        const entries = content
-          .split(EOL)
-          .filter(Boolean)
-          .map(x => JSON.parse(x));
-
-        const har = new HarBuilder(entries).build();
-
-        return JSON.stringify(har, null, 2);
-      }
-    }
-
-    return undefined;
+    return entries ? new HarBuilder(entries).build() : undefined;
   }
 
   private waitForNetworkIdle(

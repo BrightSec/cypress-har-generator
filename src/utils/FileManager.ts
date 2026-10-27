@@ -16,6 +16,11 @@ import { join } from 'node:path';
 
 type Serializable = unknown;
 
+const isAsyncIterable = (value: unknown): value is AsyncIterable<string> =>
+  typeof (value as AsyncIterable<string> | undefined)?.[
+    Symbol.asyncIterator
+  ] === 'function';
+
 export class FileManager {
   private static _instance: FileManager;
 
@@ -40,10 +45,12 @@ export class FileManager {
 
   public async writeFile<T extends Serializable>(
     path: string,
-    content: T
+    content: T | AsyncIterable<string>
   ): Promise<void> {
     const data =
-      typeof content === 'string' ? content : JSON.stringify(content);
+      typeof content === 'string' || isAsyncIterable(content)
+        ? content
+        : JSON.stringify(content);
 
     await writeFile(path, data);
   }
