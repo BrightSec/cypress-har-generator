@@ -48,7 +48,8 @@ $ npm i --save-dev @neuralegion/cypress-har-generator
 
 > ✴ TypeScript projects need TypeScript 5.0 or later. If you are on an earlier TypeScript version, stay on version 5 of the plugin.
 
-> ✴ For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
+> [!NOTE]
+> For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
 
 ## Setting Up the Plugin
 
@@ -71,11 +72,14 @@ export default defineConfig({
 });
 ```
 
-> ✴ The plugin ships both ES modules and CommonJS, so a CommonJS config can load it with `require('@neuralegion/cypress-har-generator')` instead.
+> [!TIP]
+> The plugin ships both ES modules and CommonJS, so a CommonJS config can load it with `require('@neuralegion/cypress-har-generator')` instead.
 
-> ✴ `setupNodeEvents` can be defined in either the e2e or component configuration
+> [!NOTE]
+> `setupNodeEvents` can be defined in either the e2e or component configuration
 
-> ⚠ Please note that the `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
+> [!WARNING]
+> `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
 >
 > ```js
 > import { defineConfig } from 'cypress';
@@ -107,7 +111,8 @@ Add the following line to your [support file](https://docs.cypress.io/app/core-c
 import '@neuralegion/cypress-har-generator/commands';
 ```
 
-> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
+> [!IMPORTANT]
+> Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
 
 The import also adds the types of the commands, so TypeScript knows `cy.recordHar`, `cy.saveHar` and `cy.disposeOfHar` without any further configuration.
 
@@ -149,7 +154,8 @@ $ cypress run --browser chrome --expose hars_folder=cypress/hars
 
 On Cypress versions before 16, the plugin also reads `hars_folder` from the `env` object, the `--env` option, or the `CYPRESS_hars_folder` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
 
-> ⚠ **Notice:** `hars_folder` was previously named `hars_folders`. The old name is still supported and used when `hars_folder` is not set, but it is deprecated and will be removed in version 6. The plugin warns about it when `install` receives the config, as in `install(on, config)`. Please rename it in your configuration. Likewise, the `CYPRESS_HARS_FOLDERS` environment variable is deprecated; use `CYPRESS_hars_folder` instead.
+> [!WARNING]
+> `hars_folder` was previously named `hars_folders`. The old name is still supported and used when `hars_folder` is not set, but it is deprecated and will be removed in version 6. The plugin warns about it when `install` receives the config, as in `install(on, config)`. Please rename it in your configuration. Likewise, the `CYPRESS_HARS_FOLDERS` environment variable is deprecated; use `CYPRESS_hars_folder` instead.
 
 Finally, to start running your tests, use the following command:
 
@@ -157,7 +163,8 @@ Finally, to start running your tests, use the following command:
 $ cypress run --browser chrome
 ```
 
-> 🚧 Currently, only Chrome family browsers are supported. But this plugin also works with Electron, you just need to set the remote-debugging-port option when you launch Cypress as follows:
+> [!IMPORTANT]
+> Currently, only Chrome family browsers are supported. But this plugin also works with Electron, you just need to set the remote-debugging-port option when you launch Cypress as follows:
 >
 > ```bash
 > $ ELECTRON_EXTRA_LAUNCH_ARGS=--remote-debugging-port=9222 cypress run --browser electron
@@ -179,7 +186,8 @@ Here's an example of how to use the `recordHar` command:
 cy.recordHar();
 ```
 
-> ⚠ The maximum size of a single resource that can be preserved is 10MB. If you need to receive a larger response body, you should adjust the `maxResourceBufferSize` and `maxTotalBufferSize` accordingly:
+> [!WARNING]
+> The maximum size of a single resource that can be preserved is 10MB. If you need to receive a larger response body, you should adjust the `maxResourceBufferSize` and `maxTotalBufferSize` accordingly:
 >
 > ```js
 > cy.recordHar({
@@ -224,7 +232,8 @@ For example, to only include requests that have a status code of 400 or greater,
 cy.recordHar({ minStatusCodeToInclude: 400 });
 ```
 
-> ⚠ `minStatusCodeToInclude` is deprecated and will be removed in version 6, and the plugin warns when it is used. Use `excludeStatusCodes` instead.
+> [!WARNING]
+> `minStatusCodeToInclude` is deprecated and will be removed in version 6, and the plugin warns when it is used. Use `excludeStatusCodes` instead.
 
 Alternatively, you can have more granular control over the requests to exclude by passing an array of status codes you want to exclude from the recorded HAR file.
 
@@ -232,7 +241,8 @@ Alternatively, you can have more granular control over the requests to exclude b
 cy.recordHar({ excludeStatusCodes: [200, 201, 204] });
 ```
 
-> ⚠ Please note that both options `minStatusCodeToInclude` and `excludeStatusCodes` are mutually exclusive.
+> [!IMPORTANT]
+> Both options `minStatusCodeToInclude` and `excludeStatusCodes` are mutually exclusive.
 
 By default, when you use `recordHar` command, it will include the blob requests in the recorded HAR file. However, those requests only make sense when they are used on the same page they were created. To exclude the blob requests from the recorded HAR file, set the `includeBlobs` to false as follows:
 
@@ -240,7 +250,8 @@ By default, when you use `recordHar` command, it will include the blob requests 
 cy.recordHar({ includeBlobs: false });
 ```
 
-> ⚠ Version 6 changes the default of `includeBlobs` to `false`, and the plugin warns when it is not set. To keep recording blob requests after upgrading, pass `includeBlobs: true`.
+> [!WARNING]
+> Version 6 changes the default of `includeBlobs` to `false`, and the plugin warns when it is not set. To keep recording blob requests after upgrading, pass `includeBlobs: true`.
 
 You can specify the `filter` option as a path to a module that exports a function (it can be sync or async) to filter out unwanted entries from the HAR. The function should take an [Entry object](http://www.softwareishard.com/blog/har-12-spec/#entries) as a parameter and return a boolean indicating whether the entry should be included in the final HAR or not.
 
@@ -300,7 +311,8 @@ The function should take an Entry object as a parameter and return the modified.
 
 In this example, the transform function will replace any occurrences of password with `***` in the request body of each entry.
 
-> ✴ The plugin also supports files with `.js`, `.mjs` and `.cjs` extensions, written as ES modules or CommonJS. For example, the same filter as a CommonJS module, `include-password.cjs`:
+> [!TIP]
+> The plugin also supports files with `.js`, `.mjs` and `.cjs` extensions, written as ES modules or CommonJS. For example, the same filter as a CommonJS module, `include-password.cjs`:
 >
 > ```js
 > module.exports = entry =>
@@ -440,11 +452,14 @@ export default defineConfig({
 });
 ```
 
-> ⚠ Please note, to record a HAR for each spec this way, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
+> [!IMPORTANT]
+> To record a HAR for each spec this way, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
 
-> ✴ If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `{ lifecycle: true }` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
+> [!TIP]
+> If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `{ lifecycle: true }` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
 
-> ✴ `enableExperimentalLifecycle(on, config)` does the same and still works, but it is deprecated and will be removed in version 6.
+> [!WARNING]
+> `enableExperimentalLifecycle(on, config)` does the same and still works, but it is deprecated and will be removed in version 6.
 
 ## License
 
