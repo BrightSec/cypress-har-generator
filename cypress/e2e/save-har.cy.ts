@@ -1,4 +1,5 @@
 import { env, expose } from '../support/config-sources.ts';
+import { Entry } from 'har-format';
 
 const sources = [expose, env];
 const keys = ['hars_folder', 'HARS_FOLDER', 'hars_folders'];
@@ -123,5 +124,31 @@ describe('Save HAR', () => {
       const path = `${options.outDir}/${fileName}.har`;
       cy.exists(path).should('be.true');
     });
+  });
+
+  it('saves a large response body without waiting for idle', () => {
+    const size = 50 * 1024 ** 2;
+
+    cy.recordHar({
+      maxTotalBufferSize: 256 * 1024 ** 2,
+      maxResourceBufferSize: 256 * 1024 ** 2
+    });
+
+    cy.get('a[href$=large-body]').click();
+    cy.get('#result', { timeout: 30000 }).should(
+      'have.text',
+      `Received ${size} characters`
+    );
+
+    cy.saveHar();
+
+    cy.findHar()
+      .its('log.entries')
+      .should((entries: Entry[]) => {
+        const entry = entries.find(({ request }: Entry) =>
+          request.url.endsWith('/api/large-body')
+        );
+        expect(entry?.response.content.text).to.have.length(size);
+      });
   });
 });
