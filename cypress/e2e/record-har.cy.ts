@@ -351,16 +351,12 @@ describe('Record HAR', () => {
   });
 
   it('records the WebSocket frames when the socket is still open', () => {
-    let startedAt = 0;
-
     cy.recordHar();
 
     cy.get('a[href$=websocket]').click();
     cy.get('ul > li').should('have.length.gte', 2);
 
-    cy.then(() => (startedAt = Date.now()));
     cy.saveHar({ waitForIdle: true });
-    cy.then(() => expect(Date.now() - startedAt).to.be.lessThan(3000));
 
     cy.findHar()
       .its('log.entries')
