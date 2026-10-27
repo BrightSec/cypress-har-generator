@@ -143,7 +143,7 @@ describe('Save HAR', () => {
       `Received ${size} characters`
     );
 
-    cy.saveHar();
+    cy.saveHar({ waitForIdle: false });
 
     cy.findHar()
       .its('log.entries')
@@ -153,5 +153,24 @@ describe('Save HAR', () => {
         );
         expect(entry?.response.content.text).to.have.length(size);
       });
+  });
+
+  it('waits for a pending request by default', () => {
+    cy.recordHar();
+
+    cy.window().then(win => void win.fetch('/api/delay/1500'));
+
+    cy.saveHar();
+
+    cy.findHar()
+      .its('log.entries')
+      .should(
+        (entries: Entry[]) =>
+          expect(
+            entries.some(({ request }: Entry) =>
+              request.url.endsWith('/api/delay/1500')
+            )
+          ).to.be.true
+      );
   });
 });

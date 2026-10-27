@@ -30,6 +30,10 @@ import { setTimeout } from 'node:timers/promises';
 export interface SaveOptions {
   fileName: string;
   outDir: string;
+  /**
+   * Waits for the pending requests to finish, up to `maxWaitDuration`, before saving.
+   * @defaultValue true
+   */
   waitForIdle?: boolean;
   minIdleDuration?: number;
   maxWaitDuration?: number;
@@ -126,7 +130,7 @@ export class Plugin {
     try {
       await this.fileManager.createFolder(options.outDir);
 
-      if (options.waitForIdle) {
+      if (options.waitForIdle ?? true) {
         await this.waitForNetworkIdle(options);
       }
 

@@ -232,7 +232,8 @@ describe('Plugin', () => {
   describe('saveHar', () => {
     const options = {
       fileName: 'file.har',
-      outDir: tmpdir()
+      outDir: tmpdir(),
+      waitForIdle: false
     } as SaveOptions;
 
     it('should log an error message when the connection is corrupted', async () => {
@@ -287,6 +288,33 @@ describe('Plugin', () => {
       await plugin.saveHar({
         ...options,
         waitForIdle: true
+      });
+      // assert
+      verify(networkObserverMock.empty).times(4);
+    });
+
+    it('should wait for completing all pending requests by default', async () => {
+      // arrange
+      when(connectionFactoryMock.create(anything())).thenReturn(
+        instance(connectionMock)
+      );
+      when(
+        observerFactoryMock.createNetworkObserver(anything(), anything())
+      ).thenReturn(instance(networkObserverMock));
+      when(networkObserverMock.empty).thenReturn(false, false, true);
+      when(harExporterFactoryMock.create(anything())).thenResolve(
+        resolvableInstance(harExporterMock)
+      );
+      plugin.ensureBrowserFlags(chrome, []);
+      await plugin.recordHar({
+        rootDir: '/'
+      });
+
+      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
+      // act
+      await plugin.saveHar({
+        fileName: options.fileName,
+        outDir: options.outDir
       });
       // assert
       verify(networkObserverMock.empty).times(4);
