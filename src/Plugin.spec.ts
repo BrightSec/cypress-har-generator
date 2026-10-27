@@ -13,6 +13,7 @@ import {
   anyFunction,
   anyString,
   anything,
+  capture,
   deepEqual,
   instance,
   match,
@@ -66,6 +67,12 @@ const useFakeTimers = () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return timer!;
     });
+};
+
+const entriesOf = async function* (
+  ...entries: string[]
+): AsyncGenerator<string> {
+  yield* entries;
 };
 
 const entry = {
@@ -283,7 +290,9 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
+      when(harExporterMock.read()).thenResolve(
+        entriesOf(JSON.stringify(entry))
+      );
       // act
       await plugin.saveHar({
         ...options,
@@ -309,16 +318,23 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
+      when(harExporterMock.read()).thenResolve(
+        entriesOf(JSON.stringify(entry))
+      );
       // act
       await plugin.saveHar(options);
       // assert
-      verify(
-        fileManagerMock.writeFile(
-          match(options.fileName),
-          match(`"version": "1.2"`)
-        )
-      ).once();
+      const [path, content]: [string, unknown] = capture<string, unknown>(
+        fileManagerMock.writeFile
+      ).last();
+      let har = '';
+      for await (const chunk of content as AsyncIterable<string>) {
+        har += chunk;
+      }
+      expect(path).toMatch(options.fileName);
+      expect(JSON.parse(har)).toMatchObject({
+        log: { version: '1.2', entries: [entry] }
+      });
     });
 
     it('should stop observing the network before building a HAR file', async () => {
@@ -337,7 +353,9 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
+      when(harExporterMock.read()).thenResolve(
+        entriesOf(JSON.stringify(entry))
+      );
       // act
       await plugin.saveHar(options);
       // assert
@@ -410,7 +428,9 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
+      when(harExporterMock.read()).thenResolve(
+        entriesOf(JSON.stringify(entry))
+      );
       // act
       await plugin.saveHar(options);
       // assert
@@ -435,7 +455,9 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
+      when(harExporterMock.read()).thenResolve(
+        entriesOf(JSON.stringify(entry))
+      );
       // act
       await plugin.saveHar(options);
       // assert

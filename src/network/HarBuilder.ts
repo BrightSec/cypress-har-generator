@@ -1,13 +1,16 @@
 import pkg from '../../package.json' with { type: 'json' };
-import type { Entry, Har } from 'har-format';
+import type { Har } from 'har-format';
+
+// An entry sits three levels deep, at `log.entries[i]`.
+const ENTRY_INDENT = ' '.repeat(6);
 
 export class HarBuilder {
-  constructor(private readonly entries: Entry[]) {}
+  constructor(private readonly entries: AsyncIterable<string>) {}
 
-  public build(): Har {
+  // Yields the HAR in chunks, holding a single entry in memory at a time.
+  public async *build(): AsyncGenerator<string> {
     const { name, version, homepage: comment } = pkg;
-
-    return {
+    const har: Har = {
       log: {
         version: '1.2',
         pages: [],
@@ -16,14 +19,27 @@ export class HarBuilder {
           version,
           comment
         },
-        // Entries are recorded as requests finish; HAR 1.2 orders them by start time.
-        entries: this.entries
-          .slice()
-          .sort(
-            (a, b) =>
-              Date.parse(a.startedDateTime) - Date.parse(b.startedDateTime)
-          )
+        entries: []
       }
     };
+    const json = JSON.stringify(har, null, 2);
+    const entriesStart = json.lastIndexOf('[]') + 1;
+    let separator = '';
+
+    yield json.slice(0, entriesStart);
+
+    for await (const entry of this.entries) {
+      const indented = JSON.stringify(JSON.parse(entry), null, 2).replaceAll(
+        '\n',
+        `\n${ENTRY_INDENT}`
+      );
+
+      yield `${separator}\n${ENTRY_INDENT}${indented}`;
+      separator = ',';
+    }
+
+    yield separator
+      ? `\n${ENTRY_INDENT.slice(2)}${json.slice(entriesStart)}`
+      : json.slice(entriesStart);
   }
 }
