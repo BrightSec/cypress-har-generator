@@ -176,6 +176,18 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     this.updateNetworkRequestWithResponse(entry, response);
   }
 
+  public requestServedFromCache({
+    requestId
+  }: Protocol.Network.RequestServedFromCacheEvent): void {
+    const entry: NetworkRequest | undefined = this._entries.get(requestId);
+
+    if (!entry) {
+      return;
+    }
+
+    entry.setFromMemoryCache();
+  }
+
   public resourceChangedPriority({
     requestId,
     newPriority
@@ -626,6 +638,24 @@ export class NetworkObserver implements Observer<NetworkRequest> {
         response.remoteIPAddress,
         response.remotePort || -1
       );
+    }
+
+    if (response.fromServiceWorker) {
+      networkRequest.fetchedViaServiceWorker = true;
+    }
+
+    if (response.fromDiskCache) {
+      networkRequest.fromDiskCache = true;
+    }
+
+    if (response.cacheStorageCacheName) {
+      networkRequest.responseCacheStorageCacheName =
+        response.cacheStorageCacheName;
+    }
+
+    if (response.serviceWorkerResponseSource) {
+      networkRequest.serviceWorkerResponseSource =
+        response.serviceWorkerResponseSource;
     }
 
     if (response.timing) {

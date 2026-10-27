@@ -318,6 +318,95 @@ describe('EntryBuilder', () => {
       });
     });
 
+    it.each([
+      {
+        name: 'the memory cache',
+        arrange: () => request.setFromMemoryCache(),
+        expected: 'memory'
+      },
+      {
+        name: 'the disk cache',
+        arrange: () => (request.fromDiskCache = true),
+        expected: 'disk'
+      }
+    ])(
+      'should build an entry for a response served from $name',
+      async ({ arrange, expected }) => {
+        // arrange
+        arrange();
+        request.responseHeadersText = 'HTTP/1.1 200 OK\r\n\r\n';
+        request.resourceSize = 325;
+        request.transferSize = 0;
+        const entryBuilder = new EntryBuilder(request);
+        // act
+        const entry = await entryBuilder.build();
+        // assert
+        expect(entry).toMatchObject({
+          _fromCache: expected,
+          response: {
+            bodySize: 0,
+            content: { size: 325, compression: undefined }
+          }
+        });
+      }
+    );
+
+    it('should build an entry with how a service worker served the response', async () => {
+      // arrange
+      request.fetchedViaServiceWorker = true;
+      request.responseCacheStorageCacheName = 'v1';
+      request.serviceWorkerResponseSource = 'cache-storage';
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry).toMatchObject({
+        response: {
+          _fetchedViaServiceWorker: true,
+          _responseCacheStorageCacheName: 'v1',
+          _serviceWorkerResponseSource: 'cache-storage'
+        }
+      });
+    });
+
+    it('should build an entry with the service worker timings left out of the total time', async () => {
+      // arrange
+      request.setIssueTime(1475164.6793, 1673020881.302266);
+      request.timing = {
+        connectEnd: -1,
+        connectStart: -1,
+        dnsEnd: -1,
+        dnsStart: -1,
+        proxyEnd: -1,
+        proxyStart: -1,
+        pushEnd: 0,
+        pushStart: 0,
+        receiveHeadersStart: 0.856,
+        receiveHeadersEnd: 0.857,
+        requestTime: 1475164.679607,
+        sendEnd: 0.088,
+        sendStart: 0.088,
+        sslEnd: -1,
+        sslStart: -1,
+        workerStart: 0.003,
+        workerReady: 0.088,
+        workerFetchStart: 0.088,
+        workerRespondWithSettled: 0.743
+      };
+      request.endTime = 1475164.68054;
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry.timings).toMatchObject({
+        _workerStart: 0.003,
+        _workerReady: 0.088,
+        _workerFetchStart: 0.088,
+        _workerRespondWithSettled: 0.743
+      });
+      expect(entry.time).toBeCloseTo(1.24, 6);
+    });
+
     it('should build an entry parsing IP address', async () => {
       // arrange
       request.setRemoteAddress('1.1.1.1', 80);

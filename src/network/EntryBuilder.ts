@@ -11,6 +11,22 @@ import type {
   Response,
   Timings
 } from 'har-format';
+import type { Protocol } from 'devtools-protocol';
+
+interface ChromeResponse extends Response {
+  _fetchedViaServiceWorker: boolean;
+  _responseCacheStorageCacheName?: string;
+  _serviceWorkerResponseSource?: Protocol.Network.ServiceWorkerResponseSource;
+}
+
+interface ChromeTimings extends Timings {
+  _workerStart?: number;
+  _workerReady?: number;
+  _workerFetchStart?: number;
+  _workerRespondWithSettled?: number;
+  _workerRouterEvaluationStart?: number;
+  _workerCacheLookupStart?: number;
+}
 
 export class EntryBuilder {
   constructor(private readonly request: NetworkRequest) {}
@@ -24,10 +40,18 @@ export class EntryBuilder {
       serverIPAddress = serverIPAddress.substr(0, portPositionInString);
     }
 
-    const timings: Timings = this.buildTimings();
+    const timings: ChromeTimings = this.buildTimings();
 
-    const time: number = Object.values(timings).reduce(
-      (acc: number, t: number): number => acc + Math.max(t, 0),
+    const time: number = [
+      timings.blocked,
+      timings.dns,
+      timings.ssl,
+      timings.connect,
+      timings.send,
+      timings.wait,
+      timings.receive
+    ].reduce(
+      (acc: number, t: number | undefined): number => acc + Math.max(t ?? 0, 0),
       0
     );
 
@@ -48,6 +72,10 @@ export class EntryBuilder {
       _eventSourceMessages: this.request.eventSourceMessages ?? []
     };
 
+    if (this.request.cached()) {
+      entry._fromCache = this.request.cachedInMemory() ? 'memory' : 'disk';
+    }
+
     if (this.request.connectionId !== '0') {
       entry.connection = this.request.connectionId;
     }
@@ -56,7 +84,7 @@ export class EntryBuilder {
   }
 
   private getResponseBodySize(): number {
-    if (this.request.statusCode === 304) {
+    if (this.request.cached() || this.request.statusCode === 304) {
       return 0;
     }
 
@@ -73,7 +101,11 @@ export class EntryBuilder {
   }
 
   private getResponseCompression(): number | undefined {
-    if (this.request.statusCode === 304 || this.request.statusCode === 206) {
+    if (
+      this.request.cached() ||
+      this.request.statusCode === 304 ||
+      this.request.statusCode === 206
+    ) {
       return undefined;
     }
 
@@ -113,7 +145,7 @@ export class EntryBuilder {
     return res;
   }
 
-  private async buildResponse(): Promise<Response> {
+  private async buildResponse(): Promise<ChromeResponse> {
     return {
       status: this.request.statusCode,
       statusText: this.request.statusText,
@@ -129,7 +161,11 @@ export class EntryBuilder {
       _transferSize: this.request.transferSize,
       ...(this.request.failDescription
         ? { _error: this.request.failDescription }
-        : {})
+        : {}),
+      _fetchedViaServiceWorker: this.request.fetchedViaServiceWorker,
+      _responseCacheStorageCacheName:
+        this.request.responseCacheStorageCacheName,
+      _serviceWorkerResponseSource: this.request.serviceWorkerResponseSource
     };
   }
 
@@ -147,12 +183,12 @@ export class EntryBuilder {
   }
 
   // eslint-disable-next-line complexity
-  private buildTimings(): Timings {
+  private buildTimings(): ChromeTimings {
     const timing = this.request.timing;
     const issueTime: number = this.request.issueTime;
     const startTime: number = this.request.startTime;
 
-    const result: Timings = {
+    const result: ChromeTimings = {
       blocked: -1,
       dns: -1,
       ssl: -1,
@@ -211,6 +247,13 @@ export class EntryBuilder {
         blockedStart,
         0
       );
+
+      result._workerStart = timing.workerStart;
+      result._workerReady = timing.workerReady;
+      result._workerFetchStart = timing.workerFetchStart;
+      result._workerRespondWithSettled = timing.workerRespondWithSettled;
+      result._workerRouterEvaluationStart = timing.workerRouterEvaluationStart;
+      result._workerCacheLookupStart = timing.workerCacheLookupStart;
     } else if (this.request.responseReceivedTime === -1) {
       result.blocked = this.request.endTime - issueTime;
 

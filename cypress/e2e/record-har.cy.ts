@@ -269,6 +269,69 @@ describe('Record HAR', () => {
       });
   });
 
+  it('records a response served by the Service Worker from the Cache Storage', () => {
+    cy.recordHar();
+
+    cy.get('a[href$=service-worker]').click();
+    cy.window().then(win => win.navigator.serviceWorker.ready);
+    cy.reload();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should((entries: Entry[]) => {
+        const entry = entries.find(
+          ({ request, response }: Entry) =>
+            request.url.endsWith('/service-worker.css') &&
+            (response as { _serviceWorkerResponseSource?: string })
+              ._serviceWorkerResponseSource === 'cache-storage'
+        );
+
+        expect(entry).to.deep.include({ _fromCache: 'disk' });
+        expect(entry?.response).to.deep.include({
+          bodySize: 0,
+          _fetchedViaServiceWorker: true,
+          _responseCacheStorageCacheName: 'v1'
+        });
+        expect(entry?.timings)
+          .to.have.property('_workerRespondWithSettled')
+          .that.is.at.least(0);
+      });
+  });
+
+  it('records a response served from the memory cache without the timings of the original request', () => {
+    cy.recordHar();
+
+    cy.visit('/pages/memory-cache');
+    cy.visit('/');
+    cy.go('back');
+    cy.get('img').should(($images: JQuery<HTMLImageElement>) =>
+      expect([...$images].every(({ complete }) => complete)).to.equal(true)
+    );
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should((entries: Entry[]) => {
+        const cached = entries.filter(
+          ({ _fromCache }: Entry) => _fromCache === 'memory'
+        );
+
+        expect(cached).to.have.length.greaterThan(0);
+        cached.forEach(({ timings, response }: Entry) => {
+          expect(response.bodySize).to.equal(0);
+          expect(timings).to.include({
+            blocked: -1,
+            dns: -1,
+            connect: -1,
+            ssl: -1
+          });
+        });
+      });
+  });
+
   it('records an open request of a terminated worker', () => {
     cy.recordHar();
 
