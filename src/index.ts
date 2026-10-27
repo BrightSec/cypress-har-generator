@@ -29,14 +29,31 @@ const plugin = new Plugin(
 );
 
 export interface InstallOptions {
+  /**
+   * Records a HAR for each spec from the Node process, which survives a run stopped early.
+   * Requires `config`.
+   * @defaultValue false
+   */
   lifecycle?: boolean;
 }
 
+/**
+ * Sets the plugin up in `setupNodeEvents`.
+ * @param on - The `on` argument of `setupNodeEvents`.
+ * @param config - The `config` argument of `setupNodeEvents`, required by the `lifecycle` option.
+ * @param options - See {@link InstallOptions}.
+ */
 export const install = (
   on: Cypress.PluginEvents,
-  config: Cypress.PluginConfigOptions,
-  { lifecycle = true }: InstallOptions = {}
+  config?: Cypress.PluginConfigOptions,
+  { lifecycle = false }: InstallOptions = {}
 ): void => {
+  if (lifecycle && !config) {
+    throw new TypeError(
+      'The `lifecycle` option requires the config: call `install(on, config, { lifecycle: true })`.'
+    );
+  }
+
   // ADHOC: Cypress expect the return value to be null to signal that the given event has been handled properly.
   // https://docs.cypress.io/api/commands/task#Usage
   on('task', {
@@ -69,19 +86,38 @@ export const install = (
     }
   );
 
-  if (lifecycle) {
+  if (config && lifecycle) {
     enableLifecycle(on, config);
   }
+};
+
+let lifecycleDeprecationWarned = false;
+
+/**
+ * @deprecated Use `install(on, config, { lifecycle: true })` instead.
+ */
+export const enableExperimentalLifecycle = (
+  on: Cypress.PluginEvents,
+  config: Cypress.PluginConfigOptions
+): void => {
+  if (!lifecycleDeprecationWarned) {
+    lifecycleDeprecationWarned = true;
+    Logger.Instance.warn(
+      '`enableExperimentalLifecycle(on, config)` is deprecated and will be removed in the next major version. Use `install(on, config, { lifecycle: true })` instead.'
+    );
+  }
+
+  enableLifecycle(on, config);
 };
 
 const enableLifecycle = (
   on: Cypress.PluginEvents,
   config: Cypress.PluginConfigOptions
-) => {
+): void => {
   // FIXME: `isInteractive` is always true. For details see https://github.com/cypress-io/cypress/issues/20789
   if (!config.isTextTerminal && !config.experimentalInteractiveRunEvents) {
     Logger.Instance.warn(
-      'To record a HAR for each spec, you must either disable the interactive mode or activate the "experimentalInteractiveRunEvents" feature, or pass `{ lifecycle: false }` to `install` to record with the commands only. For further information, please refer to: https://docs.cypress.io/guides/references/experiments#Configuration'
+      'To record a HAR for each spec, you must either disable the interactive mode or activate the "experimentalInteractiveRunEvents" feature. For further information, please refer to: https://docs.cypress.io/guides/references/experiments#Configuration'
     );
   } else {
     on('before:spec', (spec: Cypress.Spec) =>
@@ -99,11 +135,6 @@ const enableLifecycle = (
     );
   }
 };
-
-/**
- * Function has been deprecated. {@link install} records a HAR for each spec unless `{ lifecycle: false }` is passed.
- */
-export const enableExperimentalLifecycle = enableLifecycle;
 
 /**
  * Function has been deprecated. Use {@link install} instead as follows:

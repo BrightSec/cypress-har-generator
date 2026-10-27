@@ -13,12 +13,13 @@ import type { Network } from '../network/Network.ts';
 import { DefaultNetwork } from './DefaultNetwork.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type { NetworkOptions } from './NetworkOptions.ts';
+import type { CDPClient } from './CDPClient.ts';
 import CDP, { Version } from 'chrome-remote-interface';
-import type { Client, Options } from 'chrome-remote-interface';
+import type { Options } from 'chrome-remote-interface';
 
 export class CDPConnection implements Connection {
   private _network?: Network;
-  private _cdp?: Client;
+  private _cdp?: CDPClient;
 
   get cdp() {
     return this._cdp;
@@ -36,9 +37,9 @@ export class CDPConnection implements Connection {
 
       const target = await this.populateBrowserTarget();
 
-      const cdp = await CDP({
+      const cdp = (await CDP({
         target
-      });
+      })) as CDPClient;
 
       this.logger.debug(CONNECTED);
 

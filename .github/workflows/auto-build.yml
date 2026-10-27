@@ -38,8 +38,7 @@ jobs:
 
   # `default` is the Cypress version the repository depends on; the earlier majors are ones users still run,
   # where options come from `env` (before 16) instead of or as well as `expose`
-  # the `lifecycle` suite checks the HAR `install` saves for each spec by default, which the default suite turns off to
-  # test the commands; it runs on its own because its `Cypress.stop()` ends the run
+  # the `lifecycle` suite runs with `enableExperimentalLifecycle`, which the default suite cannot enable
   e2e:
     name: e2e (cypress ${{ matrix.cypress }}${{ matrix.suite == 'lifecycle' && ', lifecycle' || '' }})
     runs-on: ubuntu-latest

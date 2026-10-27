@@ -15,12 +15,9 @@ export default defineConfig({
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/integration/**/*.cy.ts',
     baseUrl: 'http://localhost:7079',
-    setupNodeEvents(
-      on: Cypress.PluginEvents,
-      config: Cypress.PluginConfigOptions
-    ): void {
-      // Install the plugin to record a HAR file with the commands
-      install(on, config, { lifecycle: false });
+    setupNodeEvents(on: Cypress.PluginEvents): void {
+      // Install the plugin to record a HAR file
+      install(on);
     }
   }
 });

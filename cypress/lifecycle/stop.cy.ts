@@ -1,4 +1,4 @@
-describe('Lifecycle', () => {
+describe('Experimental lifecycle', () => {
   afterEach(() => Cypress.stop());
 
   it('records a spec that stops the run', () => {

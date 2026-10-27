@@ -44,6 +44,10 @@ To install the plugin as development dependency, run the following command:
 $ npm i --save-dev @neuralegion/cypress-har-generator
 ```
 
+> ✴ The plugin requires Cypress 14.0.0 or later. If you are on an earlier Cypress version, stay on version 5 of the plugin.
+
+> ✴ TypeScript projects need TypeScript 5.0 or later. If you are on an earlier TypeScript version, stay on version 5 of the plugin.
+
 > ✴ For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
 
 ## Setting Up the Plugin
@@ -60,8 +64,8 @@ import { install } from '@neuralegion/cypress-har-generator';
 
 export default defineConfig({
   e2e: {
-    setupNodeEvents(on, config) {
-      install(on, config);
+    setupNodeEvents(on) {
+      install(on);
     }
   }
 });
@@ -70,16 +74,6 @@ export default defineConfig({
 > ✴ The plugin ships both ES modules and CommonJS, so a CommonJS config can load it with `require('@neuralegion/cypress-har-generator')` instead.
 
 > ✴ `setupNodeEvents` can be defined in either the e2e or component configuration
-
-> ✴ Before Cypress 10.0.0, the plugin is installed in the `cypress/plugins/index.js` file instead (for details see [the migration guide](https://docs.cypress.io/guides/references/migration-guide#Plugins-File-Removed)):
->
-> ```js
-> const { install } = require('@neuralegion/cypress-har-generator');
->
-> module.exports = (on, config) => {
->   install(on, config);
-> };
-> ```
 
 > ⚠ Please note that the `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
 >
@@ -92,8 +86,8 @@ export default defineConfig({
 >
 > export default defineConfig({
 >   e2e: {
->     setupNodeEvents(on, config) {
->       install(on, config);
+>     setupNodeEvents(on) {
+>       install(on);
 >       on('before:browser:launch', (browser = {}, launchOptions) => {
 >         ensureBrowserFlags(browser, launchOptions);
 >         return launchOptions;
@@ -113,25 +107,13 @@ Add the following line to your [support file](https://docs.cypress.io/app/core-c
 import '@neuralegion/cypress-har-generator/commands';
 ```
 
-> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. Before Cypress 10.0.0, the default support file is `cypress/support/index.js`, and Cypress 10.0.0 and later no longer load it. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
+> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
 
 The import also adds the types of the commands, so TypeScript knows `cy.recordHar`, `cy.saveHar` and `cy.disposeOfHar` without any further configuration.
 
 ## Generating a HAR File
 
-By default, `install` records a HAR file for each spec: it starts recording before the spec runs and saves the HAR file when the spec ends, so your test files need no code for it.
-
-> ⚠ Cypress emits the spec events this relies on only in run mode, or in interactive mode with the "experimentalInteractiveRunEvents" feature enabled. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
-
-> ✴ The HAR file is saved from the Node process, so it is saved even when the run is stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), which makes Cypress skip the remaining `after` and `afterEach` hooks.
-
-To decide in your tests what to record and when to save it, turn this off by passing `{ lifecycle: false }` to `install`, and use the [commands](#commands) instead:
-
-```js
-setupNodeEvents(on, config) {
-  install(on, config, { lifecycle: false });
-}
-```
+To generate a HAR file, you'll need to include the following code in your test file(s):
 
 ```js
 describe('my tests', () => {
@@ -404,8 +386,6 @@ describe('my tests', () => {
 
 ## Example Usage
 
-The examples below use the commands, so they assume `install` is called with `{ lifecycle: false }`.
-
 To generate a HAR file during your tests, you'll need to include the `recordHar` and `saveHar` commands in your test file(s). Here's an example of how you might use these commands in a test:
 
 ```js
@@ -444,6 +424,27 @@ describe('my tests', () => {
   });
 });
 ```
+
+You can set up hooks in a single step, eliminating the need to define them in each spec file. To do this, pass the config and `{ lifecycle: true }` to `install` as shown below:
+
+```js
+import { defineConfig } from 'cypress';
+import { install } from '@neuralegion/cypress-har-generator';
+
+export default defineConfig({
+  e2e: {
+    setupNodeEvents(on, config) {
+      install(on, config, { lifecycle: true });
+    }
+  }
+});
+```
+
+> ⚠ Please note, to record a HAR for each spec this way, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
+
+> ✴ If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `{ lifecycle: true }` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
+
+> ✴ `enableExperimentalLifecycle(on, config)` does the same and still works, but it is deprecated and will be removed in version 6.
 
 ## License
 

@@ -26,9 +26,9 @@ export default defineConfig({
     ...(exposeSupported ? { expose: variables } : { env: variables }),
     setupNodeEvents(
       on: Cypress.PluginEvents,
-      config: Cypress.PluginConfigOptions
+      _: Cypress.PluginConfigOptions
     ): void {
-      install(on, config, { lifecycle: false });
+      install(on);
 
       on('task', {
         async 'fs:match'({

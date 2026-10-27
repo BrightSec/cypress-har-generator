@@ -15,7 +15,7 @@ export default defineConfig({
       on: Cypress.PluginEvents,
       config: Cypress.PluginConfigOptions
     ): void {
-      install(on, config);
+      install(on, config, { lifecycle: true });
 
       on('before:run', () => rm(harPath, { force: true }));
       // `Cypress.stop()` skips the rest of the run, so the HAR can only be checked once the run is over
