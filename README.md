@@ -44,6 +44,8 @@ To install the plugin as development dependency, run the following command:
 $ npm i --save-dev @neuralegion/cypress-har-generator
 ```
 
+> ✴ TypeScript projects need TypeScript 5.0 or higher. The type declarations import their siblings with a `.ts` extension, which earlier versions reject with `TS2691: An import path cannot end with a '.ts' extension` unless `skipLibCheck` is enabled.
+
 > ✴ For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
 
 ## Setting Up the Plugin
