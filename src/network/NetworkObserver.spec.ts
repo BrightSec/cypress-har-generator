@@ -1113,5 +1113,34 @@ describe('NetworkObserver', () => {
       );
       expect(sut.empty).toBe(true);
     });
+
+    it('should not detach from the targets while a response body is still loading', async () => {
+      // arrange
+      const body = { body: '<html></html>', base64Encoded: false };
+      const order: string[] = [];
+      let resolveBody!: (value: typeof body) => void;
+      when(optionsSpy.content).thenReturn(true);
+      when(networkMock.getResponseBody('1')).thenReturn(
+        new Promise(resolve => (resolveBody = resolve))
+      );
+      when(networkMock.detachFromTargets()).thenCall(async () =>
+        order.push('detach')
+      );
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      await sut.subscribe(callback);
+      // act
+      const unsubscribing = sut.unsubscribe();
+      setImmediate(() => {
+        order.push('body');
+        resolveBody(body);
+      });
+      await unsubscribing;
+      // assert
+      expect(order).toEqual(['body', 'detach']);
+    });
   });
 });

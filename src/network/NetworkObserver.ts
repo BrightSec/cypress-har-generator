@@ -46,8 +46,10 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   }
 
   public async unsubscribe(): Promise<void> {
-    await this.network.detachFromTargets();
+    // Turning auto-attach off detaches the target sessions, and Chrome never answers
+    // a `Network.getResponseBody` still pending on a detached session.
     await Promise.allSettled(this._pendingWrites);
+    await this.network.detachFromTargets();
     delete this.destination;
     this._entries.clear();
     this._extraInfoBuilders.clear();
