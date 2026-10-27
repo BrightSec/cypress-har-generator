@@ -30,8 +30,8 @@ const plugin = new Plugin(
 export interface InstallOptions {
   /**
    * Records a HAR for each spec from the Node process, which survives a run stopped early.
-   * Requires `config`.
-   * @defaultValue false
+   * Turn it off to record only through the `cy.recordHar` and `cy.saveHar` commands.
+   * @defaultValue true
    */
   lifecycle?: boolean;
 }
@@ -39,17 +39,17 @@ export interface InstallOptions {
 /**
  * Sets the plugin up in `setupNodeEvents`.
  * @param on - The `on` argument of `setupNodeEvents`.
- * @param config - The `config` argument of `setupNodeEvents`, required by the `lifecycle` option.
+ * @param config - The `config` argument of `setupNodeEvents`.
  * @param options - See {@link InstallOptions}.
  */
 export const install = (
   on: Cypress.PluginEvents,
-  config?: Cypress.PluginConfigOptions,
-  { lifecycle = false }: InstallOptions = {}
+  config: Cypress.PluginConfigOptions,
+  { lifecycle = true }: InstallOptions = {}
 ): void => {
-  if (lifecycle && !config) {
+  if (!config) {
     throw new TypeError(
-      'The `lifecycle` option requires the config: call `install(on, config, { lifecycle: true })`.'
+      '`install` requires the config: call `install(on, config)` in `setupNodeEvents(on, config)`.'
     );
   }
 
@@ -85,23 +85,9 @@ export const install = (
     }
   );
 
-  if (config && lifecycle) {
+  if (lifecycle) {
     enableLifecycle(on, config);
   }
-};
-
-/**
- * @deprecated Will be removed in version 6. Use `install(on, config, { lifecycle: true })` instead.
- */
-export const enableExperimentalLifecycle = (
-  on: Cypress.PluginEvents,
-  config: Cypress.PluginConfigOptions
-): void => {
-  Logger.Instance.deprecate(
-    'enableExperimentalLifecycle',
-    '`enableExperimentalLifecycle(on, config)` is deprecated and will be removed in version 6. Use `install(on, config, { lifecycle: true })` instead.'
-  );
-  enableLifecycle(on, config);
 };
 
 const enableLifecycle = (
@@ -132,8 +118,8 @@ const enableLifecycle = (
 /**
  * Function has been deprecated. Use {@link install} instead as follows:
  * ```diff
- * setupNodeEvents(on) {
- *   install(on);
+ * setupNodeEvents(on, config) {
+ *   install(on, config);
  * -  // bind to the event we care about
  * -  on('before:browser:launch', (browser = {}, launchOptions) => {
  * -    ensureBrowserFlags(browser, launchOptions);

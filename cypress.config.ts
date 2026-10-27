@@ -16,9 +16,10 @@ export default defineConfig({
     expose: { hars_folder: 'cypress/hars' },
     setupNodeEvents(
       on: Cypress.PluginEvents,
-      _: Cypress.PluginConfigOptions
+      config: Cypress.PluginConfigOptions
     ): void {
-      install(on);
+      // the specs record through the commands, which the HAR recorded for each spec would interfere with
+      install(on, config, { lifecycle: false });
 
       on('task', {
         async 'fs:match'({

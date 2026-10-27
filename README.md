@@ -68,8 +68,8 @@ import { install } from '@neuralegion/cypress-har-generator';
 
 export default defineConfig({
   e2e: {
-    setupNodeEvents(on) {
-      install(on);
+    setupNodeEvents(on, config) {
+      install(on, config);
     }
   }
 });
@@ -93,8 +93,8 @@ export default defineConfig({
 >
 > export default defineConfig({
 >   e2e: {
->     setupNodeEvents(on) {
->       install(on);
+>     setupNodeEvents(on, config) {
+>       install(on, config);
 >       on('before:browser:launch', (browser = {}, launchOptions) => {
 >         ensureBrowserFlags(browser, launchOptions);
 >         return launchOptions;
@@ -121,7 +121,26 @@ The import also adds the types of the commands, so TypeScript knows `cy.recordHa
 
 ## Generating a HAR File
 
-To generate a HAR file, you'll need to include the following code in your test file(s):
+Once installed, the plugin records a HAR file for each spec and saves it when the spec ends, with no changes to your test files. The HAR is saved even when a run is stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast).
+
+> ⚠ Please note, to record a HAR for each spec in the interactive mode (`cypress open`), you must enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
+
+To control what is recorded and when with the [commands](#commands) instead, turn this off:
+
+```js
+import { defineConfig } from 'cypress';
+import { install } from '@neuralegion/cypress-har-generator';
+
+export default defineConfig({
+  e2e: {
+    setupNodeEvents(on, config) {
+      install(on, config, { lifecycle: false });
+    }
+  }
+});
+```
+
+Then include the following code in your test file(s):
 
 ```js
 describe('my tests', () => {
@@ -417,30 +436,6 @@ describe('my tests', () => {
   });
 });
 ```
-
-You can set up hooks in a single step, eliminating the need to define them in each spec file. To do this, pass the config and `{ lifecycle: true }` to `install` as shown below:
-
-```js
-import { defineConfig } from 'cypress';
-import { install } from '@neuralegion/cypress-har-generator';
-
-export default defineConfig({
-  e2e: {
-    setupNodeEvents(on, config) {
-      install(on, config, { lifecycle: true });
-    }
-  }
-});
-```
-
-> [!IMPORTANT]
-> To record a HAR for each spec this way, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
-
-> [!TIP]
-> If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `{ lifecycle: true }` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
-
-> [!WARNING]
-> `enableExperimentalLifecycle(on, config)` does the same and still works, but it is deprecated and will be removed in version 6.
 
 ## License
 
