@@ -16,6 +16,28 @@ const openWebSocket = () =>
       })
   );
 
+// `127.0.0.1` reaches the same app as `localhost` under another host.
+const fetchFromBothHosts = () =>
+  cy.window().then(win =>
+    Promise.all([
+      win.fetch('/api/products'),
+      win.fetch(`http://127.0.0.1:${win.location.port}/api/products`, {
+        mode: 'no-cors'
+      })
+    ])
+  );
+
+const expectOnlyLocalhost = () =>
+  cy
+    .findHar()
+    .its('log.entries')
+    .should('contain.something.like', {
+      request: { url: /^http:\/\/localhost:\d+\/api\/products$/ }
+    })
+    .and('not.contain.something.like', {
+      request: { url: /^http:\/\/127\.0\.0\.1:/ }
+    });
+
 describe('Record HAR', () => {
   beforeEach(() => cy.visit('/'));
 
@@ -186,6 +208,36 @@ describe('Record HAR', () => {
           url: /www\.openstreetmap\.org/
         }
       });
+  });
+
+  it('includes only a request when its host name matches regardless of the port', () => {
+    cy.recordHar({ includeHosts: ['localhost'] });
+
+    fetchFromBothHosts();
+
+    cy.saveHar({ waitForIdle: true });
+
+    expectOnlyLocalhost();
+  });
+
+  it('excludes a request by its host', () => {
+    cy.recordHar({ excludeHosts: ['127.0.0.1'] });
+
+    fetchFromBothHosts();
+
+    cy.saveHar({ waitForIdle: true });
+
+    expectOnlyLocalhost();
+  });
+
+  it('includes only a request to the host of the base URL', () => {
+    cy.recordHar({ includeBaseUrlHost: true });
+
+    fetchFromBothHosts();
+
+    cy.saveHar({ waitForIdle: true });
+
+    expectOnlyLocalhost();
   });
 
   it('includes only a request responding with the status code equal or greater than the threshold', () => {

@@ -5,18 +5,23 @@ import { HostPattern } from '../../utils/HostPattern.ts';
 export class HostFilter implements RequestFilter {
   public apply(
     request: NetworkRequest,
-    { includeHosts }: RequestFilterOptions
+    { includeHosts, excludeHosts }: RequestFilterOptions
   ): boolean {
     const { parsedURL } = request;
+    const matches = (patterns: (string | RegExp)[] | undefined): boolean =>
+      !!patterns?.some(pattern => HostPattern.test(pattern, parsedURL));
 
-    return !!includeHosts?.some(pattern =>
-      HostPattern.test(pattern, parsedURL)
+    return (
+      !matches(excludeHosts) && (!includeHosts?.length || matches(includeHosts))
     );
   }
 
-  public wouldApply(options: RequestFilterOptions): boolean {
-    return (
-      Array.isArray(options.includeHosts) && options.includeHosts.length > 0
+  public wouldApply({
+    includeHosts,
+    excludeHosts
+  }: RequestFilterOptions): boolean {
+    return [includeHosts, excludeHosts].some(
+      patterns => Array.isArray(patterns) && patterns.length > 0
     );
   }
 }

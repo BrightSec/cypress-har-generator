@@ -26,9 +26,44 @@ export class HostPattern {
       : expected === hostname;
   }
 
+  public static withBaseUrlHost(
+    includeHosts: (string | RegExp)[] | undefined,
+    includeBaseUrlHost: boolean | undefined,
+    baseUrl: string | null | undefined
+  ): (string | RegExp)[] | undefined {
+    if (
+      includeBaseUrlHost !== undefined &&
+      typeof includeBaseUrlHost !== 'boolean'
+    ) {
+      throw new TypeError('The `includeBaseUrlHost` option must be a boolean.');
+    }
+
+    if (!includeBaseUrlHost) {
+      return includeHosts;
+    }
+
+    const host = this.hostOf(baseUrl);
+
+    if (!host) {
+      throw new TypeError(
+        `The \`includeBaseUrlHost\` option requires \`baseUrl\` to be set to a URL with a host, got ${JSON.stringify(baseUrl)}.`
+      );
+    }
+
+    return [...(includeHosts ?? []), host];
+  }
+
   // A RegExp cannot be passed to `cy.task`, so it is sent as its source,
   // which is wrapped to keep it from being read as a host name.
   public static toSource(pattern: string | RegExp): string {
     return typeof pattern === 'string' ? pattern : `(?:${pattern.source})`;
+  }
+
+  private static hostOf(url: string | null | undefined): string {
+    try {
+      return new URL(url ?? '').host;
+    } catch {
+      return '';
+    }
   }
 }

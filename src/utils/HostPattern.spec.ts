@@ -67,4 +67,109 @@ describe('HostPattern', () => {
       }
     );
   });
+
+  describe('withBaseUrlHost', () => {
+    it.each([undefined, false])(
+      'should return the hosts as is when not asked to (includeBaseUrlHost: %s)',
+      includeBaseUrlHost => {
+        // act
+        const result = HostPattern.withBaseUrlHost(
+          ['example.com'],
+          includeBaseUrlHost,
+          'http://localhost:8080'
+        );
+        // assert
+        expect(result).toEqual(['example.com']);
+      }
+    );
+
+    it('should keep the hosts undefined when not asked to', () => {
+      // act
+      const result = HostPattern.withBaseUrlHost(
+        undefined,
+        false,
+        'http://localhost:8080'
+      );
+      // assert
+      expect(result).toBeUndefined();
+    });
+
+    it.each([
+      { baseUrl: 'http://localhost:8080', expected: 'localhost:8080' },
+      { baseUrl: 'https://App.Example.com/app/', expected: 'app.example.com' },
+      { baseUrl: 'http://[::1]:3000', expected: '[::1]:3000' }
+    ])(
+      'should add the host of the base URL (baseUrl: $baseUrl)',
+      ({ baseUrl, expected }) => {
+        // act
+        const result = HostPattern.withBaseUrlHost(
+          [/example\.com$/],
+          true,
+          baseUrl
+        );
+        // assert
+        expect(result).toEqual([/example\.com$/, expected]);
+      }
+    );
+
+    it('should add the host of the base URL when no hosts are given', () => {
+      // act
+      const result = HostPattern.withBaseUrlHost(
+        undefined,
+        true,
+        'http://localhost:8080'
+      );
+      // assert
+      expect(result).toEqual(['localhost:8080']);
+    });
+
+    it('should match only the host of the base URL', () => {
+      // arrange
+      const pattern = HostPattern.withBaseUrlHost(
+        undefined,
+        true,
+        'http://localhost:8080'
+      )?.[0];
+      // act
+      const result = [
+        'http://localhost:8080/api',
+        'http://localhost:8081',
+        'http://127.0.0.1:8080',
+        'http://localhost.attacker.net:8080'
+      ].map(x => HostPattern.test(pattern as string, new URL(x)));
+      // assert
+      expect(result).toEqual([true, false, false, false]);
+    });
+
+    it.each([undefined, null, ''])(
+      'should throw when the base URL is not set (baseUrl: %j)',
+      baseUrl => {
+        // act & assert
+        expect(() =>
+          HostPattern.withBaseUrlHost(undefined, true, baseUrl)
+        ).toThrow(TypeError);
+      }
+    );
+
+    it('should throw when the base URL is invalid', () => {
+      // act & assert
+      expect(() =>
+        HostPattern.withBaseUrlHost(undefined, true, 'localhost')
+      ).toThrow(TypeError);
+    });
+
+    it.each(['true', 1, null, {}])(
+      'should throw when the option is not a boolean (includeBaseUrlHost: %j)',
+      includeBaseUrlHost => {
+        // act & assert
+        expect(() =>
+          HostPattern.withBaseUrlHost(
+            undefined,
+            includeBaseUrlHost as unknown as boolean,
+            'http://localhost:8080'
+          )
+        ).toThrow(TypeError);
+      }
+    );
+  });
 });

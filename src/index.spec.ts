@@ -133,6 +133,48 @@ describe('install', () => {
     });
   });
 
+  it('should record only the hosts given and the host of the base URL', async () => {
+    // arrange
+    const recordHar = jest
+      .spyOn(Plugin.prototype, 'recordHar')
+      .mockResolvedValue(undefined);
+    const { handlers, on } = createEvents();
+    install(
+      on,
+      { ...config, baseUrl: 'http://localhost:8080' },
+      {
+        lifecycle: true,
+        includeHosts: ['api.example.com'],
+        excludeHosts: ['analytics.example.com'],
+        includeBaseUrlHost: true
+      }
+    );
+
+    // act
+    await handlers.get('before:spec')?.({
+      absolute: '/project/cypress/e2e/spec.cy.ts'
+    });
+
+    // assert
+    expect(recordHar).toHaveBeenCalledWith({
+      content: true,
+      includeBlobs: true,
+      rootDir: '/project/cypress/e2e',
+      includeHosts: ['api.example.com', 'localhost:8080'],
+      excludeHosts: ['analytics.example.com']
+    });
+  });
+
+  it('should throw when the host of the base URL is asked for without the base URL', () => {
+    // arrange
+    const { on } = createEvents();
+
+    // act & assert
+    expect(() =>
+      install(on, config, { lifecycle: true, includeBaseUrlHost: true })
+    ).toThrow(TypeError);
+  });
+
   it('should warn when the recording options are given without the lifecycle', () => {
     // arrange
     const warn = jest

@@ -3,6 +3,7 @@ import { NetworkObserver } from './NetworkObserver.ts';
 import type { NetworkRequest } from './NetworkRequest.ts';
 import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
 import type { RequestFilter } from './filters/RequestFilter.ts';
+import { CompositeFilter } from './filters/CompositeFilter.ts';
 import type { Network } from './Network.ts';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
@@ -845,6 +846,30 @@ describe('NetworkObserver', () => {
       await sut.subscribe(callback);
       // assert
       verify(networkMock.getResponseBody('1')).never();
+    });
+
+    it('should not load a response body of a request to an excluded host', async () => {
+      // arrange
+      sut = new NetworkObserver(
+        { content: true, excludeHosts: ['localhost'] },
+        instance(networkMock),
+        instance(loggerMock),
+        new CompositeFilter()
+      );
+      when(networkMock.getResponseBody('1')).thenResolve({
+        body: '<html></html>',
+        base64Encoded: false
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      verify(networkMock.getResponseBody('1')).never();
+      expect(callback).not.toHaveBeenCalled();
     });
 
     it('should not keep a filtered out request pending', async () => {
