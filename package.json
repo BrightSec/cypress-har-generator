@@ -154,5 +154,8 @@
     "chrome-remote-interface": "~0.34.0",
     "tslib": "^2.4.0"
   },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "type": "module"
 }
