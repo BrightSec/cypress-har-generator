@@ -34,9 +34,7 @@ const plugin = new Plugin(
  * The HAR is named after the spec and written to `hars_folder`, so `fileName` and `outDir` are not accepted.
  */
 export interface InstallOptions
-  extends
-    Partial<Omit<RecordOptions, 'minStatusCodeToInclude'>>,
-    Omit<SaveOptions, 'fileName' | 'outDir'> {
+  extends Partial<RecordOptions>, Omit<SaveOptions, 'fileName' | 'outDir'> {
   /**
    * Records a HAR for each spec from the Node process, which survives a run stopped early.
    * Requires `config`.

@@ -63,6 +63,7 @@ describe('install', () => {
       content: false,
       includeBlobs: false,
       excludePaths: [/^\/__cypress\//],
+      minStatusCodeToInclude: 400,
       maxTotalBufferSize: 1024,
       filter: 'filter.js',
       rootDir: '/project'
@@ -78,6 +79,7 @@ describe('install', () => {
       content: false,
       includeBlobs: false,
       excludePaths: [/^\/__cypress\//],
+      minStatusCodeToInclude: 400,
       maxTotalBufferSize: 1024,
       filter: 'filter.js',
       rootDir: '/project'
