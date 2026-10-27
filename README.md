@@ -135,7 +135,7 @@ install(on, config, {
 
 The HAR is named after the spec and written to `hars_folder`, so `fileName` and `outDir` are not accepted. As with `cy.recordHar()`, the `filter` and `transform` paths are relative to the spec folder unless `rootDir` is set, for example to `config.projectRoot`.
 
-Unlike `cy.saveHar()`, the HAR of each spec waits for the network to be idle before it is saved (`waitForIdle: true`), so requests still running when the spec ends are kept. Open WebSockets do not hold it up. It waits up to `maxWaitDuration` (5 seconds by default) for each spec, so a spec that keeps polling ends up to that much later. Pass `waitForIdle: false` to save right away.
+As with `cy.saveHar()`, the HAR of each spec waits for the network to be idle before it is saved, so requests still running when the spec ends are kept. It waits up to `maxWaitDuration` (5 seconds by default) for each spec, so a spec that keeps polling ends up to that much later. Pass `waitForIdle: false` to save right away.
 
 To control what is recorded and when with the [commands](#commands) instead, turn this off:
 
@@ -375,18 +375,16 @@ You can customize a destination folder overriding any previous settings:
 cy.saveHar({ outDir: './hars' });
 ```
 
-You can also pass the `waitForIdle` option to wait for all pending requests to complete before saving the HAR file:
+By default, `saveHar` waits for all pending requests to complete before saving the HAR file: it monitors the count of pending requests and waits for it to reach zero, so all responses have been received and the data in the file is complete. Open WebSockets do not hold it up. To save right away instead, pass `waitForIdle: false`:
 
 ```js
-cy.saveHar({ waitForIdle: true });
+cy.saveHar({ waitForIdle: false });
 ```
 
-This option is false by default for `cy.saveHar()`, and true for the [HAR recorded for each spec](#generating-a-har-file). When set to true, the plugin will monitor the count of pending requests and wait for it to reach zero before proceeding with saving the HAR file. This ensures that all responses have been received and the data in the file is complete and accurate.
-
-Additionally, you can pass the `maxWaitDuration` option to specify the maximum time to wait for the pending requests to complete:
+You can pass the `maxWaitDuration` option to specify the maximum time to wait for the pending requests to complete:
 
 ```js
-cy.saveHar({ waitForIdle: true, maxWaitDuration: 20000 });
+cy.saveHar({ maxWaitDuration: 20000 });
 ```
 
 The `maxWaitDuration` option is set to 5000 milliseconds by default, meaning it will wait for 5 seconds until all pending requests have completed.
@@ -394,7 +392,7 @@ The `maxWaitDuration` option is set to 5000 milliseconds by default, meaning it 
 You can also pass the `minIdleDuration` option to specify the minimum duration in milliseconds to wait for the network idle during the `maxWaitDuration` time. The network is idle if there are no pending requests during this time.
 
 ```js
-cy.saveHar({ waitForIdle: true, minIdleDuration: 1000 });
+cy.saveHar({ minIdleDuration: 1000 });
 ```
 
 The `minIdleDuration` option is set to 100 milliseconds by default.

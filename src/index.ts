@@ -31,7 +31,6 @@ const plugin = new Plugin(
  * Besides `lifecycle`, takes the options of `cy.recordHar()` and `cy.saveHar()` for the HAR recorded for each spec,
  * so `lifecycle: false` turns them off. As with `cy.recordHar()`, `rootDir` defaults to the folder of the spec.
  * The HAR is named after the spec and written to `hars_folder`, so `fileName` and `outDir` are not accepted.
- * Unlike `cy.saveHar()`, `waitForIdle` defaults to `true`, so requests still running when the spec ends are kept.
  */
 export interface InstallOptions
   extends Partial<RecordOptions>, Omit<SaveOptions, 'fileName' | 'outDir'> {
@@ -110,7 +109,7 @@ const enableLifecycle = (
   on: Cypress.PluginEvents,
   config: Cypress.PluginConfigOptions,
   {
-    waitForIdle = true,
+    waitForIdle,
     minIdleDuration,
     maxWaitDuration,
     ...recordOptions
