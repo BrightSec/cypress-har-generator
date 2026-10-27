@@ -15,7 +15,7 @@ export default defineConfig({
       on: Cypress.PluginEvents,
       config: Cypress.PluginConfigOptions
     ): void {
-      install(on, config, { waitForIdle: true });
+      install(on, config);
 
       on('before:run', () => rm(harPath, { force: true }));
       // `Cypress.stop()` skips the rest of the run, so the HAR can only be checked once the run is over
@@ -25,8 +25,12 @@ export default defineConfig({
           ({ request }: { request: { url: string } }) => request.url
         );
 
-        if (!urls.includes(`${config.baseUrl}/`)) {
-          throw new Error(`${harPath} has no entry for ${config.baseUrl}/`);
+        for (const path of ['/', '/api/delay/3500']) {
+          if (!urls.includes(`${config.baseUrl}${path}`)) {
+            throw new Error(
+              `${harPath} has no entry for ${config.baseUrl}${path}`
+            );
+          }
         }
 
         // the runner loads its own scripts, such as `/__cypress-cy-prompt/`, when a spec starts

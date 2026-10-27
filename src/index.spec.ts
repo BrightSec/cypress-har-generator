@@ -109,6 +109,29 @@ describe('install', () => {
     });
   });
 
+  it.each([
+    { options: {}, expected: true },
+    { options: { waitForIdle: false }, expected: false }
+  ])(
+    'should save the HAR of each spec with waitForIdle $expected when the options are $options',
+    async ({ options, expected }) => {
+      // arrange
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
+      install(on, config, options);
+
+      // act
+      await handlers.get('after:spec')?.({ name: 'spec.cy.ts' }, {});
+
+      // assert
+      expect(saveHar).toHaveBeenCalledWith(
+        expect.objectContaining({ waitForIdle: expected })
+      );
+    }
+  );
+
   it('should not pass the saving options to the recording', async () => {
     // arrange
     const recordHar = jest
