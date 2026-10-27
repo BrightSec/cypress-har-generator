@@ -309,7 +309,7 @@ describe('NetworkRequest', () => {
       // assert
       const result = await sut.contentData();
       expect(result).toMatchObject({
-        error: 'Content for WebSockets is currently not supported'
+        _error: 'Content for WebSockets is currently not supported'
       });
     });
 
@@ -319,7 +319,7 @@ describe('NetworkRequest', () => {
       // assert
       const result = await sut.contentData();
       expect(result).toMatchObject({
-        error: 'something went wrong'
+        _error: 'something went wrong'
       });
     });
   });
