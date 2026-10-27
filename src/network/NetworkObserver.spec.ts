@@ -329,6 +329,98 @@ describe('NetworkObserver', () => {
       );
     });
 
+    it('should drop the timing of the original request from a response served from the memory cache', async () => {
+      // arrange
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            timestamp: 1475233.113563
+          }
+        });
+        await cb({
+          method: 'Network.requestServedFromCache',
+          params: { requestId: '1' }
+        });
+        await cb({
+          ...responseReceivedEvent,
+          params: {
+            ...responseReceivedEvent.params,
+            timestamp: 1475233.113579,
+            response: {
+              ...response,
+              encodedDataLength: 60920,
+              timing: {
+                ...timings,
+                requestTime: 1475231.954948,
+                sendStart: 0.816,
+                sendEnd: 0.863,
+                receiveHeadersEnd: 3.029
+              }
+            }
+          }
+        });
+        await cb({
+          ...loadingFinishedEvent,
+          params: { ...loadingFinishedEvent.params, timestamp: 1475233.113582 }
+        });
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: '1',
+          fromMemoryCache: true,
+          timing: undefined,
+          startTime: 1475233.113563,
+          responseReceivedTime: 1475233.113579,
+          transferSize: 0
+        })
+      );
+    });
+
+    it('should record how a service worker served a response', async () => {
+      // arrange
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb({
+          ...responseReceivedEvent,
+          params: {
+            ...responseReceivedEvent.params,
+            response: {
+              ...response,
+              encodedDataLength: 0,
+              fromDiskCache: true,
+              fromServiceWorker: true,
+              cacheStorageCacheName: 'v1',
+              serviceWorkerResponseSource: 'cache-storage'
+            }
+          }
+        });
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: '1',
+          fromDiskCache: true,
+          fetchedViaServiceWorker: true,
+          responseCacheStorageCacheName: 'v1',
+          serviceWorkerResponseSource: 'cache-storage'
+        })
+      );
+    });
+
     it('should handle a SXG', async () => {
       // arrange
       when(networkMock.getRequestBody('1')).thenResolve({
