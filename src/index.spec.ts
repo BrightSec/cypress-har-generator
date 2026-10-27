@@ -14,6 +14,10 @@ const createEvents = () => {
 describe('install', () => {
   const config = { isTextTerminal: true } as Cypress.PluginConfigOptions;
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('should not record a HAR for each spec by default', () => {
     // arrange
     const { handlers, on } = createEvents();
@@ -45,6 +49,102 @@ describe('install', () => {
     // act & assert
     expect(() => install(on, undefined, { lifecycle: true })).toThrow(
       TypeError
+    );
+  });
+
+  it('should record a HAR for each spec with the given recording options', async () => {
+    // arrange
+    const recordHar = jest
+      .spyOn(Plugin.prototype, 'recordHar')
+      .mockResolvedValue(undefined);
+    const { handlers, on } = createEvents();
+    install(on, config, {
+      lifecycle: true,
+      content: false,
+      includeBlobs: false,
+      excludePaths: [/^\/__cypress\//],
+      maxTotalBufferSize: 1024,
+      filter: 'filter.js',
+      rootDir: '/project'
+    });
+
+    // act
+    await handlers.get('before:spec')?.({
+      absolute: '/project/cypress/e2e/spec.cy.ts'
+    });
+
+    // assert
+    expect(recordHar).toHaveBeenCalledWith({
+      content: false,
+      includeBlobs: false,
+      excludePaths: [/^\/__cypress\//],
+      maxTotalBufferSize: 1024,
+      filter: 'filter.js',
+      rootDir: '/project'
+    });
+  });
+
+  it('should save the HAR of each spec with the given saving options', async () => {
+    // arrange
+    const saveHar = jest
+      .spyOn(Plugin.prototype, 'saveHar')
+      .mockResolvedValue(undefined);
+    const { handlers, on } = createEvents();
+    install(on, config, {
+      lifecycle: true,
+      waitForIdle: true,
+      minIdleDuration: 200,
+      maxWaitDuration: 3000
+    });
+
+    // act
+    await handlers.get('after:spec')?.({ name: 'spec.cy.ts' }, {});
+
+    // assert
+    expect(saveHar).toHaveBeenCalledWith({
+      waitForIdle: true,
+      minIdleDuration: 200,
+      maxWaitDuration: 3000,
+      fileName: 'spec.cy.har',
+      outDir: '.'
+    });
+  });
+
+  it('should not pass the saving options to the recording', async () => {
+    // arrange
+    const recordHar = jest
+      .spyOn(Plugin.prototype, 'recordHar')
+      .mockResolvedValue(undefined);
+    const { handlers, on } = createEvents();
+    install(on, config, { lifecycle: true, waitForIdle: true });
+
+    // act
+    await handlers.get('before:spec')?.({
+      absolute: '/project/cypress/e2e/spec.cy.ts'
+    });
+
+    // assert
+    expect(recordHar).toHaveBeenCalledWith({
+      content: true,
+      includeBlobs: true,
+      rootDir: '/project/cypress/e2e'
+    });
+  });
+
+  it('should warn when the recording options are given without the lifecycle', () => {
+    // arrange
+    const warn = jest
+      .spyOn(Logger.Instance, 'warn')
+      .mockImplementation(() => undefined);
+    const { handlers, on } = createEvents();
+
+    // act
+    install(on, config, { content: false });
+
+    // assert
+    expect(handlers.has('before:spec')).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('{ lifecycle: true, ... }')
     );
   });
 
