@@ -3,6 +3,7 @@ import { Plugin } from './Plugin.ts';
 import { Logger } from './utils/Logger.ts';
 import { DEFAULT_EXCLUDE_PATHS } from './constants.ts';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { join, resolve } from 'node:path';
 
 const createEvents = () => {
   const handlers = new Map<string, (...args: unknown[]) => unknown>();
@@ -13,7 +14,12 @@ const createEvents = () => {
 };
 
 describe('install', () => {
-  const config = { isTextTerminal: true } as Cypress.PluginConfigOptions;
+  const projectRoot = resolve('/project');
+  const config = {
+    projectRoot,
+    isTextTerminal: true,
+    specPattern: 'cypress/e2e/**/*.cy.ts'
+  } as Cypress.PluginConfigOptions;
 
   afterEach(() => {
     jest.restoreAllMocks();
@@ -97,7 +103,13 @@ describe('install', () => {
     });
 
     // act
-    await handlers.get('after:spec')?.({ name: 'spec.cy.ts' }, {});
+    await handlers.get('after:spec')?.(
+      {
+        name: 'spec.cy.ts',
+        absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+      },
+      {}
+    );
 
     // assert
     expect(saveHar).toHaveBeenCalledWith({
@@ -162,13 +174,102 @@ describe('install', () => {
       install(on, { ...config, ...source } as Cypress.PluginConfigOptions);
 
       // act
-      await handlers.get('after:spec')?.({ name: 'spec.cy.ts' }, {});
+      await handlers.get('after:spec')?.(
+        {
+          name: 'spec.cy.ts',
+          absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+        },
+        {}
+      );
 
       // assert
       expect(saveHar).toHaveBeenCalledWith(
         expect.objectContaining({ outDir: expected })
       );
       saveHar.mockRestore();
+    }
+  );
+
+  it.each([
+    {
+      specPattern: 'cypress/e2e/**/*.cy.ts',
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: join('hars', 'a')
+    },
+    {
+      specPattern: './cypress/e2e/**/*.cy.{js,ts}',
+      spec: 'cypress/e2e/a/b/login.cy.ts',
+      expected: join('hars', 'a', 'b')
+    },
+    {
+      specPattern: ['src/**/*.cy.ts', 'cypress/**/*.cy.ts', 'cypress/e2e/**'],
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: join('hars', 'a')
+    },
+    {
+      specPattern: '**/*.cy.ts',
+      spec: 'src/a/login.cy.ts',
+      expected: join('hars', 'src', 'a')
+    },
+    {
+      specPattern: 'cypress/e2e/a/login.cy.ts',
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: 'hars'
+    },
+    {
+      specPattern: join(projectRoot, 'cypress/e2e/**/*.cy.ts'),
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: join('hars', 'a')
+    },
+    {
+      specPattern: 'cypress/e\\*2e/**/*.cy.ts',
+      spec: 'cypress/e*2e/a/login.cy.ts',
+      expected: join('hars', 'a')
+    },
+    {
+      specPattern: ['!cypress/e2e/a/**', 'cypress/**/*.cy.ts'],
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: join('hars', 'e2e', 'a')
+    },
+    {
+      specPattern: 'cypress/e2e/**/*.cy.ts',
+      spec: '../other/a/login.cy.ts',
+      expected: 'hars'
+    },
+    {
+      specPattern: '../shared/**/*.cy.ts',
+      spec: '../shared/a/login.cy.ts',
+      expected: join('hars', 'a')
+    },
+    {
+      specPattern: undefined,
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: 'hars'
+    }
+  ])(
+    'should save the HAR of $spec to $expected when the spec pattern is $specPattern',
+    async ({ specPattern, spec, expected }) => {
+      // arrange
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
+      install(on, {
+        ...config,
+        specPattern,
+        expose: { hars_folder: 'hars' }
+      } as Cypress.PluginConfigOptions);
+
+      // act
+      await handlers.get('after:spec')?.(
+        { name: 'login.cy.ts', absolute: resolve(projectRoot, spec) },
+        {}
+      );
+
+      // assert
+      expect(saveHar).toHaveBeenCalledWith(
+        expect.objectContaining({ fileName: 'login.cy.har', outDir: expected })
+      );
     }
   );
 
