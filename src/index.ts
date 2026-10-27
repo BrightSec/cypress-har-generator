@@ -6,7 +6,7 @@ import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.t
 import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
 import { ConfigUtils } from './utils/ConfigUtils.ts';
-import { HARS_FOLDER_KEYS } from './constants.ts';
+import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEYS } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 declare global {
@@ -76,6 +76,7 @@ export const enableExperimentalLifecycle = (
       plugin.recordHar({
         content: true,
         includeBlobs: true,
+        excludePaths: [...DEFAULT_EXCLUDE_PATHS],
         rootDir: StringUtils.dirname(spec.absolute)
       })
     );

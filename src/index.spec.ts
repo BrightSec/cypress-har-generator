@@ -27,6 +27,7 @@ describe('enableExperimentalLifecycle', () => {
     expect(recordHar).toHaveBeenCalledWith({
       content: true,
       includeBlobs: true,
+      excludePaths: ['^\\/__cypress\\/'],
       rootDir: '/project/cypress/e2e'
     });
   });

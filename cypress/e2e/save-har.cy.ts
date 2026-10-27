@@ -24,7 +24,7 @@ describe('Save HAR', () => {
   });
 
   it('does nothing when no recorded entries', () => {
-    cy.recordHar({ excludePaths: [/^\/__cypress\//] });
+    cy.recordHar();
     cy.saveHar();
     cy.get('@options')
       .its('fileName')

@@ -1,6 +1,6 @@
 import { StringUtils } from './utils/StringUtils.ts';
 import { type BrowserConfigSource, ConfigUtils } from './utils/ConfigUtils.ts';
-import { HARS_FOLDER_KEYS } from './constants.ts';
+import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEYS } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 Cypress.Commands.add(
@@ -11,7 +11,7 @@ Cypress.Commands.add(
       includeBlobs: true,
       rootDir: StringUtils.dirname(Cypress.spec.absolute),
       ...options,
-      excludePaths: options?.excludePaths?.map(x =>
+      excludePaths: (options?.excludePaths ?? DEFAULT_EXCLUDE_PATHS).map(x =>
         StringUtils.toRegexSource(x)
       ),
       includeHosts: options?.includeHosts?.map(x =>
