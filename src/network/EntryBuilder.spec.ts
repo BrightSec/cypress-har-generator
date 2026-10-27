@@ -418,6 +418,7 @@ describe('EntryBuilder', () => {
       const data = 'test';
       const opcode = 1;
       const mask = false;
+      request.setIssueTime(208215.856474, 1673020881.302266);
       request.statusCode = 101;
       request.url = 'ws://example.com';
       request.addProtocolFrame(
@@ -434,7 +435,7 @@ describe('EntryBuilder', () => {
           {
             data,
             opcode,
-            time,
+            time: expect.closeTo(1673020881.302979, 6),
             mask,
             type: 'response'
           }
@@ -448,6 +449,7 @@ describe('EntryBuilder', () => {
       const data = 'test';
       const eventName = 'data';
       const eventId = '1';
+      request.setIssueTime(208215.856474, 1673020881.302266);
       request.mimeType = 'text/event-stream';
       request.addEventSourceMessage(time, eventName, eventId, data);
       const entryBuilder = new EntryBuilder(request);
@@ -457,7 +459,7 @@ describe('EntryBuilder', () => {
       expect(entry).toMatchObject({
         _eventSourceMessages: [
           {
-            time,
+            time: expect.closeTo(1673020881.302979, 6),
             eventName,
             eventId,
             data
