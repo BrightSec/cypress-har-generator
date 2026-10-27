@@ -132,6 +132,9 @@ export class Plugin {
         await this.waitForNetworkIdle(options);
       }
 
+      await this.networkObservable?.unsubscribe();
+      delete this.networkObservable;
+
       const har: string | undefined = await this.buildHar();
 
       if (har) {
