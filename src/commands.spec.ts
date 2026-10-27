@@ -39,7 +39,9 @@ describe('commands', () => {
       // assert
       expect(task).toHaveBeenCalledWith(
         'recordHar',
-        expect.objectContaining({ excludePaths: ['^\\/__cypress\\/'] })
+        expect.objectContaining({
+          excludePaths: ['^\\/__(cypress[\\w-]*)?\\/']
+        })
       );
     });
 

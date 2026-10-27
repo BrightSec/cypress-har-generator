@@ -7,6 +7,6 @@ export class BlobFilter implements RequestFilter {
   }
 
   public wouldApply({ includeBlobs }: RequestFilterOptions): boolean {
-    return !(includeBlobs ?? true);
+    return !includeBlobs;
   }
 }

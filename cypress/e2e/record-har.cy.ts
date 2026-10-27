@@ -124,6 +124,35 @@ describe('Record HAR', () => {
     })
   );
 
+  it('excludes the Cypress internal requests by default', () => {
+    cy.recordHar();
+
+    cy.visit('/');
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('not.be.empty')
+      .and('not.contain.something.like', {
+        request: { url: /^https?:\/\/[^/]+\/__(cypress[\w-]*)?\// }
+      });
+  });
+
+  it('records the Cypress internal requests when the excluded paths are empty', () => {
+    cy.recordHar({ excludePaths: [] });
+
+    cy.visit('/');
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: { url: /^https?:\/\/[^/]+\/__(cypress[\w-]*)?\// }
+      });
+  });
+
   it('excludes a request by its path', () => {
     cy.recordHar({ excludePaths: [/^\/api\/products$/, '^\\/api\\/users$'] });
 
@@ -172,22 +201,6 @@ describe('Record HAR', () => {
       });
   });
 
-  it('includes only a request responding with the status code equal or greater than the threshold', () => {
-    cy.recordHar({ minStatusCodeToInclude: 400 });
-
-    cy.visit('/pages/unknown', { failOnStatusCode: false });
-
-    cy.saveHar({ waitForIdle: true });
-
-    cy.findHar()
-      .its('log.entries')
-      .should('all.contain.something.like', {
-        response: {
-          status: 500
-        }
-      });
-  });
-
   it('records a response body', () => {
     cy.recordHar();
 
@@ -205,7 +218,7 @@ describe('Record HAR', () => {
   });
 
   it('includes blobs loaded by the Service Worker', () => {
-    cy.recordHar();
+    cy.recordHar({ includeBlobs: true });
 
     cy.get('a[href$=service-worker]').click();
 

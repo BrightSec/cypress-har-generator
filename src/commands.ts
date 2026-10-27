@@ -1,6 +1,5 @@
 import { StringUtils } from './utils/StringUtils.ts';
-import { type BrowserConfigSource, ConfigUtils } from './utils/ConfigUtils.ts';
-import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEYS } from './constants.ts';
+import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 Cypress.Commands.add(
@@ -8,7 +7,6 @@ Cypress.Commands.add(
   (options?: Partial<RecordOptions>): Cypress.Chainable =>
     cy.task('recordHar', {
       content: true,
-      includeBlobs: true,
       rootDir: StringUtils.dirname(Cypress.spec.absolute),
       ...options,
       excludePaths: (options?.excludePaths ?? DEFAULT_EXCLUDE_PATHS).map(x =>
@@ -24,11 +22,7 @@ Cypress.Commands.add(
   'saveHar',
   (options?: Partial<SaveOptions>): Cypress.Chainable => {
     const fallbackFileName = Cypress.spec.name;
-    const outDir =
-      ConfigUtils.fromBrowser<string>(
-        Cypress as BrowserConfigSource,
-        HARS_FOLDER_KEYS
-      ) ?? './';
+    const outDir: string = Cypress.expose(HARS_FOLDER_KEY) ?? './';
 
     return cy.task('saveHar', {
       outDir,

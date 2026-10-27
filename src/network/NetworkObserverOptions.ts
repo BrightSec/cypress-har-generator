@@ -5,11 +5,8 @@ export interface NetworkObserverOptions {
   includeMimes?: string[];
   excludeStatusCodes?: number[];
   /**
-   * @deprecated As of version 6, this field will be removed. Use {@link excludeStatusCodes} instead.
-   */
-  minStatusCodeToInclude?: number;
-  /**
-   * @deprecated As of version 6, this flag will be disabled by default.
+   * Records requests to `blob:` URLs.
+   * @defaultValue false
    */
   includeBlobs?: boolean;
 }

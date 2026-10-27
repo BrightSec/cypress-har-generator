@@ -1,13 +1,6 @@
-import { env, expose } from '../support/config-sources.ts';
-
-const sources = [expose, env];
-const keys = ['hars_folder', 'HARS_FOLDER', 'hars_folders'];
-
 describe('Save HAR', () => {
   beforeEach(() => {
-    for (const source of sources.filter(x => x.supported)) {
-      keys.forEach(key => source.set(key, undefined));
-    }
+    Cypress.expose('hars_folder', undefined);
 
     cy.visit('/');
 
@@ -51,33 +44,25 @@ describe('Save HAR', () => {
       .then(fileName => cy.exists(fileName).should('be.true'));
   });
 
-  for (const source of sources) {
-    for (const key of keys) {
-      // a test for an API the running Cypress version lacks is skipped instead of being removed
-      (source.supported ? it : it.skip)(
-        `saves a HAR file to the folder specified by the ${key} ${source.name} variable`,
-        () => {
-          cy.recordHar();
-          cy.get('@options')
-            .its('outDir')
-            .then(value => source.set(key, value));
+  it('saves a HAR file to the folder specified by the hars_folder expose variable', () => {
+    cy.recordHar();
+    cy.get<string>('@options')
+      .its('outDir')
+      .then(value => Cypress.expose('hars_folder', value));
 
-          cy.visit('/');
-          cy.get('a[href$=fetch]').click();
-          cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 1);
+    cy.visit('/');
+    cy.get('a[href$=fetch]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 1);
 
-          cy.saveHar();
-          cy.get('@options')
-            .its('fileName')
-            .then(fileName => {
-              const path = `${source.get(key)}/${fileName}`;
+    cy.saveHar();
+    cy.get('@options')
+      .its('fileName')
+      .then(fileName => {
+        const path = `${Cypress.expose('hars_folder')}/${fileName}`;
 
-              cy.exists(path).should('be.true');
-            });
-        }
-      );
-    }
-  }
+        cy.exists(path).should('be.true');
+      });
+  });
 
   it('saves a HAR file to the custom folder', () => {
     cy.recordHar();

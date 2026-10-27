@@ -5,8 +5,7 @@ import { DefaultConnectionFactory } from './cdp/DefaultConnectionFactory.ts';
 import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.ts';
 import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
-import { ConfigUtils } from './utils/ConfigUtils.ts';
-import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEYS } from './constants.ts';
+import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 declare global {
@@ -28,7 +27,32 @@ const plugin = new Plugin(
   new DefaultHarExporterFactory(FileManager.Instance, Logger.Instance)
 );
 
-export const install = (on: Cypress.PluginEvents): void => {
+export interface InstallOptions {
+  /**
+   * Records a HAR for each spec from the Node process, which survives a run stopped early.
+   * Turn it off to record only through the `cy.recordHar` and `cy.saveHar` commands.
+   * @defaultValue true
+   */
+  lifecycle?: boolean;
+}
+
+/**
+ * Sets the plugin up in `setupNodeEvents`.
+ * @param on - The `on` argument of `setupNodeEvents`.
+ * @param config - The `config` argument of `setupNodeEvents`.
+ * @param options - See {@link InstallOptions}.
+ */
+export const install = (
+  on: Cypress.PluginEvents,
+  config: Cypress.PluginConfigOptions,
+  { lifecycle = true }: InstallOptions = {}
+): void => {
+  if (!config) {
+    throw new TypeError(
+      '`install` requires the config: call `install(on, config)` in `setupNodeEvents(on, config)`.'
+    );
+  }
+
   // ADHOC: Cypress expect the return value to be null to signal that the given event has been handled properly.
   // https://docs.cypress.io/api/commands/task#Usage
   on('task', {
@@ -60,22 +84,25 @@ export const install = (on: Cypress.PluginEvents): void => {
       return launchOptions;
     }
   );
+
+  if (lifecycle) {
+    enableLifecycle(on, config);
+  }
 };
 
-export const enableExperimentalLifecycle = (
+const enableLifecycle = (
   on: Cypress.PluginEvents,
   config: Cypress.PluginConfigOptions
-) => {
+): void => {
   // FIXME: `isInteractive` is always true. For details see https://github.com/cypress-io/cypress/issues/20789
   if (!config.isTextTerminal && !config.experimentalInteractiveRunEvents) {
     Logger.Instance.warn(
-      'To activate the experimental mechanism for setting up lifecycle, you must either disable the interactive mode or activate the "experimentalInteractiveRunEvents" feature. For further information, please refer to: https://docs.cypress.io/guides/references/experiments#Configuration'
+      'To record a HAR for each spec, you must either disable the interactive mode or activate the "experimentalInteractiveRunEvents" feature. For further information, please refer to: https://docs.cypress.io/guides/references/experiments#Configuration'
     );
   } else {
     on('before:spec', (spec: Cypress.Spec) =>
       plugin.recordHar({
         content: true,
-        includeBlobs: true,
         excludePaths: [...DEFAULT_EXCLUDE_PATHS],
         rootDir: StringUtils.dirname(spec.absolute)
       })
@@ -83,7 +110,7 @@ export const enableExperimentalLifecycle = (
     on('after:spec', (spec: Cypress.Spec, _: CypressCommandLine.RunResult) =>
       plugin.saveHar({
         fileName: StringUtils.normalizeName(spec.name, { ext: '.har' }),
-        outDir: ConfigUtils.fromNode<string>(config, HARS_FOLDER_KEYS) ?? '.'
+        outDir: config.expose?.[HARS_FOLDER_KEY] ?? '.'
       })
     );
   }
@@ -92,8 +119,8 @@ export const enableExperimentalLifecycle = (
 /**
  * Function has been deprecated. Use {@link install} instead as follows:
  * ```diff
- * setupNodeEvents(on) {
- *   install(on);
+ * setupNodeEvents(on, config) {
+ *   install(on, config);
  * -  // bind to the event we care about
  * -  on('before:browser:launch', (browser = {}, launchOptions) => {
  * -    ensureBrowserFlags(browser, launchOptions);

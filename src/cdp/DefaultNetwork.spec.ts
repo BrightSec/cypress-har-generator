@@ -1,6 +1,7 @@
 import { DefaultNetwork } from './DefaultNetwork.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { TARGET_OR_BROWSER_CLOSED } from './messages.ts';
+import type { CDPClient } from './CDPClient.ts';
 import {
   anyFunction,
   anything,
@@ -12,7 +13,6 @@ import {
   verify,
   when
 } from 'ts-mockito';
-import type { Client } from 'chrome-remote-interface';
 import {
   afterEach,
   beforeEach,
@@ -24,7 +24,7 @@ import {
 import type { Protocol } from 'devtools-protocol';
 
 describe('DefaultNetwork', () => {
-  const clientMock = mock<Client>();
+  const clientMock = mock<CDPClient>();
   const loggerMock = mock<Logger>();
   const listener = jest.fn();
 
@@ -38,7 +38,7 @@ describe('DefaultNetwork', () => {
   afterEach(() => {
     jest.useRealTimers();
     listener.mockReset();
-    reset<Client | Logger>(clientMock, loggerMock);
+    reset<CDPClient | Logger>(clientMock, loggerMock);
   });
 
   describe('attachToTargets', () => {
