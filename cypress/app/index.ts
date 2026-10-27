@@ -94,6 +94,9 @@ app.post(
   (req: Request, res: Response) =>
     res.send(Buffer.isBuffer(req.body) ? req.body.toString() : req.body)
 );
+app.get('/api/delay/:ms', (req: Request, res: Response) => {
+  setTimeout(() => res.json({ delay: req.params.ms }), Number(req.params.ms));
+});
 app.get('/api/keys', (_: Request, res: Response) =>
   res.json({
     keys: Array(1000)

@@ -29,3 +29,24 @@ describe('Record network issues', () => {
     cy.window().then(win => win.fetch(url).catch(() => undefined));
   });
 });
+
+describe('Record failed requests', () => {
+  it('records why a request failed', () => {
+    cy.intercept('/api/products', { forceNetworkError: true });
+    cy.visit('/');
+    cy.recordHar();
+
+    cy.window().then(win => win.fetch('/api/products').catch(() => undefined));
+
+    cy.saveHar({ waitForIdle: true });
+
+    // ADHOC: the error text of a request stubbed with `forceNetworkError` depends on the browser,
+    // e.g. `net::ERR_FAILED` in Chrome and `net::ERR_EMPTY_RESPONSE` in Electron
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: { url: /\/api\/products$/ },
+        response: { status: 0, _error: /^net::ERR_/ }
+      });
+  });
+});
