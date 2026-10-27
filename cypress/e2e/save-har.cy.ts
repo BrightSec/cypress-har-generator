@@ -79,6 +79,25 @@ describe('Save HAR', () => {
     }
   }
 
+  it('saves a HAR file to the nested hars_folder that does not exist yet', () => {
+    const source = sources.find(x => x.supported);
+
+    cy.recordHar();
+
+    cy.visit('/');
+    cy.get('a[href$=fetch]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 1);
+
+    cy.get<{ outDir: string; fileName: string }>('@options').then(options => {
+      const root = `${options.outDir}/${options.fileName}.nested`;
+
+      cy.remove(root).then(() => source?.set('hars_folder', `${root}/a/b`));
+      cy.saveHar();
+      cy.exists(`${root}/a/b/${options.fileName}`).should('be.true');
+      cy.remove(root);
+    });
+  });
+
   it('saves a HAR file to the custom folder', () => {
     cy.recordHar();
 
