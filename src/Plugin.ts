@@ -132,8 +132,7 @@ export class Plugin {
         await this.waitForNetworkIdle(options);
       }
 
-      await this.networkObservable?.unsubscribe();
-      delete this.networkObservable;
+      await this.stopObserving();
 
       const har: string | undefined = await this.buildHar();
 
@@ -155,14 +154,18 @@ export class Plugin {
       return;
     }
 
-    await this.networkObservable?.unsubscribe();
-    delete this.networkObservable;
+    await this.stopObserving();
     await this.closeConnection();
 
     if (this.exporter) {
       this.exporter.end();
       delete this.exporter;
     }
+  }
+
+  private async stopObserving(): Promise<void> {
+    await this.networkObservable?.unsubscribe();
+    delete this.networkObservable;
   }
 
   private warnAboutDeprecations(options: RecordOptions): void {

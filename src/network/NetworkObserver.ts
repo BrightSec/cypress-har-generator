@@ -15,6 +15,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     Protocol.Network.RequestId,
     ExtraInfoBuilder
   >;
+  private readonly _pendingWrites = new Set<Promise<unknown>>();
   private destination?: (chromeEntry: NetworkRequest) => unknown;
 
   get empty(): boolean {
@@ -49,6 +50,9 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   }
 
   public async unsubscribe(): Promise<void> {
+    // Turning auto-attach off detaches the target sessions, and Chrome never answers
+    // a `Network.getResponseBody` still pending on a detached session.
+    await Promise.allSettled(this._pendingWrites);
     await this.network.detachFromTargets();
     // DevTools exports a WebSocket that is still open with the frames received so far.
     await Promise.all(
@@ -477,10 +481,17 @@ export class NetworkObserver implements Observer<NetworkRequest> {
       return;
     }
 
-    await networkRequest
+    const pending: Promise<unknown> = networkRequest
       .waitForCompletion()
       .then(() => this.destination?.(networkRequest))
-      .finally(() => this._entries.delete(networkRequest.requestId));
+      .finally(() => {
+        this._entries.delete(networkRequest.requestId);
+        this._pendingWrites.delete(pending);
+      });
+
+    this._pendingWrites.add(pending);
+
+    await pending;
   }
 
   private loadContent(networkRequest: NetworkRequest): void {
