@@ -39,6 +39,7 @@ app.get('/', (_: Request, res: Response) =>
       { id: 'server-sent-events', name: 'Server-sent events' },
       { id: 'websocket', name: 'WebSocket' },
       { id: 'large-content', name: 'Large content' },
+      { id: 'large-body', name: 'Large body' },
       { id: 'post-data', name: 'Post data' }
     ]
   })
@@ -102,6 +103,10 @@ app.get('/api/keys', (_: Request, res: Response) =>
         id: idx
       }))
   })
+);
+const largeBody = randomBytes(25 * 1024 ** 2).toString('hex');
+app.get('/api/large-body', (_: Request, res: Response) =>
+  res.type('text/plain').send(largeBody)
 );
 
 const server = app.listen(port);
