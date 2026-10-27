@@ -28,7 +28,18 @@ const plugin = new Plugin(
   new DefaultHarExporterFactory(FileManager.Instance, Logger.Instance)
 );
 
-export const install = (on: Cypress.PluginEvents): void => {
+export interface InstallOptions {
+  /**
+   * Records a HAR for each spec from the Node process, which survives a run stopped early.
+   */
+  lifecycle?: boolean;
+}
+
+export const install = (
+  on: Cypress.PluginEvents,
+  config?: Cypress.PluginConfigOptions,
+  { lifecycle = false }: InstallOptions = {}
+): void => {
   // ADHOC: Cypress expect the return value to be null to signal that the given event has been handled properly.
   // https://docs.cypress.io/api/commands/task#Usage
   on('task', {
@@ -60,12 +71,24 @@ export const install = (on: Cypress.PluginEvents): void => {
       return launchOptions;
     }
   );
+
+  if (config && lifecycle) {
+    enableLifecycle(on, config);
+  }
 };
 
+/**
+ * @deprecated Use `install(on, config, { lifecycle: true })` instead.
+ */
 export const enableExperimentalLifecycle = (
   on: Cypress.PluginEvents,
   config: Cypress.PluginConfigOptions
-) => {
+): void => enableLifecycle(on, config);
+
+const enableLifecycle = (
+  on: Cypress.PluginEvents,
+  config: Cypress.PluginConfigOptions
+): void => {
   // FIXME: `isInteractive` is always true. For details see https://github.com/cypress-io/cypress/issues/20789
   if (!config.isTextTerminal && !config.experimentalInteractiveRunEvents) {
     Logger.Instance.warn(
