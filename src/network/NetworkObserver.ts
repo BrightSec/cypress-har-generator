@@ -199,6 +199,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     }
 
     entry.resourceType = type;
+    entry.failDescription = errorText;
 
     this.finishRequest(entry, timestamp, -1);
 

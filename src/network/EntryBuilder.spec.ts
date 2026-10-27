@@ -385,6 +385,27 @@ describe('EntryBuilder', () => {
       expect(entry).not.toHaveProperty('connection');
     });
 
+    it('should build an entry with the failure reason of a failed request', async () => {
+      // arrange
+      request.failDescription = 'net::ERR_NAME_NOT_RESOLVED';
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry).toMatchObject({
+        response: { _error: 'net::ERR_NAME_NOT_RESOLVED' }
+      });
+    });
+
+    it('should build an entry omitting the failure reason if the request did not fail', async () => {
+      // arrange
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry.response).not.toHaveProperty('_error');
+    });
+
     it('should build an entry with the request body', async () => {
       // arrange
       const mimeType = 'application/json';
