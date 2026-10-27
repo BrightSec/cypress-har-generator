@@ -149,8 +149,6 @@ $ cypress run --browser chrome --expose hars_folder=cypress/hars
 
 On Cypress versions before 16, the plugin also reads `hars_folder` from the `env` object, the `--env` option, or the `CYPRESS_hars_folder` environment variable when it is not exposed, unless `allowCypressEnv` is set to `false`. Cypress 16 removes `Cypress.env()`, so use `expose` there.
 
-> ⚠ **Notice:** `hars_folder` was previously named `hars_folders`. The old name is still supported and used when `hars_folder` is not set, but it is deprecated and will be removed in version 6. The plugin warns about it when `install` receives the config, as in `install(on, config)`. Please rename it in your configuration. Likewise, the `CYPRESS_HARS_FOLDERS` environment variable is deprecated; use `CYPRESS_hars_folder` instead.
-
 Finally, to start running your tests, use the following command:
 
 ```bash
@@ -216,31 +214,17 @@ cy.recordHar({ includeMimes: ['application/json'] });
 
 This will record only requests with a MIME type of `application/json`.
 
-To exclude requests based on their status code, you can use the `minStatusCodeToInclude` field.
-
-For example, to only include requests that have a status code of 400 or greater, you can pass the `minStatusCodeToInclude` option as follows:
-
-```js
-cy.recordHar({ minStatusCodeToInclude: 400 });
-```
-
-> ⚠ `minStatusCodeToInclude` is deprecated and will be removed in version 6, and the plugin warns when it is used. Use `excludeStatusCodes` instead.
-
-Alternatively, you can have more granular control over the requests to exclude by passing an array of status codes you want to exclude from the recorded HAR file.
+To exclude requests based on their status code, pass an array of the status codes you want to exclude from the recorded HAR file:
 
 ```js
 cy.recordHar({ excludeStatusCodes: [200, 201, 204] });
 ```
 
-> ⚠ Please note that both options `minStatusCodeToInclude` and `excludeStatusCodes` are mutually exclusive.
-
-By default, when you use `recordHar` command, it will include the blob requests in the recorded HAR file. However, those requests only make sense when they are used on the same page they were created. To exclude the blob requests from the recorded HAR file, set the `includeBlobs` to false as follows:
+By default, the recorded HAR file leaves out blob requests, as they only make sense on the page that created them. To record them as well, set `includeBlobs` to true as follows:
 
 ```js
-cy.recordHar({ includeBlobs: false });
+cy.recordHar({ includeBlobs: true });
 ```
-
-> ⚠ Version 6 changes the default of `includeBlobs` to `false`, and the plugin warns when it is not set. To keep recording blob requests after upgrading, pass `includeBlobs: true`.
 
 You can specify the `filter` option as a path to a module that exports a function (it can be sync or async) to filter out unwanted entries from the HAR. The function should take an [Entry object](http://www.softwareishard.com/blog/har-12-spec/#entries) as a parameter and return a boolean indicating whether the entry should be included in the final HAR or not.
 

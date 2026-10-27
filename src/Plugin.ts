@@ -94,8 +94,6 @@ export class Plugin {
       return;
     }
 
-    this.warnAboutDeprecations(options);
-
     await this.disposeOfHar();
     await this.closeConnection();
 
@@ -159,22 +157,6 @@ export class Plugin {
     if (this.exporter) {
       this.exporter.end();
       delete this.exporter;
-    }
-  }
-
-  private warnAboutDeprecations(options: RecordOptions): void {
-    if (options.minStatusCodeToInclude !== undefined) {
-      this.logger.deprecate(
-        'minStatusCodeToInclude',
-        'The `minStatusCodeToInclude` option is deprecated and will be removed in version 6. Use `excludeStatusCodes` instead.'
-      );
-    }
-
-    if (options.includeBlobs === undefined) {
-      this.logger.deprecate(
-        'includeBlobs',
-        'Version 6 stops recording blob requests by default. Pass `includeBlobs: true` to `cy.recordHar()` to keep them, or `includeBlobs: false` to opt in now.'
-      );
     }
   }
 

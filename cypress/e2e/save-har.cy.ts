@@ -1,7 +1,7 @@
 import { env, expose } from '../support/config-sources.ts';
 
 const sources = [expose, env];
-const keys = ['hars_folder', 'HARS_FOLDER', 'hars_folders'];
+const keys = ['hars_folder', 'HARS_FOLDER'];
 
 describe('Save HAR', () => {
   beforeEach(() => {
