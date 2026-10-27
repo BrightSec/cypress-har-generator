@@ -1,9 +1,5 @@
 import '../../src/commands.ts';
-import { HARS_FOLDER_KEYS } from '../../src/constants.ts';
-import {
-  type BrowserConfigSource,
-  ConfigUtils
-} from '../../src/utils/ConfigUtils.ts';
+import { HARS_FOLDER_KEY } from '../../src/constants.ts';
 import { Har } from 'har-format';
 import like from 'chai-like';
 import things from 'chai-things';
@@ -24,10 +20,7 @@ like.extend({
 
 const getDefaultHarPath = (): string =>
   join(
-    ConfigUtils.fromBrowser<string>(
-      Cypress as unknown as BrowserConfigSource,
-      HARS_FOLDER_KEYS
-    ) ?? '.',
+    Cypress.expose(HARS_FOLDER_KEY) ?? '.',
     Cypress.spec.name.replace('.ts', '.har')
   );
 

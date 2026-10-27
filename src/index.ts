@@ -5,8 +5,7 @@ import { DefaultConnectionFactory } from './cdp/DefaultConnectionFactory.ts';
 import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.ts';
 import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
-import { ConfigUtils } from './utils/ConfigUtils.ts';
-import { HARS_FOLDER_KEYS } from './constants.ts';
+import { HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 
 declare global {
@@ -124,7 +123,7 @@ const enableLifecycle = (
     on('after:spec', (spec: Cypress.Spec, _: CypressCommandLine.RunResult) =>
       plugin.saveHar({
         fileName: StringUtils.normalizeName(spec.name, { ext: '.har' }),
-        outDir: ConfigUtils.fromNode<string>(config, HARS_FOLDER_KEYS) ?? '.'
+        outDir: config.expose?.[HARS_FOLDER_KEY] ?? '.'
       })
     );
   }
