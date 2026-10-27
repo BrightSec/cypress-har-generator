@@ -19,24 +19,6 @@ export class StringUtils {
     return this.removeTrailingSlash(dirname);
   }
 
-  /**
-   * Returns the leading folders of a glob pattern that hold no glob characters, with a trailing slash,
-   * e.g. `cypress/e2e/` for `cypress/e2e/**\/*.cy.ts`, or an empty string when the pattern starts with a glob.
-   */
-  public static globBase(pattern: string): string {
-    const segments = pattern
-      .replaceAll('\\', '/')
-      .replace(/^\.\//, '')
-      .split('/');
-    const globIdx = segments.findIndex(segment => /[*?[\]{}()!]/.test(segment));
-    const base = segments.slice(
-      0,
-      globIdx === -1 ? segments.length - 1 : globIdx
-    );
-
-    return base.length ? `${base.join('/')}/` : '';
-  }
-
   public static normalizeName(
     path: string,
     options?: { ext?: string }

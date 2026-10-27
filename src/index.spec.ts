@@ -3,7 +3,7 @@ import { Plugin } from './Plugin.ts';
 import { Logger } from './utils/Logger.ts';
 import { DEFAULT_EXCLUDE_PATHS } from './constants.ts';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const createEvents = () => {
   const handlers = new Map<string, (...args: unknown[]) => unknown>();
@@ -14,8 +14,10 @@ const createEvents = () => {
 };
 
 describe('install', () => {
+  const projectRoot = resolve('/project');
   const config = {
     isTextTerminal: true,
+    projectRoot,
     specPattern: 'cypress/e2e/**/*.cy.ts'
   } as Cypress.PluginConfigOptions;
 
@@ -102,7 +104,10 @@ describe('install', () => {
 
     // act
     await handlers.get('after:spec')?.(
-      { name: 'spec.cy.ts', relative: 'cypress/e2e/spec.cy.ts' },
+      {
+        name: 'spec.cy.ts',
+        absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+      },
       {}
     );
 
@@ -170,7 +175,10 @@ describe('install', () => {
 
       // act
       await handlers.get('after:spec')?.(
-        { name: 'spec.cy.ts', relative: 'cypress/e2e/spec.cy.ts' },
+        {
+          name: 'spec.cy.ts',
+          absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+        },
         {}
       );
 
@@ -185,27 +193,62 @@ describe('install', () => {
   it.each([
     {
       specPattern: 'cypress/e2e/**/*.cy.ts',
-      relative: 'cypress/e2e/a/login.cy.ts',
+      spec: 'cypress/e2e/a/login.cy.ts',
       expected: join('hars', 'a')
     },
     {
-      specPattern: 'cypress/e2e/**/*.cy.ts',
-      relative: 'cypress\\e2e\\a\\b\\login.cy.ts',
+      specPattern: './cypress/e2e/**/*.cy.{js,ts}',
+      spec: 'cypress/e2e/a/b/login.cy.ts',
       expected: join('hars', 'a', 'b')
     },
     {
-      specPattern: ['src/**/*.cy.ts', 'cypress/e2e/**/*.cy.ts'],
-      relative: 'cypress/e2e/a/login.cy.ts',
+      specPattern: ['src/**/*.cy.ts', 'cypress/**/*.cy.ts', 'cypress/e2e/**'],
+      spec: 'cypress/e2e/a/login.cy.ts',
       expected: join('hars', 'a')
     },
     {
       specPattern: '**/*.cy.ts',
-      relative: 'src/a/login.cy.ts',
+      spec: 'src/a/login.cy.ts',
       expected: join('hars', 'src', 'a')
+    },
+    {
+      specPattern: 'cypress/e2e/a/login.cy.ts',
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: 'hars'
+    },
+    {
+      specPattern: join(projectRoot, 'cypress/e2e/**/*.cy.ts'),
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: join('hars', 'a')
+    },
+    {
+      specPattern: 'cypress/e\\*2e/**/*.cy.ts',
+      spec: 'cypress/e*2e/a/login.cy.ts',
+      expected: join('hars', 'a')
+    },
+    {
+      specPattern: ['!cypress/e2e/a/**', 'cypress/**/*.cy.ts'],
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: join('hars', 'e2e', 'a')
+    },
+    {
+      specPattern: 'cypress/e2e/**/*.cy.ts',
+      spec: '../other/a/login.cy.ts',
+      expected: 'hars'
+    },
+    {
+      specPattern: '../shared/**/*.cy.ts',
+      spec: '../shared/a/login.cy.ts',
+      expected: join('hars', 'a')
+    },
+    {
+      specPattern: undefined,
+      spec: 'cypress/e2e/a/login.cy.ts',
+      expected: 'hars'
     }
   ])(
-    'should save the HAR of $relative to $expected when the spec pattern is $specPattern',
-    async ({ specPattern, relative, expected }) => {
+    'should save the HAR of $spec to $expected when the spec pattern is $specPattern',
+    async ({ specPattern, spec, expected }) => {
       // arrange
       const saveHar = jest
         .spyOn(Plugin.prototype, 'saveHar')
@@ -218,7 +261,10 @@ describe('install', () => {
       } as Cypress.PluginConfigOptions);
 
       // act
-      await handlers.get('after:spec')?.({ name: 'login.cy.ts', relative }, {});
+      await handlers.get('after:spec')?.(
+        { name: 'login.cy.ts', absolute: resolve(projectRoot, spec) },
+        {}
+      );
 
       // assert
       expect(saveHar).toHaveBeenCalledWith(

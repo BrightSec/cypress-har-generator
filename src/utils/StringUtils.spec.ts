@@ -54,26 +54,6 @@ describe('StringUtils', () => {
     });
   });
 
-  describe('globBase', () => {
-    it.each([
-      { pattern: 'cypress/e2e/**/*.cy.ts', expected: 'cypress/e2e/' },
-      { pattern: './cypress/e2e/*.cy.{js,ts}', expected: 'cypress/e2e/' },
-      { pattern: 'cypress\\e2e\\**\\*.cy.ts', expected: 'cypress/e2e/' },
-      { pattern: 'cypress/e2e/login.cy.ts', expected: 'cypress/e2e/' },
-      { pattern: 'src/{a,b}/**/*.cy.ts', expected: 'src/' },
-      { pattern: '**/*.cy.ts', expected: '' },
-      { pattern: 'login.cy.ts', expected: '' }
-    ])(
-      'should return $expected for the $pattern pattern',
-      ({ pattern, expected }) => {
-        // act
-        const result = StringUtils.globBase(pattern);
-        // assert
-        expect(result).toBe(expected);
-      }
-    );
-  });
-
   describe('dirname', () => {
     it('should return the directory name of a unix path', () => {
       const path = '/path/to/file.txt';

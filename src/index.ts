@@ -7,7 +7,8 @@ import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
 import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
-import { join } from 'node:path';
+import picomatch from 'picomatch';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -133,7 +134,7 @@ const enableLifecycle = (
         fileName: StringUtils.normalizeName(spec.name, { ext: '.har' }),
         outDir: join(
           config.expose?.[HARS_FOLDER_KEY] ?? '.',
-          specFolder(spec, config.specPattern)
+          specFolder(spec, config)
         )
       })
     );
@@ -143,16 +144,22 @@ const enableLifecycle = (
 // keeps the folders below the fixed start of `specPattern`, so specs with the same name in different folders do not overwrite each other's HAR
 const specFolder = (
   spec: Cypress.Spec,
-  specPattern: string | string[]
+  { projectRoot, specPattern }: Cypress.PluginConfigOptions
 ): string => {
-  const relative = spec.relative.replaceAll('\\', '/');
-  const [base = '']: string[] = [specPattern]
+  const specDir = dirname(spec.absolute);
+  const [folder = '']: string[] = [specPattern ?? []]
     .flat()
-    .map(pattern => StringUtils.globBase(pattern))
-    .filter(prefix => relative.startsWith(prefix))
-    .sort((a, b) => b.length - a.length);
+    .filter(pattern => typeof pattern === 'string')
+    .map(pattern => picomatch.scan(pattern, { unescape: true }))
+    .filter(({ negated }) => !negated)
+    .map(({ base, isGlob }) =>
+      relative(resolve(projectRoot, isGlob ? base : dirname(base)), specDir)
+    )
+    // a folder outside the base would let the HAR escape `hars_folder`
+    .filter(x => !isAbsolute(x) && x !== '..' && !x.startsWith(`..${sep}`))
+    .sort((a, b) => a.length - b.length);
 
-  return StringUtils.dirname(relative.slice(base.length));
+  return folder;
 };
 
 /**
