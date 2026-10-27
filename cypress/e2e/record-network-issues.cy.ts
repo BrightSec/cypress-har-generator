@@ -40,13 +40,13 @@ describe('Record failed requests', () => {
 
     cy.saveHar({ waitForIdle: true });
 
-    // ADHOC: the Cypress proxy destroys the socket of a request stubbed with `forceNetworkError`,
-    // so Chrome reports it as an empty response
+    // ADHOC: the error text of a request stubbed with `forceNetworkError` depends on the browser,
+    // e.g. `net::ERR_FAILED` in Chrome and `net::ERR_EMPTY_RESPONSE` in Electron
     cy.findHar()
       .its('log.entries')
       .should('contain.something.like', {
         request: { url: /\/api\/products$/ },
-        response: { status: 0, _error: 'net::ERR_EMPTY_RESPONSE' }
+        response: { status: 0, _error: /^net::ERR_/ }
       });
   });
 });
