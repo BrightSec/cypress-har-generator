@@ -44,11 +44,15 @@ To install the plugin as development dependency, run the following command:
 $ npm i --save-dev @neuralegion/cypress-har-generator
 ```
 
-> ✴ The plugin requires Cypress 14.0.0 or later. If you are on an earlier Cypress version, stay on version 5 of the plugin.
+The plugin requires:
 
-> ✴ TypeScript projects need TypeScript 5.0 or later. If you are on an earlier TypeScript version, stay on version 5 of the plugin.
+- Cypress 14.0.0 or later
+- TypeScript 5.0 or later, in TypeScript projects
 
-> ✴ For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
+If your project uses older versions, stay on version 5 of the plugin.
+
+> [!NOTE]
+> For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
 
 ## Setting Up the Plugin
 
@@ -71,11 +75,14 @@ export default defineConfig({
 });
 ```
 
-> ✴ The plugin ships both ES modules and CommonJS, so a CommonJS config can load it with `require('@neuralegion/cypress-har-generator')` instead.
+> [!TIP]
+> The plugin ships both ES modules and CommonJS, so a CommonJS config can load it with `require('@neuralegion/cypress-har-generator')` instead.
 
-> ✴ `setupNodeEvents` can be defined in either the e2e or component configuration
+> [!NOTE]
+> `setupNodeEvents` can be defined in either the e2e or component configuration
 
-> ⚠ Please note that the `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
+> [!WARNING]
+> `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
 >
 > ```js
 > import { defineConfig } from 'cypress';
@@ -107,7 +114,8 @@ Add the following line to your [support file](https://docs.cypress.io/app/core-c
 import '@neuralegion/cypress-har-generator/commands';
 ```
 
-> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
+> [!IMPORTANT]
+> Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
 
 The import also adds the types of the commands, so TypeScript knows `cy.recordHar`, `cy.saveHar` and `cy.disposeOfHar` without any further configuration.
 
@@ -155,7 +163,8 @@ Finally, to start running your tests, use the following command:
 $ cypress run --browser chrome
 ```
 
-> 🚧 Currently, only Chrome family browsers are supported. But this plugin also works with Electron, you just need to set the remote-debugging-port option when you launch Cypress as follows:
+> [!IMPORTANT]
+> Currently, only Chrome family browsers are supported. But this plugin also works with Electron, you just need to set the remote-debugging-port option when you launch Cypress as follows:
 >
 > ```bash
 > $ ELECTRON_EXTRA_LAUNCH_ARGS=--remote-debugging-port=9222 cypress run --browser electron
@@ -177,7 +186,8 @@ Here's an example of how to use the `recordHar` command:
 cy.recordHar();
 ```
 
-> ⚠ The maximum size of a single resource that can be preserved is 10MB. If you need to receive a larger response body, you should adjust the `maxResourceBufferSize` and `maxTotalBufferSize` accordingly:
+> [!WARNING]
+> The maximum size of a single resource that can be preserved is 10MB. If you need to receive a larger response body, you should adjust the `maxResourceBufferSize` and `maxTotalBufferSize` accordingly:
 >
 > ```js
 > cy.recordHar({
@@ -284,7 +294,8 @@ The function should take an Entry object as a parameter and return the modified.
 
 In this example, the transform function will replace any occurrences of password with `***` in the request body of each entry.
 
-> ✴ The plugin also supports files with `.js`, `.mjs` and `.cjs` extensions, written as ES modules or CommonJS. For example, the same filter as a CommonJS module, `include-password.cjs`:
+> [!TIP]
+> The plugin also supports files with `.js`, `.mjs` and `.cjs` extensions, written as ES modules or CommonJS. For example, the same filter as a CommonJS module, `include-password.cjs`:
 >
 > ```js
 > module.exports = entry =>
@@ -424,11 +435,14 @@ export default defineConfig({
 });
 ```
 
-> ⚠ Please note, to record a HAR for each spec this way, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
+> [!IMPORTANT]
+> To record a HAR for each spec this way, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
 
-> ✴ If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `{ lifecycle: true }` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
+> [!TIP]
+> If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `{ lifecycle: true }` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
 
-> ✴ `enableExperimentalLifecycle(on, config)` does the same and still works, but it is deprecated and will be removed in version 6.
+> [!WARNING]
+> `enableExperimentalLifecycle(on, config)` does the same and still works, but it is deprecated and will be removed in version 6.
 
 ## License
 
