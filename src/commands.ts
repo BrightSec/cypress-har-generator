@@ -8,7 +8,6 @@ Cypress.Commands.add(
   (options?: Partial<RecordOptions>): Cypress.Chainable =>
     cy.task('recordHar', {
       content: true,
-      includeBlobs: true,
       rootDir: StringUtils.dirname(Cypress.spec.absolute),
       ...options,
       excludePaths: options?.excludePaths?.map(x =>

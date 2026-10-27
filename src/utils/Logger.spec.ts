@@ -54,4 +54,20 @@ describe('Logger', () => {
       expect(logSpy).toHaveBeenCalledWith(expectedLog);
     });
   });
+
+  describe('deprecate', () => {
+    it('should warn only the first time for the same id', () => {
+      // arrange
+      const message = 'Test message';
+      const expectedLog = chalk.yellow(`⚠ ${message}`);
+
+      // act
+      Logger.Instance.deprecate('test-id', message);
+      Logger.Instance.deprecate('test-id', message);
+
+      // assert
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      expect(logSpy).toHaveBeenCalledWith(expectedLog);
+    });
+  });
 });
