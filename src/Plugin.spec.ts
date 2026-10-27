@@ -11,6 +11,7 @@ import type { Connection } from './cdp/Connection.ts';
 import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
 import {
   anyFunction,
+  anyString,
   anything,
   deepEqual,
   instance,
@@ -436,6 +437,34 @@ describe('Plugin', () => {
       ).once();
       verify(connectionMock.open()).once();
       verify(networkObserverMock.subscribe(anyFunction())).once();
+    });
+
+    it('should warn that minStatusCodeToInclude is deprecated', async () => {
+      // arrange
+      plugin.ensureBrowserFlags(chrome, []);
+      // act
+      await plugin.recordHar({
+        ...options,
+        includeBlobs: true,
+        minStatusCodeToInclude: 400
+      });
+      // assert
+      verify(
+        loggerMock.deprecate('minStatusCodeToInclude', anyString())
+      ).once();
+      verify(loggerMock.deprecate('includeBlobs', anyString())).never();
+    });
+
+    it('should warn that the includeBlobs default changes when it is not set', async () => {
+      // arrange
+      plugin.ensureBrowserFlags(chrome, []);
+      // act
+      await plugin.recordHar(options);
+      // assert
+      verify(loggerMock.deprecate('includeBlobs', anyString())).once();
+      verify(
+        loggerMock.deprecate('minStatusCodeToInclude', anyString())
+      ).never();
     });
 
     it('should throw an error when the addr is not defined', async () => {
