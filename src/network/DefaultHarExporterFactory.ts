@@ -39,7 +39,8 @@ export class DefaultHarExporterFactory implements HarExporterFactory {
 
     return {
       filter: preProcessor,
-      transform: postProcessor
+      transform: postProcessor,
+      transformPath: transform
     } as DefaultHarExporterOptions;
   }
 
