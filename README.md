@@ -44,9 +44,11 @@ To install the plugin as development dependency, run the following command:
 $ npm i --save-dev @neuralegion/cypress-har-generator
 ```
 
-> ✴ The plugin requires Cypress 14.0.0 or later. If you are on an earlier Cypress version, stay on version 5 of the plugin.
+> [!IMPORTANT]
+> The plugin requires Cypress 14.0.0 or later. If you are on an earlier Cypress version, stay on version 5 of the plugin.
 
-> ✴ TypeScript projects need TypeScript 5.0 or later. If you are on an earlier TypeScript version, stay on version 5 of the plugin.
+> [!IMPORTANT]
+> TypeScript projects need TypeScript 5.0 or later. If you are on an earlier TypeScript version, stay on version 5 of the plugin.
 
 > [!NOTE]
 > For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
