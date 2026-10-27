@@ -1088,5 +1088,30 @@ describe('NetworkObserver', () => {
       // assert
       verify(networkMock.detachFromTargets()).once();
     });
+
+    it('should write a finished request whose response body is still loading', async () => {
+      // arrange
+      const body = { body: '<html></html>', base64Encoded: false };
+      let resolveBody!: (value: typeof body) => void;
+      when(optionsSpy.content).thenReturn(true);
+      when(networkMock.getResponseBody('1')).thenReturn(
+        new Promise(resolve => (resolveBody = resolve))
+      );
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      await sut.subscribe(callback);
+      // act
+      const unsubscribing = sut.unsubscribe();
+      setImmediate(() => resolveBody(body));
+      await unsubscribing;
+      // assert
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ requestId: '1' })
+      );
+      expect(sut.empty).toBe(true);
+    });
   });
 });

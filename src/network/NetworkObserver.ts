@@ -15,6 +15,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     Protocol.Network.RequestId,
     ExtraInfoBuilder
   >;
+  private readonly _pendingWrites = new Set<Promise<void>>();
   private destination?: (chromeEntry: NetworkRequest) => unknown;
 
   get empty(): boolean {
@@ -46,6 +47,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
   public async unsubscribe(): Promise<void> {
     await this.network.detachFromTargets();
+    await Promise.allSettled(this._pendingWrites);
     delete this.destination;
     this._entries.clear();
     this._extraInfoBuilders.clear();
@@ -463,10 +465,17 @@ export class NetworkObserver implements Observer<NetworkRequest> {
       return;
     }
 
-    networkRequest
+    const pending: Promise<void> = networkRequest
       .waitForCompletion()
-      .then(() => this.destination?.(networkRequest))
-      .finally(() => this._entries.delete(networkRequest.requestId));
+      .then(async () => {
+        await this.destination?.(networkRequest);
+      })
+      .finally(() => {
+        this._entries.delete(networkRequest.requestId);
+        this._pendingWrites.delete(pending);
+      });
+
+    this._pendingWrites.add(pending);
   }
 
   private loadContent(networkRequest: NetworkRequest): void {

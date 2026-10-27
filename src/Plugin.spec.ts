@@ -369,6 +369,31 @@ describe('Plugin', () => {
       verify(networkObserverMock.unsubscribe()).once();
     });
 
+    it('should stop observing the network before reading the recorded entries', async () => {
+      // arrange
+      when(connectionFactoryMock.create(anything())).thenReturn(
+        instance(connectionMock)
+      );
+      when(
+        observerFactoryMock.createNetworkObserver(anything(), anything())
+      ).thenReturn(instance(networkObserverMock));
+      when(harExporterFactoryMock.create(anything())).thenResolve(
+        resolvableInstance(harExporterMock)
+      );
+      plugin.ensureBrowserFlags(chrome, []);
+      await plugin.recordHar({
+        rootDir: '/'
+      });
+
+      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
+      // act
+      await plugin.saveHar(options);
+      // assert
+      verify(networkObserverMock.unsubscribe()).calledBefore(
+        harExporterMock.read()
+      );
+    });
+
     it('should dispose a exporter', async () => {
       // arrange
       when(connectionFactoryMock.create(anything())).thenReturn(
