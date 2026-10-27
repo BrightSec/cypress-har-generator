@@ -38,8 +38,6 @@ The plugin allows you to record network requests from multiple targets such as p
 
 ## Install
 
-The plugin requires Node.js 20.19.0 or later in the 20.x line, or 22.12.0 or later.
-
 To install the plugin as development dependency, run the following command:
 
 ```bash
