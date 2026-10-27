@@ -1,7 +1,50 @@
 import externals from 'webpack-node-externals';
 import FileManagerPlugin from 'filemanager-webpack-plugin';
 import webpack, { type Configuration } from 'webpack';
+import ts from 'typescript';
 import { resolve } from 'node:path';
+
+// declarations keep the `.ts` extensions of relative imports, which TypeScript 4 cannot resolve, so it would
+// type the public options as `any`; a `.js` extension resolves to the same declaration file in every version
+const declarationImportExtensions: ts.TransformerFactory<
+  ts.SourceFile | ts.Bundle
+> = context => {
+  const { factory } = context;
+  const rewrite = (specifier: ts.Expression): ts.Expression =>
+    ts.isStringLiteral(specifier) && /^\.\.?\/.*\.ts$/.test(specifier.text)
+      ? factory.createStringLiteral(
+          specifier.text.replace(/\.ts$/, '.js'),
+          true
+        )
+      : specifier;
+  const visit = (node: ts.Node): ts.Node => {
+    if (ts.isImportDeclaration(node)) {
+      return factory.updateImportDeclaration(
+        node,
+        node.modifiers,
+        node.importClause,
+        rewrite(node.moduleSpecifier),
+        node.attributes
+      );
+    }
+
+    if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
+      return factory.updateExportDeclaration(
+        node,
+        node.modifiers,
+        node.isTypeOnly,
+        node.exportClause,
+        rewrite(node.moduleSpecifier),
+        node.attributes
+      );
+    }
+
+    return node;
+  };
+
+  return file =>
+    ts.isSourceFile(file) ? ts.visitEachChild(file, visit, context) : file;
+};
 
 const base = (extension: 'js' | 'mjs'): Configuration => ({
   context: process.cwd(),
@@ -34,7 +77,10 @@ const base = (extension: 'js' | 'mjs'): Configuration => ({
             loader: 'ts-loader',
             options: {
               configFile: resolve('./tsconfig.build.json'),
-              compilerOptions: { declaration: extension === 'js' }
+              compilerOptions: { declaration: extension === 'js' },
+              getCustomTransformers: () => ({
+                afterDeclarations: [declarationImportExtensions]
+              })
             }
           }
         ]
