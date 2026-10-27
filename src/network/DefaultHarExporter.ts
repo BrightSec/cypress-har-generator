@@ -1,5 +1,6 @@
 /// <reference types="node" preserve="true" />
 import { EntryBuilder } from './EntryBuilder.ts';
+import { HarBuilder } from './HarBuilder.ts';
 import type { NetworkRequest } from './NetworkRequest.ts';
 import type { HarExporter } from './HarExporter.ts';
 import type { Logger } from '../utils/Logger.ts';
@@ -12,8 +13,7 @@ import type {
 import type { Entry } from 'har-format';
 import type { WriteStream } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
-import { EOL } from 'node:os';
-import { format, promisify } from 'node:util';
+import { format } from 'node:util';
 
 export class DefaultHarExporter implements HarExporter {
   private get filter(): Filter | undefined {
@@ -130,14 +130,15 @@ ${stack}`
     const result = await this.transformEntry(entry);
 
     if (this.buffer.writable && result) {
-      const json = JSON.stringify(result);
+      const json = HarBuilder.formatEntry(result);
       const length = Buffer.byteLength(json);
       // the stream appends the chunks in the order they are written
       const position = this.size;
 
-      this.size += length + Buffer.byteLength(EOL);
-      // @ts-expect-error signature mismatch due to overloading issues
-      await promisify(this.buffer.write).call(this.buffer, `${json}${EOL}`);
+      this.size += length;
+      await new Promise<void>((resolve, reject) =>
+        this.buffer.write(json, e => (e ? reject(e) : resolve()))
+      );
       this.index.push({
         position,
         length,

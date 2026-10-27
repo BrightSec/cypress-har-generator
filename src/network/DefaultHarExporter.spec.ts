@@ -1,5 +1,6 @@
 import { NetworkRequest } from './NetworkRequest.ts';
 import { DefaultHarExporter } from './DefaultHarExporter.ts';
+import { HarBuilder } from './HarBuilder.ts';
 import type { Logger } from '../utils/Logger.ts';
 import type { DefaultHarExporterOptions } from './DefaultHarExporterOptions.ts';
 import {
@@ -18,7 +19,7 @@ import type { Entry } from 'har-format';
 import { beforeEach, describe, it, jest, expect } from '@jest/globals';
 import type { WriteStream } from 'node:fs';
 import { open, rm, type FileHandle } from 'node:fs/promises';
-import { EOL, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -192,7 +193,7 @@ describe('DefaultHarExporter', () => {
       await harExporter.write(networkRequest);
 
       // assert
-      verify(streamMock.write(match(`${EOL}`), anyFunction())).once();
+      verify(streamMock.write(anyString(), anyFunction())).once();
     });
 
     it('should write the entry to the buffer if the predicate returns throws an error', async () => {
@@ -210,13 +211,13 @@ describe('DefaultHarExporter', () => {
       await harExporter.write(networkRequest);
 
       // assert
-      verify(streamMock.write(match(`${EOL}`), anyFunction())).once();
+      verify(streamMock.write(anyString(), anyFunction())).once();
     });
 
     it('should transform the entry before writing to the buffer', async () => {
       // arrange
       const entry = { foo: 'bar' } as unknown as Entry;
-      const entryString = JSON.stringify(entry);
+      const entryString = HarBuilder.formatEntry(entry);
       when(streamMock.writable).thenReturn(true);
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => callback()
@@ -228,9 +229,7 @@ describe('DefaultHarExporter', () => {
       await harExporter.write(networkRequest);
 
       // assert
-      verify(
-        streamMock.write(match(`${entryString}${EOL}`), anyFunction())
-      ).once();
+      verify(streamMock.write(entryString, anyFunction())).once();
     });
 
     it('should skip the entry when the transformation is failed with an error', async () => {

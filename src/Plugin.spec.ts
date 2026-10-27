@@ -1,5 +1,6 @@
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { Plugin } from './Plugin.ts';
+import { HarBuilder } from './network/HarBuilder.ts';
 import type { Logger } from './utils/Logger.ts';
 import type { FileManager } from './utils/FileManager.ts';
 import type { Observer } from './network/Observer.ts';
@@ -291,7 +292,7 @@ describe('Plugin', () => {
       });
 
       when(harExporterMock.read()).thenResolve(
-        entriesOf(JSON.stringify(entry))
+        entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
       await plugin.saveHar({
@@ -319,7 +320,7 @@ describe('Plugin', () => {
       });
 
       when(harExporterMock.read()).thenResolve(
-        entriesOf(JSON.stringify(entry))
+        entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
       await plugin.saveHar(options);
@@ -354,7 +355,7 @@ describe('Plugin', () => {
       });
 
       when(harExporterMock.read()).thenResolve(
-        entriesOf(JSON.stringify(entry))
+        entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
       await plugin.saveHar(options);
@@ -429,7 +430,7 @@ describe('Plugin', () => {
       });
 
       when(harExporterMock.read()).thenResolve(
-        entriesOf(JSON.stringify(entry))
+        entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
       await plugin.saveHar(options);
@@ -456,7 +457,7 @@ describe('Plugin', () => {
       });
 
       when(harExporterMock.read()).thenResolve(
-        entriesOf(JSON.stringify(entry))
+        entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
       await plugin.saveHar(options);

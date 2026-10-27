@@ -37,7 +37,7 @@ const entries: Entry[] = [
 
 const entriesOf = async function* (items: Entry[]): AsyncGenerator<string> {
   for (const item of items) {
-    yield await Promise.resolve(JSON.stringify(item));
+    yield await Promise.resolve(HarBuilder.formatEntry(item));
   }
 };
 

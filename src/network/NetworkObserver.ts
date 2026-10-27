@@ -539,10 +539,30 @@ export class NetworkObserver implements Observer<NetworkRequest> {
           .getRequestBody(request.requestId)
           .then(
             ({
-              postData
-            }: Protocol.Network.GetRequestPostDataResponse): string => postData
+              postData,
+              base64Encoded
+            }: Protocol.Network.GetRequestPostDataResponse & {
+              base64Encoded?: boolean;
+            }): string =>
+              base64Encoded
+                ? this.decodeRequestBody(postData, request.requestContentType)
+                : postData
           )
           .catch(() => undefined);
+  }
+
+  // Chrome sends a body that is not valid UTF-8 (e.g. a binary Blob or a multipart file part) in base64,
+  // which DevTools decodes with the charset of the request's Content-Type, UTF-8 by default.
+  private decodeRequestBody(data: string, contentType?: string): string {
+    const bytes = Buffer.from(data, 'base64');
+    const charset =
+      contentType?.match(/;\s*charset\s*=\s*"?([^";\s]+)/i)?.[1] ?? 'utf-8';
+
+    try {
+      return new TextDecoder(charset).decode(bytes);
+    } catch {
+      return new TextDecoder().decode(bytes);
+    }
   }
 
   private createRequest(
