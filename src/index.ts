@@ -87,7 +87,12 @@ export const install = (
       browser: Cypress.Browser | null,
       launchOptions: Cypress.BeforeBrowserLaunchOptions
     ) => {
-      ensureBrowserFlags((browser ?? {}) as Cypress.Browser, launchOptions);
+      launchOptions.args.push(
+        ...plugin.ensureBrowserFlags(
+          (browser ?? {}) as Cypress.Browser,
+          launchOptions.args
+        )
+      );
 
       return launchOptions;
     }
@@ -160,29 +165,6 @@ const specFolder = (
     .sort((a, b) => a.length - b.length);
 
   return folder;
-};
-
-/**
- * Function has been deprecated. Use {@link install} instead as follows:
- * ```diff
- * setupNodeEvents(on, config) {
- *   install(on, config);
- * -  // bind to the event we care about
- * -  on('before:browser:launch', (browser = {}, launchOptions) => {
- * -    ensureBrowserFlags(browser, launchOptions);
- * -    return launchOptions;
- * -  });
- * }
- * ```
- * In case of any issues please refer to {@link https://github.com/cypress-io/cypress/issues/5240}
- */
-export const ensureBrowserFlags = (
-  browser: Cypress.Browser,
-  launchOptions: Cypress.BeforeBrowserLaunchOptions
-): void => {
-  launchOptions.args.push(
-    ...plugin.ensureBrowserFlags(browser, launchOptions.args)
-  );
 };
 
 export type { SaveOptions, RecordOptions } from './Plugin.ts';

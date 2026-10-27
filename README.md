@@ -82,29 +82,26 @@ export default defineConfig({
 > `setupNodeEvents` can be defined in either the e2e or component configuration
 
 > [!WARNING]
-> `setupNodeEvents` does not support multiple `on` event listeners without overwriting previously defined listeners. To work around this issue, you can either call the `install` function at the end of the `setupNodeEvents` function, or use the deprecated `ensureBrowserFlags` as follows:
+> Cypress keeps only the last listener for each event in `setupNodeEvents` ([cypress#5240](https://github.com/cypress-io/cypress/issues/5240)). The plugin listens to `before:browser:launch`, `before:spec` and `after:spec`, so your own listener for one of them replaces the plugin's, or the other way around. Wrap `on` with [cypress-on-fix](https://github.com/bahmutov/cypress-on-fix) to keep them all, as described in [this post](https://glebbahmutov.com/blog/fix-for-cypress-plugin-events/):
 >
 > ```js
 > import { defineConfig } from 'cypress';
-> import {
->   install,
->   ensureBrowserFlags
-> } from '@neuralegion/cypress-har-generator';
+> import { install } from '@neuralegion/cypress-har-generator';
+> import onFix from 'cypress-on-fix';
 >
 > export default defineConfig({
 >   e2e: {
->     setupNodeEvents(on, config) {
+>     setupNodeEvents(cypressOn, config) {
+>       const on = onFix(cypressOn);
 >       install(on, config);
->       on('before:browser:launch', (browser = {}, launchOptions) => {
->         ensureBrowserFlags(browser, launchOptions);
+>       on('before:browser:launch', (browser, launchOptions) => {
+>         // your own changes
 >         return launchOptions;
 >       });
 >     }
 >   }
 > });
 > ```
->
-> For more information, see [this GitHub issue](https://github.com/cypress-io/cypress/issues/5240).
 
 ### Registering the commands
 
