@@ -448,6 +448,30 @@ describe('Record HAR', () => {
       });
   });
 
+  it('records why the content is missing in a custom content field', () => {
+    // a body over the buffer limit is not kept by Chrome, so reading it fails
+    cy.recordHar({ maxResourceBufferSize: 1, maxTotalBufferSize: 1 });
+
+    cy.get('a[href$=fetch]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 1);
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should((entries: Entry[]) => {
+        const content = entries.find(({ request }: Entry) =>
+          request.url.endsWith('/api/products')
+        )?.response.content;
+
+        expect(content)
+          .to.have.property('_error')
+          .that.is.a('string')
+          .and.have.length.greaterThan(0);
+        expect(content).not.to.have.property('error');
+      });
+  });
+
   it('records the WebSocket frames', () => {
     cy.recordHar();
 

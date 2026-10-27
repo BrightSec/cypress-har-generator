@@ -9,7 +9,7 @@ import type { Header, Param, QueryString } from 'har-format';
 import type { Protocol } from 'devtools-protocol';
 
 export interface ContentData {
-  error?: string;
+  _error?: string;
   text?: string;
   encoding?: string;
 }
@@ -564,7 +564,7 @@ export class NetworkRequest {
   ): void {
     if (this.resourceType === 'WebSocket') {
       this._contentData = Promise.resolve({
-        error: 'Content for WebSockets is currently not supported'
+        _error: 'Content for WebSockets is currently not supported'
       });
 
       return;
@@ -580,7 +580,7 @@ export class NetworkRequest {
           encoding: base64Encoded ? 'base64' : undefined
         })
       )
-      .catch((e: Error): ContentData => ({ error: e.message }));
+      .catch((e: Error): ContentData => ({ _error: e.message }));
   }
 
   public contentData(): Promise<ContentData> | undefined {
