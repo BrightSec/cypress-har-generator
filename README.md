@@ -431,28 +431,26 @@ describe('my tests', () => {
 });
 ```
 
-If you're using Cypress version 6.2.0 or higher, you can set up hooks in a single step, eliminating the need to define them in each spec file. To do this, you need to call `enableExperimentalLifecycle` in addition to `install` as shown below:
+If you're using Cypress version 6.2.0 or higher, you can set up hooks in a single step, eliminating the need to define them in each spec file. To do this, pass the config and `{ lifecycle: true }` to `install` as shown below:
 
 ```js
 import { defineConfig } from 'cypress';
-import {
-  install,
-  enableExperimentalLifecycle
-} from '@neuralegion/cypress-har-generator';
+import { install } from '@neuralegion/cypress-har-generator';
 
 export default defineConfig({
   e2e: {
     setupNodeEvents(on, config) {
-      install(on);
-      enableExperimentalLifecycle(on, config);
+      install(on, config, { lifecycle: true });
     }
   }
 });
 ```
 
-> ⚠ Please note, to utilize this experimental mechanism for setting up lifecycle, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
+> ⚠ Please note, to record a HAR for each spec this way, you must either disable the interactive mode or enable the "experimentalInteractiveRunEvents" feature. For more details, see the documentation: https://docs.cypress.io/guides/references/experiments#Configuration
 
-> ✴ If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `enableExperimentalLifecycle` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
+> ✴ If a run can be stopped early, for example by `Cypress.stop()` or a plugin such as [cypress-fail-fast](https://github.com/javierbrea/cypress-fail-fast), Cypress skips the remaining `after` and `afterEach` hooks, so a `cy.saveHar()` call in them never runs. Use `{ lifecycle: true }` in that case: it saves the HAR from the Node process at the end of each spec, which happens even when the run is stopped.
+
+> ✴ `enableExperimentalLifecycle(on, config)` does the same and still works, but it is deprecated and will be removed in version 6.
 
 ## License
 
