@@ -48,5 +48,32 @@
       .then(response => response.text())
       .then(data => blob.innerText = data)
       .catch(error => console.error(error));
+
+    const binary = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0xff]);
+    const form = () => {
+      const data = new FormData();
+      data.append('field', 'value');
+      data.append('file', new Blob([binary], { type: 'image/gif' }), 'image.gif');
+      return data;
+    };
+
+    fetch('/api/upload/blob', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: new Blob([binary])
+    }).catch(error => console.error(error));
+
+    fetch('/api/upload/bytes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: binary
+    }).catch(error => console.error(error));
+
+    fetch('/api/upload/form-data', { method: 'POST', body: form() })
+      .catch(error => console.error(error));
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload/xhr-form-data');
+    xhr.send(form());
   </script>
 </html>

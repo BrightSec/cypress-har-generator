@@ -94,6 +94,12 @@ app.post(
   (req: Request, res: Response) =>
     res.send(Buffer.isBuffer(req.body) ? req.body.toString() : req.body)
 );
+app.post(
+  '/api/upload/:name',
+  raw({ type: () => true }),
+  (req: Request, res: Response) =>
+    res.json({ size: Buffer.isBuffer(req.body) ? req.body.length : 0 })
+);
 app.get('/api/delay/:ms', (req: Request, res: Response) => {
   setTimeout(() => res.json({ delay: req.params.ms }), Number(req.params.ms));
 });

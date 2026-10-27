@@ -4,6 +4,7 @@ import type { NetworkRequest } from './NetworkRequest.ts';
 import type { NetworkObserverOptions } from './NetworkObserverOptions.ts';
 import type { RequestFilter } from './filters/RequestFilter.ts';
 import type { Network } from './Network.ts';
+import type { Protocol } from 'devtools-protocol';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
   anyFunction,
@@ -757,6 +758,111 @@ describe('NetworkObserver', () => {
       await sut.subscribe(callback);
       // assert
       verify(networkMock.getRequestBody('1')).once();
+    });
+
+    it.each([
+      {
+        contentType: 'application/octet-stream',
+        bytes: [0x47, 0x49, 0x46, 0xff, 0x00],
+        expected: 'GIF\ufffd\u0000'
+      },
+      {
+        contentType: 'text/plain; charset=ISO-8859-1',
+        bytes: [0x63, 0x61, 0x66, 0xe9],
+        expected: 'café'
+      },
+      {
+        contentType: 'text/plain; charset="windows-1252"',
+        bytes: [0x80],
+        expected: '€'
+      },
+      {
+        contentType: 'text/plain; charset=unknown',
+        bytes: [0x61, 0xff],
+        expected: 'a\ufffd'
+      }
+    ])(
+      'should decode a base64-encoded request body with the charset of $contentType',
+      async ({ contentType, bytes, expected }) => {
+        // arrange
+        when(networkMock.getRequestBody('1')).thenResolve({
+          postData: Buffer.from(bytes).toString('base64'),
+          base64Encoded: true
+        } as Protocol.Network.GetRequestPostDataResponse);
+        when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+          await cb({
+            ...requestWillBeSentEvent,
+            params: {
+              ...requestWillBeSentEvent.params,
+              request: {
+                ...requestWillBeSentEvent.params.request,
+                method: 'POST',
+                headers: { 'Content-Type': contentType },
+                hasPostData: true
+              }
+            }
+          });
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        });
+        await sut.subscribe(callback);
+        const request = callback.mock.calls[0][0] as NetworkRequest;
+        // act
+        const result = await request.requestFormData();
+        // assert
+        expect(result).toBe(expected);
+      }
+    );
+
+    it('should parse the form parameters of a base64-encoded multipart request body', async () => {
+      // arrange
+      const body = Buffer.concat([
+        Buffer.from(
+          '--x\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n' +
+            '--x\r\nContent-Disposition: form-data; name="file"; filename="bin.dat"\r\nContent-Type: application/octet-stream\r\n\r\n'
+        ),
+        Buffer.from([0x00, 0xff]),
+        Buffer.from('\r\n--x--\r\n')
+      ]);
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: body.toString('base64'),
+        base64Encoded: true
+      } as Protocol.Network.GetRequestPostDataResponse);
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            request: {
+              ...requestWillBeSentEvent.params.request,
+              method: 'POST',
+              headers: { 'Content-Type': 'multipart/form-data; boundary=x' },
+              hasPostData: true
+            }
+          }
+        });
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      await sut.subscribe(callback);
+      const request = callback.mock.calls[0][0] as NetworkRequest;
+      // act
+      const result = await request.formParameters();
+      // assert
+      expect(result).toEqual([
+        {
+          name: 'field',
+          value: 'value',
+          fileName: undefined,
+          contentType: undefined
+        },
+        {
+          name: 'file',
+          value: '\u0000\ufffd',
+          fileName: 'bin.dat',
+          contentType: 'application/octet-stream'
+        }
+      ]);
     });
 
     it('should utilize the preloaded request body', async () => {
