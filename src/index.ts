@@ -28,7 +28,15 @@ const plugin = new Plugin(
   new DefaultHarExporterFactory(FileManager.Instance, Logger.Instance)
 );
 
-export const install = (on: Cypress.PluginEvents): void => {
+export interface InstallOptions {
+  lifecycle?: boolean;
+}
+
+export const install = (
+  on: Cypress.PluginEvents,
+  config: Cypress.PluginConfigOptions,
+  { lifecycle = true }: InstallOptions = {}
+): void => {
   // ADHOC: Cypress expect the return value to be null to signal that the given event has been handled properly.
   // https://docs.cypress.io/api/commands/task#Usage
   on('task', {
@@ -60,16 +68,20 @@ export const install = (on: Cypress.PluginEvents): void => {
       return launchOptions;
     }
   );
+
+  if (lifecycle) {
+    enableLifecycle(on, config);
+  }
 };
 
-export const enableExperimentalLifecycle = (
+const enableLifecycle = (
   on: Cypress.PluginEvents,
   config: Cypress.PluginConfigOptions
 ) => {
   // FIXME: `isInteractive` is always true. For details see https://github.com/cypress-io/cypress/issues/20789
   if (!config.isTextTerminal && !config.experimentalInteractiveRunEvents) {
     Logger.Instance.warn(
-      'To activate the experimental mechanism for setting up lifecycle, you must either disable the interactive mode or activate the "experimentalInteractiveRunEvents" feature. For further information, please refer to: https://docs.cypress.io/guides/references/experiments#Configuration'
+      'To record a HAR for each spec, you must either disable the interactive mode or activate the "experimentalInteractiveRunEvents" feature, or pass `{ lifecycle: false }` to `install` to record with the commands only. For further information, please refer to: https://docs.cypress.io/guides/references/experiments#Configuration'
     );
   } else {
     on('before:spec', (spec: Cypress.Spec) =>
@@ -87,6 +99,11 @@ export const enableExperimentalLifecycle = (
     );
   }
 };
+
+/**
+ * Function has been deprecated. {@link install} records a HAR for each spec unless `{ lifecycle: false }` is passed.
+ */
+export const enableExperimentalLifecycle = enableLifecycle;
 
 /**
  * Function has been deprecated. Use {@link install} instead as follows:

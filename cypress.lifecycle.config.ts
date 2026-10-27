@@ -1,5 +1,5 @@
 import base from './cypress.config.ts';
-import { enableExperimentalLifecycle } from './src/index.ts';
+import { install } from './src/index.ts';
 import { defineConfig } from 'cypress';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -15,8 +15,7 @@ export default defineConfig({
       on: Cypress.PluginEvents,
       config: Cypress.PluginConfigOptions
     ): void {
-      base.e2e?.setupNodeEvents?.(on, config);
-      enableExperimentalLifecycle(on, config);
+      install(on, config);
 
       on('before:run', () => rm(harPath, { force: true }));
       // `Cypress.stop()` skips the rest of the run, so the HAR can only be checked once the run is over
