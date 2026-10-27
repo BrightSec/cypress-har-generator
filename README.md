@@ -105,7 +105,7 @@ Add the following line to your [support file](https://docs.cypress.io/app/core-c
 import '@neuralegion/cypress-har-generator/commands';
 ```
 
-> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. Before Cypress 10.0.0, the default support file is `cypress/support/index.js`, and Cypress 10.0.0 and later no longer load it. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
+> ✴ Make sure the line is in the file that Cypress actually loads, which is the one set by the `supportFile` option. With CommonJS, use `require('@neuralegion/cypress-har-generator/commands');` instead.
 
 The import also adds the types of the commands, so TypeScript knows `cy.recordHar`, `cy.saveHar` and `cy.disposeOfHar` without any further configuration.
 
