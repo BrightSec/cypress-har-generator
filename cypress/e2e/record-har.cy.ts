@@ -327,7 +327,7 @@ describe('Record HAR', () => {
       .its('log.entries')
       .should('contain.something.like', {
         request: {
-          url: 'ws://localhost:8080/ws'
+          url: /\/ws$/
         },
         response: {
           status: 101
@@ -338,6 +338,38 @@ describe('Record HAR', () => {
           ({ _webSocketMessages }: Entry) =>
             (_webSocketMessages as unknown[]).length > 0
         );
+        const webSocketMessages = expected?._webSocketMessages;
+        expect(webSocketMessages).to.contain.something.like({
+          type: 'response',
+          data: /^This is a message at time/
+        });
+        expect(webSocketMessages).to.contain.something.like({
+          type: 'request',
+          data: 'Hello Server!'
+        });
+      });
+  });
+
+  it('records the WebSocket frames when the socket is still open', () => {
+    let startedAt = 0;
+
+    cy.recordHar();
+
+    cy.get('a[href$=websocket]').click();
+    cy.get('ul > li').should('have.length.gte', 2);
+
+    cy.then(() => (startedAt = Date.now()));
+    cy.saveHar({ waitForIdle: true });
+    cy.then(() => expect(Date.now() - startedAt).to.be.lessThan(3000));
+
+    cy.findHar()
+      .its('log.entries')
+      .should((data: Entry[]) => {
+        const expected = data.find(
+          ({ request, response }: Entry) =>
+            request.url.endsWith('/ws') && response.status === 101
+        );
+        expect(expected).to.have.property('_resourceType', 'WebSocket');
         const webSocketMessages = expected?._webSocketMessages;
         expect(webSocketMessages).to.contain.something.like({
           type: 'response',
