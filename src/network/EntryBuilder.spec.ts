@@ -160,18 +160,33 @@ describe('EntryBuilder', () => {
       request.responseHeadersText = 'HTTP/1.1 404 Not Found';
       request.resourceSize = size;
       request.mimeType = mimeType;
-      request.transferSize = size;
+      request.transferSize = request.responseHeadersText.length + 4;
       const entryBuilder = new EntryBuilder(request);
       // act
       const entry = await entryBuilder.build();
       // assert
       expect(entry).toMatchObject({
         response: {
+          bodySize: 4,
           content: {
-            compression: 22
+            compression: 10
           }
         }
       });
+    });
+
+    it('should build an entry with an unknown body size and no compression when the transfer size does not cover the headers', async () => {
+      // arrange
+      request.statusCode = 101;
+      request.responseHeadersText =
+        'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n\r\n';
+      request.transferSize = 0;
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry.response.bodySize).toBe(-1);
+      expect(entry.response.content.compression).toBeUndefined();
     });
 
     it('should build an entry with request cookies', async () => {
