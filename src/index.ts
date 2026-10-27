@@ -28,7 +28,13 @@ const plugin = new Plugin(
   new DefaultHarExporterFactory(FileManager.Instance, Logger.Instance)
 );
 
-export interface InstallOptions {
+/**
+ * Besides `lifecycle`, takes the options of `cy.recordHar()` and `cy.saveHar()` for the HAR recorded for each spec,
+ * so they take effect only with `lifecycle`. As with `cy.recordHar()`, `rootDir` defaults to the folder of the spec.
+ * The HAR is named after the spec and written to `hars_folder`, so `fileName` and `outDir` are not accepted.
+ */
+export interface InstallOptions
+  extends Partial<RecordOptions>, Omit<SaveOptions, 'fileName' | 'outDir'> {
   /**
    * Records a HAR for each spec from the Node process, which survives a run stopped early.
    * Requires `config`.
@@ -46,7 +52,7 @@ export interface InstallOptions {
 export const install = (
   on: Cypress.PluginEvents,
   config?: Cypress.PluginConfigOptions,
-  { lifecycle = false }: InstallOptions = {}
+  { lifecycle = false, ...harOptions }: InstallOptions = {}
 ): void => {
   if (lifecycle && !config) {
     throw new TypeError(
@@ -91,7 +97,11 @@ export const install = (
   }
 
   if (config && lifecycle) {
-    enableLifecycle(on, config);
+    enableLifecycle(on, config, harOptions);
+  } else if (Object.keys(harOptions).length > 0) {
+    Logger.Instance.warn(
+      'The recording and saving options passed to `install` apply only to the HAR recorded for each spec: call `install(on, config, { lifecycle: true, ... })`.'
+    );
   }
 };
 
@@ -149,7 +159,13 @@ const supportsExpose = (version: string): boolean => {
 
 const enableLifecycle = (
   on: Cypress.PluginEvents,
-  config: Cypress.PluginConfigOptions
+  config: Cypress.PluginConfigOptions,
+  {
+    waitForIdle,
+    minIdleDuration,
+    maxWaitDuration,
+    ...recordOptions
+  }: Omit<InstallOptions, 'lifecycle'> = {}
 ): void => {
   // FIXME: `isInteractive` is always true. For details see https://github.com/cypress-io/cypress/issues/20789
   if (!config.isTextTerminal && !config.experimentalInteractiveRunEvents) {
@@ -161,11 +177,15 @@ const enableLifecycle = (
       plugin.recordHar({
         content: true,
         includeBlobs: true,
-        rootDir: StringUtils.dirname(spec.absolute)
+        rootDir: StringUtils.dirname(spec.absolute),
+        ...recordOptions
       })
     );
     on('after:spec', (spec: Cypress.Spec, _: CypressCommandLine.RunResult) =>
       plugin.saveHar({
+        waitForIdle,
+        minIdleDuration,
+        maxWaitDuration,
         fileName: StringUtils.normalizeName(spec.name, { ext: '.har' }),
         outDir: ConfigUtils.fromNode<string>(config, HARS_FOLDER_KEYS) ?? '.'
       })

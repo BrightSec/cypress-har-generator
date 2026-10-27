@@ -482,6 +482,20 @@ export default defineConfig({
 > [!WARNING]
 > `enableExperimentalLifecycle(on, config)` does the same and still works, but it is deprecated and will be removed in version 6.
 
+The same options as `cy.recordHar()` and `cy.saveHar()` can be passed alongside `lifecycle`, and they apply to the HAR of each spec:
+
+```js
+install(on, config, {
+  lifecycle: true,
+  excludePaths: [/^\/__/],
+  includeHosts: ['api.example.com'],
+  maxTotalBufferSize: 100 * 1024 ** 2,
+  waitForIdle: true
+});
+```
+
+The HAR is named after the spec and written to `hars_folder`, so `fileName` and `outDir` are not accepted. As with `cy.recordHar()`, the `filter` and `transform` paths are relative to the spec folder unless `rootDir` is set, for example to `config.projectRoot`.
+
 ## License
 
 Copyright © 2024 [Bright Security](https://brightsec.com/).

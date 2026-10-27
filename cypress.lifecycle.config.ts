@@ -15,7 +15,11 @@ export default defineConfig({
       on: Cypress.PluginEvents,
       config: Cypress.PluginConfigOptions
     ): void {
-      install(on, config, { lifecycle: true });
+      install(on, config, {
+        lifecycle: true,
+        excludePaths: [/^\/__/],
+        waitForIdle: true
+      });
 
       on('before:run', () => rm(harPath, { force: true }));
       // `Cypress.stop()` skips the rest of the run, so the HAR can only be checked once the run is over
@@ -27,6 +31,16 @@ export default defineConfig({
 
         if (!urls.includes(`${config.baseUrl}/`)) {
           throw new Error(`${harPath} has no entry for ${config.baseUrl}/`);
+        }
+
+        const excluded = urls.filter(url =>
+          new URL(url).pathname.startsWith('/__')
+        );
+
+        if (excluded.length > 0) {
+          throw new Error(
+            `${harPath} has entries the excludePaths option leaves out: ${excluded.join(', ')}`
+          );
         }
       });
     }
