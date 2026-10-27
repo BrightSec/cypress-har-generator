@@ -1,11 +1,16 @@
 import pkg from '../../package.json' with { type: 'json' };
-import type { Har } from 'har-format';
+import type { Entry, Har } from 'har-format';
 
 // An entry sits three levels deep, at `log.entries[i]`.
 const ENTRY_INDENT = ' '.repeat(6);
 
 export class HarBuilder {
   constructor(private readonly entries: AsyncIterable<string>) {}
+
+  // Serializes an entry the way it reads inside the HAR, so `build` writes it as is.
+  public static formatEntry(entry: Entry): string {
+    return JSON.stringify(entry, null, 2).replaceAll('\n', `\n${ENTRY_INDENT}`);
+  }
 
   // Yields the HAR in chunks, holding a single entry in memory at a time.
   public async *build(): AsyncGenerator<string> {
@@ -29,12 +34,7 @@ export class HarBuilder {
     yield json.slice(0, entriesStart);
 
     for await (const entry of this.entries) {
-      const indented = JSON.stringify(JSON.parse(entry), null, 2).replaceAll(
-        '\n',
-        `\n${ENTRY_INDENT}`
-      );
-
-      yield `${separator}\n${ENTRY_INDENT}${indented}`;
+      yield `${separator}\n${ENTRY_INDENT}${entry}`;
       separator = ',';
     }
 
