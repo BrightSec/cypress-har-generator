@@ -223,6 +223,8 @@ To include only requests on specific hosts, you can pass an array of patterns sp
 cy.recordHar({ includeHosts: [/.*\.execute-api\.eu-west-1\.amazonaws\.com/] });
 ```
 
+A host name, such as `'api.example.com'`, `'localhost:8080'` or `'[::1]'`, matches only that host, ignoring case, and any port unless the name has one. It does not match `evil-api.example.com` or `api.example.com.attacker.net`, nor subdomains: use a regular expression for those, such as `/(^|\.)example\.com(:\d+)?$/`, which is tested against the host with its port. Any other string is read as the source of a regular expression.
+
 To exclude some requests, you can pass an array of patterns specifying a list of paths using the `excludePaths` to be excluded from the logs:
 
 ```js

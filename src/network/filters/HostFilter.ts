@@ -1,16 +1,16 @@
 import { NetworkRequest } from '../NetworkRequest.ts';
 import type { RequestFilter, RequestFilterOptions } from './RequestFilter.ts';
-import { StringUtils } from '../../utils/StringUtils.ts';
+import { HostPattern } from '../../utils/HostPattern.ts';
 
 export class HostFilter implements RequestFilter {
   public apply(
     request: NetworkRequest,
     { includeHosts }: RequestFilterOptions
   ): boolean {
-    const { host } = request.parsedURL;
+    const { parsedURL } = request;
 
     return !!includeHosts?.some(pattern =>
-      StringUtils.toRegex(pattern).test(host)
+      HostPattern.test(pattern, parsedURL)
     );
   }
 
