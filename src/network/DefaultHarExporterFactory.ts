@@ -31,10 +31,13 @@ export class DefaultHarExporterFactory implements HarExporterFactory {
     filter,
     transform,
     rootDir,
-    dedupe = false
+    dedupe = false,
+    stable = false
   }: HarExporterOptions) {
-    if (typeof dedupe !== 'boolean') {
-      throw new TypeError('The `dedupe` option must be a boolean.');
+    for (const [name, value] of Object.entries({ dedupe, stable })) {
+      if (typeof value !== 'boolean') {
+        throw new TypeError(`The \`${name}\` option must be a boolean.`);
+      }
     }
 
     const [preProcessor, postProcessor]: (Filter | Transformer | undefined)[] =
@@ -44,6 +47,7 @@ export class DefaultHarExporterFactory implements HarExporterFactory {
 
     return {
       dedupe,
+      stable,
       filter: preProcessor,
       transform: postProcessor,
       transformPath: transform

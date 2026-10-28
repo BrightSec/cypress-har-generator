@@ -8,4 +8,5 @@ export interface DefaultHarExporterOptions {
   transform?: Transformer;
   transformPath?: string;
   dedupe?: boolean;
+  stable?: boolean;
 }

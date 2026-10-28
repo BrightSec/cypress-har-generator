@@ -115,6 +115,42 @@ describe('DefaultHarExporterFactory', () => {
       }
     );
 
+    it.each([
+      { stable: undefined, expected: false },
+      { stable: false, expected: false },
+      { stable: true, expected: true }
+    ])(
+      'should create a HarExporter with stable $expected when stable is $stable',
+      async ({ stable, expected }) => {
+        // arrange
+        when(fileManagerMock.createTmpFile()).thenResolve(
+          resolvableInstance(fileMock)
+        );
+
+        // act
+        const result = await factory.create({ stable, rootDir: '/root' });
+
+        // assert
+        expect(result).toHaveProperty('options.stable', expected);
+      }
+    );
+
+    it.each([1, 'true', null])(
+      'should throw a TypeError when stable is %j',
+      async stable => {
+        // act
+        const act = () =>
+          factory.create({
+            stable: stable as unknown as boolean,
+            rootDir: '/'
+          });
+
+        // assert
+        await expect(act()).rejects.toThrow(TypeError);
+        verify(fileManagerMock.createTmpFile()).never();
+      }
+    );
+
     it.each([1, 'true', null])(
       'should throw a TypeError when dedupe is %j',
       async dedupe => {

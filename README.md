@@ -389,6 +389,21 @@ cy.recordHar({ dedupe: true });
 
 The check applies after `filter` and `transform`, so it compares the entries as they are saved. Headers are not compared, since they often differ only in tokens or cookies. WebSocket and server-sent event entries with messages are always kept.
 
+To compare the HAR of a run with the HAR of an earlier one, such as in a snapshot test or a code review, set `stable` to `true`. It leaves out the values that change on every run, as Playwright does when it omits timing:
+
+```js
+cy.recordHar({ stable: true });
+```
+
+| Field                                              | With `stable: true`        |
+| -------------------------------------------------- | -------------------------- |
+| `startedDateTime`                                  | `1970-01-01T00:00:00.000Z` |
+| `time`, `timings`                                  | `-1`                       |
+| `time` of WebSocket and server-sent event messages | `-1`                       |
+| `connection`                                       | removed                    |
+
+The entries keep their order by start time, so requests sent at the same time can still swap places between runs. The headers, such as `Date`, and the bodies are kept as the server sent them. It applies after `filter` and `transform`, which still get the real times.
+
 ### saveHar
 
 Stops recording and saves all requests that have occurred since `recordHar` was run to a HAR file. By default, the file is saved to the root of the project with a file name that includes the current spec's name (e.g. `{specName}.har`).
