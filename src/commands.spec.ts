@@ -13,22 +13,29 @@ describe('commands', () => {
   const commands = new Map<string, Command>();
   const task = jest.fn();
   const intercept = jest.fn();
+  const events = new Map<string, (...args: unknown[]) => unknown>();
+  const page: Record<string, unknown> = {};
+  const runner: Record<string, unknown> = {};
 
   beforeAll(async () => {
     Object.assign(globalThis, {
       Cypress: {
         spec: {
           name: 'spec.cy.ts',
-          absolute: '/project/cypress/e2e/spec.cy.ts'
+          absolute: '/project/cypress/e2e/spec.cy.ts',
+          relative: 'cypress/e2e/spec.cy.ts'
         },
         minimatch: (url: string, pattern: string) =>
           pattern === '**/other/**' ? url.includes('/other/') : false,
         config: () => undefined,
+        on: (event: string, handler: (...args: unknown[]) => unknown) =>
+          events.set(event, handler),
         Commands: {
           add: (name: string, fn: Command) => commands.set(name, fn)
         }
       },
-      cy: { task, intercept, wrap: jest.fn() }
+      cy: { task, intercept, wrap: jest.fn() },
+      window: Object.assign(page, { top: runner })
     });
 
     await import('./commands.ts');
@@ -39,7 +46,67 @@ describe('commands', () => {
       absolute: '/project/cypress/e2e/spec.cy.ts'
     });
     task.mockReset();
+    task.mockReturnValue({ then: (callback: () => unknown) => callback() });
     intercept.mockReset();
+    delete page.__cypressHarTestStarted;
+    delete runner.__cypressHarTestStarted;
+  });
+
+  describe('test:before:run', () => {
+    const test = {
+      titlePath: () => ['suite', 'test'],
+      currentRetry: () => 1
+    };
+
+    it('should tell the plugin which test started, through the function it added to the page', () => {
+      // arrange
+      const binding = jest.fn();
+      page.__cypressHarTestStarted = binding;
+      jest.spyOn(Date, 'now').mockReturnValue(42);
+
+      // act
+      events.get('test:before:run')?.({}, test);
+
+      // assert
+      expect(JSON.parse(binding.mock.calls[0][0] as string)).toEqual({
+        spec: 'cypress/e2e/spec.cy.ts',
+        titlePath: ['suite', 'test'],
+        attempt: 2,
+        startedAt: 42
+      });
+    });
+
+    it('should tell the plugin through the runner page when the spec frame lacks the function', () => {
+      // arrange
+      const binding = jest.fn();
+      runner.__cypressHarTestStarted = binding;
+
+      // act
+      events.get('test:before:run')?.({}, test);
+
+      // assert
+      expect(binding).toHaveBeenCalledTimes(1);
+    });
+
+    it('should send nothing while no recording added the function', () => {
+      // act & assert
+      expect(() => events.get('test:before:run')?.({}, test)).not.toThrow();
+    });
+
+    it('should tell the plugin which test is running once the recording starts within it', () => {
+      // arrange
+      events.get('test:before:run')?.({}, test);
+      const binding = jest.fn();
+      page.__cypressHarTestStarted = binding;
+
+      // act
+      commands.get('recordHar')?.();
+
+      // assert
+      expect(JSON.parse(binding.mock.calls[0][0] as string)).toMatchObject({
+        titlePath: ['suite', 'test']
+      });
+    });
   });
 
   describe('recordHar', () => {

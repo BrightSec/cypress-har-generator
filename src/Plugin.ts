@@ -10,10 +10,12 @@ import type { NetworkObserverOptions } from './network/NetworkObserverOptions.ts
 import type { Observer } from './network/Observer.ts';
 import type { ObserverFactory } from './network/ObserverFactory.ts';
 import { HarBuilder } from './network/HarBuilder.ts';
+import { HarTests } from './network/HarTests.ts';
 import { NetworkIdleMonitor } from './network/NetworkIdleMonitor.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import { ErrorUtils } from './utils/ErrorUtils.ts';
 import type { Connection } from './cdp/Connection.ts';
+import type { TestStartedSource } from './network/TestStartedSource.ts';
 import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
 import type { NetworkOptions } from './cdp/NetworkOptions.ts';
 import {
@@ -61,9 +63,12 @@ interface Addr {
 export class Plugin {
   private exporter?: HarExporter;
   private networkObservable?: Observer<NetworkRequest>;
+  private testStartedSource?: TestStartedSource;
   private addr?: Addr;
   private _connection?: Connection;
   private supported?: boolean;
+  // kept across recordings, as a spec can record again within a test that started before
+  private readonly tests = new HarTests();
 
   constructor(
     private readonly logger: Logger,
@@ -178,6 +183,8 @@ export class Plugin {
   private async stopObserving(): Promise<void> {
     await this.networkObservable?.unsubscribe();
     delete this.networkObservable;
+    this.testStartedSource?.offTestStarted();
+    delete this.testStartedSource;
   }
 
   private parseElectronSwitches(browser: Cypress.Browser): string[] {
@@ -198,9 +205,11 @@ Please refer to the documentation:
   }
 
   private async buildHar(): Promise<AsyncIterable<string> | undefined> {
-    const har = await this.exporter?.read();
+    const har = await this.exporter?.read(this.tests.timeline());
 
-    return har ? new HarBuilder(har.entries, har.pages).build() : undefined;
+    return har
+      ? new HarBuilder(har.entries, har.pages, har.tests).build()
+      : undefined;
   }
 
   private waitForNetworkIdle(
@@ -222,6 +231,9 @@ Please refer to the documentation:
 
   private async listenNetworkEvents(options: RecordOptions): Promise<void> {
     const network = this._connection?.discoverNetwork(options);
+
+    this.testStartedSource = network;
+    network?.onTestStarted((payload: string) => this.tests.start(payload));
 
     this.networkObservable = this.observerFactory.createNetworkObserver(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

@@ -10,5 +10,7 @@ export const DEFAULT_EXCLUDE_PATHS: readonly string[] = [
 ];
 // written by the `stable` option in place of a start time
 export const STABLE_STARTED_DATE_TIME = new Date(0).toISOString();
+// the function the plugin adds to the pages it records, which the commands call as each test starts
+export const TEST_STARTED_BINDING = '__cypressHarTestStarted';
 export const HARS_FOLDER_KEY = 'hars_folder';
 export const HARS_UPDATE_KEY = 'hars_update';

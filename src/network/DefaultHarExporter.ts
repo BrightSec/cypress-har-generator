@@ -5,6 +5,7 @@ import { StableEntry } from './StableEntry.ts';
 import type { NetworkRequest } from './NetworkRequest.ts';
 import type { ExportedEntry, HarExport, HarExporter } from './HarExporter.ts';
 import { HarPages } from './HarPages.ts';
+import { TestTimeline } from './TestTimeline.ts';
 import { STABLE_STARTED_DATE_TIME } from '../constants.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
@@ -53,7 +54,9 @@ export class DefaultHarExporter implements HarExporter {
     this.buffer = file.createWriteStream({ encoding: 'utf-8' });
   }
 
-  public async read(): Promise<HarExport | undefined> {
+  public async read(
+    tests: TestTimeline = new TestTimeline()
+  ): Promise<HarExport | undefined> {
     await Promise.allSettled(this.pendingWrites);
 
     if (!this.index.length) {
@@ -65,13 +68,17 @@ export class DefaultHarExporter implements HarExporter {
       .slice()
       .sort((a, b) => a.startedAt - b.startedAt);
 
+    const stamp = this.options?.stable
+      ? { startedDateTime: STABLE_STARTED_DATE_TIME }
+      : {};
+    const selected: TestTimeline = tests.select(
+      entries.map(({ startedAt }: Slot): number => startedAt)
+    );
+
     return {
-      pages: this.pages.toArray(
-        this.options?.stable
-          ? { startedDateTime: STABLE_STARTED_DATE_TIME }
-          : {}
-      ),
-      entries: this.readEntries(entries)
+      pages: this.pages.toArray(stamp),
+      tests: selected.toArray(stamp),
+      entries: this.readEntries(entries, selected)
     };
   }
 
@@ -91,8 +98,11 @@ export class DefaultHarExporter implements HarExporter {
     this.buffer.end();
   }
 
-  private async *readEntries(entries: Slot[]): AsyncGenerator<ExportedEntry> {
-    for (const { position, length, loaderId } of entries) {
+  private async *readEntries(
+    entries: Slot[],
+    tests: TestTimeline
+  ): AsyncGenerator<ExportedEntry> {
+    for (const { position, length, loaderId, startedAt } of entries) {
       const { buffer, bytesRead } = await this.file.read(
         Buffer.alloc(length),
         0,
@@ -102,7 +112,8 @@ export class DefaultHarExporter implements HarExporter {
       // the page is known only once every document is written, so it is added as the entry is read
       yield {
         json: buffer.toString('utf-8', 0, bytesRead),
-        pageref: loaderId ? this.pages.idOf(loaderId) : undefined
+        pageref: loaderId ? this.pages.idOf(loaderId) : undefined,
+        testref: tests.idAt(startedAt)
       };
     }
   }

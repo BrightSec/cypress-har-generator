@@ -1,6 +1,7 @@
 import { NetworkRequest } from './NetworkRequest.ts';
 import { DefaultHarExporter } from './DefaultHarExporter.ts';
 import { HarBuilder } from './HarBuilder.ts';
+import { HarTests } from './HarTests.ts';
 import type { Logger } from '../utils/Logger.ts';
 import type { DefaultHarExporterOptions } from './DefaultHarExporterOptions.ts';
 import {
@@ -253,6 +254,104 @@ describe('DefaultHarExporter', () => {
         expect(result.pages?.[0].startedDateTime).toBe(
           '1970-01-01T00:00:00.000Z'
         );
+        sut.end();
+      });
+    });
+
+    describe('tests', () => {
+      const start = (title: string, startedAt: string): string =>
+        JSON.stringify({
+          spec: 'cypress/e2e/a.cy.ts',
+          titlePath: ['suite', title],
+          attempt: 1,
+          startedAt: Date.parse(startedAt)
+        });
+
+      // the transform starts the request to `/<n>` at the n-th of the times
+      const writeAll = async (
+        sut: DefaultHarExporter,
+        count: number
+      ): Promise<void> => {
+        for (let index = 0; index < count; index++) {
+          const url = `https://example.com/${index}`;
+
+          await sut.write(new NetworkRequest(`${index}`, url, url, '1'));
+        }
+      };
+
+      const exporterAt = (
+        startedAt: string[],
+        rest: DefaultHarExporterOptions = {}
+      ): DefaultHarExporter =>
+        new DefaultHarExporter(instance(loggerMock), file, {
+          ...rest,
+          transform: (entry: Entry): Entry => ({
+            ...entry,
+            startedDateTime:
+              startedAt[Number(new URL(entry.request.url).pathname.slice(1))]
+          })
+        });
+
+      it('should list only the tests that sent an entry and give each entry the ID of its test', async () => {
+        // arrange
+        const times = [
+          '2022-04-18T09:09:35.100Z',
+          '2022-04-18T09:09:35.300Z',
+          '2022-04-18T09:09:35.350Z'
+        ];
+        const tests = new HarTests();
+        tests.start(start('first', '2022-04-18T09:09:35.000Z'));
+        tests.start(start('silent', '2022-04-18T09:09:35.200Z'));
+        tests.start(start('third', '2022-04-18T09:09:35.250Z'));
+        const sut = exporterAt(times);
+        await writeAll(sut, times.length);
+        // act
+        const har = await sut.read(tests.timeline());
+        const testrefs: (string | undefined)[] = [];
+        for await (const { testref } of har?.entries ?? []) {
+          testrefs.push(testref);
+        }
+        // assert
+        expect(har?.tests).toEqual([
+          {
+            startedDateTime: '2022-04-18T09:09:35.000Z',
+            id: 'test_1',
+            titlePath: ['suite', 'first'],
+            attempt: 1
+          },
+          {
+            startedDateTime: '2022-04-18T09:09:35.250Z',
+            id: 'test_2',
+            titlePath: ['suite', 'third'],
+            attempt: 1
+          }
+        ]);
+        expect(testrefs).toEqual(['test_1', 'test_2', 'test_2']);
+        sut.end();
+      });
+
+      it('should start the tests at the epoch when stable is set', async () => {
+        // arrange
+        const times = ['2022-04-18T09:09:35.100Z'];
+        const tests = new HarTests();
+        tests.start(start('first', '2022-04-18T09:09:35.000Z'));
+        const sut = exporterAt(times, { stable: true });
+        await writeAll(sut, times.length);
+        // act
+        const har = await sut.read(tests.timeline());
+        // assert
+        expect(har?.tests[0].startedDateTime).toBe('1970-01-01T00:00:00.000Z');
+        sut.end();
+      });
+
+      it('should list no tests when none is given', async () => {
+        // arrange
+        const sut = new DefaultHarExporter(instance(loggerMock), file);
+        await sut.write(networkRequest);
+        // act
+        const har = await sut.read();
+        // assert
+        expect(har?.tests).toEqual([]);
         sut.end();
       });
     });

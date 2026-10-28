@@ -1,6 +1,8 @@
 import type { Network, NetworkEvent } from '../network/Network.ts';
+import type { TestStartedSource } from '../network/TestStartedSource.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type { Logger } from '../utils/Logger.ts';
+import { TEST_STARTED_BINDING } from '../constants.ts';
 import {
   TARGET_OR_BROWSER_CLOSED,
   UNABLE_TO_ATTACH_TO_TARGET
@@ -10,7 +12,7 @@ import type { CDPClient } from './CDPClient.ts';
 import type { EventMessage } from 'chrome-remote-interface';
 import type { Protocol } from 'devtools-protocol';
 
-export class DefaultNetwork implements Network {
+export class DefaultNetwork implements Network, TestStartedSource {
   private readonly DOMAIN = 'Network';
   private readonly ALLOWED_TARGETS = new Set([
     'service_worker',
@@ -28,6 +30,7 @@ export class DefaultNetwork implements Network {
   ]);
 
   private listener?: (event: NetworkEvent) => unknown;
+  private testStartedListener?: (payload: string) => unknown;
   private readonly sessions = new Map<string, string | undefined>();
   private readonly openRequests = new Map<
     Protocol.Network.RequestId,
@@ -44,6 +47,14 @@ export class DefaultNetwork implements Network {
     private readonly options?: NetworkOptions
   ) {}
 
+  public onTestStarted(listener: (payload: string) => unknown): void {
+    this.testStartedListener = listener;
+  }
+
+  public offTestStarted(): void {
+    delete this.testStartedListener;
+  }
+
   public async attachToTargets(
     listener: (event: NetworkEvent) => unknown
   ): Promise<void> {
@@ -54,6 +65,7 @@ export class DefaultNetwork implements Network {
     this.cdp.on('Target.detachedFromTarget', this.detachedFromTargetListener);
     this.cdp.on('Network.requestWillBeSent', this.sessionListener);
     this.cdp.on('Network.webSocketCreated', this.sessionListener);
+    this.cdp.on('Runtime.bindingCalled', this.bindingCalledListener);
     await this.ignoreCertificateError();
     await this.recursivelyAttachToTargets({ type: 'browser' });
   }
@@ -69,6 +81,7 @@ export class DefaultNetwork implements Network {
       );
       this.cdp.off('Network.requestWillBeSent', this.sessionListener);
       this.cdp.off('Network.webSocketCreated', this.sessionListener);
+      this.cdp.off('Runtime.bindingCalled', this.bindingCalledListener);
       delete this.listener;
     }
 
@@ -256,6 +269,10 @@ export class DefaultNetwork implements Network {
       this.enableAutoAttach(true, options.sessionId),
       this.ALLOWED_TARGETS.has(options.type)
         ? this.trackNetworkEvents(options.sessionId)
+        : undefined,
+      // the specs run in a frame of the runner page, so only pages can tell when a test starts
+      options.type === 'page'
+        ? this.addTestBinding(options.sessionId)
         : undefined
     ]);
   }
@@ -274,6 +291,30 @@ export class DefaultNetwork implements Network {
       sessionId
     );
   }
+
+  private async addTestBinding(sessionId?: string): Promise<void> {
+    try {
+      await this.cdp.send(
+        'Runtime.addBinding',
+        { name: TEST_STARTED_BINDING },
+        sessionId
+      );
+    } catch (e) {
+      // a page closing while it is attached cannot be told when its tests start, which only leaves `_testref` out
+      this.logger.debug(
+        `Failed to add the test binding: ${ErrorUtils.isError(e) ? e.message : e}`
+      );
+    }
+  }
+
+  private bindingCalledListener = ({
+    name,
+    payload
+  }: Protocol.Runtime.BindingCalledEvent): void => {
+    if (name === TEST_STARTED_BINDING) {
+      this.testStartedListener?.(payload);
+    }
+  };
 
   private sessionListener = (
     {

@@ -38,12 +38,12 @@ const entries: Entry[] = [
 
 const entriesOf = async function* (
   items: Entry[],
-  pageref?: string
+  refs: Omit<ExportedEntry, 'json'> = {}
 ): AsyncGenerator<ExportedEntry> {
   for (const item of items) {
     yield await Promise.resolve({
       json: HarBuilder.formatEntry(item),
-      pageref
+      ...refs
     });
   }
 };
@@ -98,13 +98,58 @@ describe('HarBuilder', () => {
       ];
       // act
       const result = await read(
-        new HarBuilder(entriesOf(entries, 'page_1'), pages).build()
+        new HarBuilder(entriesOf(entries, { pageref: 'page_1' }), pages).build()
       );
       // assert
       const { log } = JSON.parse(result);
       expect(log.pages).toEqual(pages);
       expect(log.entries).toEqual([{ pageref: 'page_1', ...entries[0] }]);
       expect(Object.keys(log.entries[0])[0]).toBe('pageref');
+    });
+
+    it('should list the tests after the pages and add the test of each entry after its page, as the whole HAR serialized at once would', async () => {
+      // arrange
+      const { name, version, homepage: comment } = pkg;
+      const tests = [
+        {
+          startedDateTime: entries[0].startedDateTime,
+          id: 'test_1',
+          titlePath: ['suite', 'test'],
+          attempt: 2
+        }
+      ];
+      const expected = JSON.stringify(
+        {
+          log: {
+            version: '1.2',
+            pages: [],
+            _tests: tests,
+            creator: { name, version, comment },
+            entries: [{ pageref: 'page_1', _testref: 'test_1', ...entries[0] }]
+          }
+        },
+        null,
+        2
+      );
+      // act
+      const result = await read(
+        new HarBuilder(
+          entriesOf(entries, { pageref: 'page_1', testref: 'test_1' }),
+          [],
+          tests
+        ).build()
+      );
+      // assert
+      expect(result).toBe(expected);
+    });
+
+    it('should leave out the tests when no entry has one', async () => {
+      // act
+      const result = await read(new HarBuilder(entriesOf(entries)).build());
+      // assert
+      const { log } = JSON.parse(result);
+      expect(log).not.toHaveProperty('_tests');
+      expect(log.entries[0]).not.toHaveProperty('_testref');
     });
 
     it('should write the same text as the whole HAR serialized at once when the entries have pages', async () => {
@@ -132,7 +177,7 @@ describe('HarBuilder', () => {
       );
       // act
       const result = await read(
-        new HarBuilder(entriesOf(entries, 'page_1'), pages).build()
+        new HarBuilder(entriesOf(entries, { pageref: 'page_1' }), pages).build()
       );
       // assert
       expect(result).toBe(expected);
