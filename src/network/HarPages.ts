@@ -41,18 +41,18 @@ export class HarPages {
    * The ID of the page holding the document loaded by the given loader.
    */
   public idOf(loaderId: LoaderId): string | undefined {
-    this.refs ??= this.createRefs();
-
-    return this.refs.get(loaderId);
+    return this.getRefs().get(loaderId);
   }
 
   public toArray({
     startedDateTime
   }: { startedDateTime?: string } = {}): Page[] {
-    return this.pageDocuments().map(
+    const refs: Map<LoaderId, string> = this.getRefs();
+
+    return this.pageDocuments(this.findParents()).map(
       ({ loaderId, startedAt, url }: HarDocument): Page => ({
         startedDateTime: startedDateTime ?? new Date(startedAt).toISOString(),
-        id: this.idOf(loaderId) as string,
+        id: refs.get(loaderId) as string,
         // DevTools titles a page with its URL, as the HAR keeps no DOM to read the title from
         title: url,
         pageTimings: {}
@@ -60,64 +60,95 @@ export class HarPages {
     );
   }
 
+  private getRefs(): Map<LoaderId, string> {
+    this.refs ??= this.createRefs();
+
+    return this.refs;
+  }
+
   private createRefs(): Map<LoaderId, string> {
-    const ids = new Map<LoaderId, string>(
-      this.pageDocuments().map(
+    const parents: Map<LoaderId, LoaderId> = this.findParents();
+    const refs = new Map<LoaderId, string>(
+      this.pageDocuments(parents).map(
         ({ loaderId }: HarDocument, index: number): [LoaderId, string] => [
           loaderId,
           `page_${index + 1}`
         ]
       )
     );
-    const refs = new Map<LoaderId, string>();
 
     for (const loaderId of this.documents.keys()) {
-      const id: string | undefined = ids.get(this.pageOf(loaderId));
+      let page: LoaderId = loaderId;
 
-      if (id) {
-        refs.set(loaderId, id);
+      // a parent always sits in a frame above, so the walk ends at a page
+      while (parents.has(page)) {
+        page = parents.get(page) as LoaderId;
       }
+
+      refs.set(loaderId, refs.get(page) as string);
     }
 
     return refs;
   }
 
-  private pageDocuments(): HarDocument[] {
+  private pageDocuments(parents: Map<LoaderId, LoaderId>): HarDocument[] {
     return [...this.documents.values()]
-      .filter(({ loaderId }: HarDocument): boolean => !this.parentOf(loaderId))
+      .filter(({ loaderId }: HarDocument): boolean => !parents.has(loaderId))
       .sort(
         (a: HarDocument, b: HarDocument): number => a.startedAt - b.startedAt
       );
   }
 
-  // follows the parents up, which ends at a page since a parent always sits in a frame above
-  private pageOf(loaderId: LoaderId): LoaderId {
-    const parent: LoaderId | undefined = this.parentOf(loaderId);
+  // the parent of a document is the one of the nearest recorded frame above, which was loaded there when the document started
+  private findParents(): Map<LoaderId, LoaderId> {
+    const byFrame = new Map<Protocol.Page.FrameId, HarDocument[]>();
 
-    return parent ? this.pageOf(parent) : loaderId;
-  }
+    for (const document of this.documents.values()) {
+      const loaded: HarDocument[] | undefined = byFrame.get(document.frameId);
 
-  // the document of the nearest recorded frame above, which was the one loaded there when this document started
-  private parentOf(loaderId: LoaderId): LoaderId | undefined {
-    const { ancestors, startedAt } = this.documents.get(
-      loaderId
-    ) as HarDocument;
-
-    for (const frameId of ancestors) {
-      const loaded: HarDocument[] = [...this.documents.values()]
-        .filter((x: HarDocument): boolean => x.frameId === frameId)
-        .sort(
-          (a: HarDocument, b: HarDocument): number => b.startedAt - a.startedAt
-        );
-      const parent: HarDocument | undefined =
-        loaded.find((x: HarDocument): boolean => x.startedAt <= startedAt) ??
-        loaded.at(-1);
-
-      if (parent) {
-        return parent.loaderId;
+      if (loaded) {
+        loaded.push(document);
+      } else {
+        byFrame.set(document.frameId, [document]);
       }
     }
 
-    return undefined;
+    for (const loaded of byFrame.values()) {
+      loaded.sort(
+        (a: HarDocument, b: HarDocument): number => a.startedAt - b.startedAt
+      );
+    }
+
+    const parents = new Map<LoaderId, LoaderId>();
+
+    for (const { loaderId, ancestors, startedAt } of this.documents.values()) {
+      const loaded: HarDocument[] | undefined = ancestors
+        .map((frameId: Protocol.Page.FrameId) => byFrame.get(frameId))
+        .find(Boolean);
+
+      if (loaded) {
+        parents.set(loaderId, this.loadedAt(loaded, startedAt).loaderId);
+      }
+    }
+
+    return parents;
+  }
+
+  // the last of the documents, sorted by start, that started by the given time, or the first one when none did
+  private loadedAt(loaded: HarDocument[], time: number): HarDocument {
+    let low = 0;
+    let high: number = loaded.length - 1;
+
+    while (low < high) {
+      const middle: number = Math.ceil((low + high) / 2);
+
+      if (loaded[middle].startedAt <= time) {
+        low = middle;
+      } else {
+        high = middle - 1;
+      }
+    }
+
+    return loaded[low];
   }
 }
