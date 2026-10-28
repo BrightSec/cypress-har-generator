@@ -290,6 +290,98 @@ describe('NetworkObserver', () => {
       );
     });
 
+    it.each([
+      {
+        name: 'the navigation of a frame',
+        params: { loaderId: '1', frameId: 'aut' },
+        expected: 1
+      },
+      {
+        name: 'a document loaded by another request',
+        params: { loaderId: '2', frameId: 'aut' },
+        expected: 0
+      },
+      {
+        name: 'a document of a worker',
+        params: { loaderId: '1' },
+        expected: 0
+      },
+      {
+        name: 'a fetch',
+        params: { loaderId: '1', frameId: 'aut', type: 'Fetch' },
+        expected: 0
+      }
+    ])(
+      'should read the frames above the frame of $name $expected time(s)',
+      async ({ params, expected }) => {
+        // arrange
+        when(networkMock.getRequestBody('1')).thenResolve({ postData: '' });
+        when(networkMock.getFrameAncestors('1', 'aut')).thenResolve(['runner']);
+        when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+          await cb({
+            ...requestWillBeSentEvent,
+            params: { ...requestWillBeSentEvent.params, ...params }
+          });
+          await cb(responseReceivedEvent);
+          await cb(loadingFinishedEvent);
+        });
+        // act
+        await sut.subscribe(callback);
+        // assert
+        verify(networkMock.getFrameAncestors('1', 'aut')).times(expected);
+      }
+    );
+
+    it('should give the navigation of a frame the frames above it', async () => {
+      // arrange
+      when(networkMock.getRequestBody('1')).thenResolve({ postData: '' });
+      when(networkMock.getFrameAncestors('1', 'aut')).thenResolve(['runner']);
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            loaderId: '1',
+            frameId: 'aut'
+          }
+        });
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      await expect(
+        (callback.mock.calls[0][0] as NetworkRequest).frameAncestors
+      ).resolves.toEqual(['runner']);
+    });
+
+    it('should record the navigation of a frame when its frames cannot be read', async () => {
+      // arrange
+      when(networkMock.getRequestBody('1')).thenResolve({ postData: '' });
+      when(networkMock.getFrameAncestors('1', 'aut')).thenReject(
+        new Error('No target with given id found')
+      );
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            loaderId: '1',
+            frameId: 'aut'
+          }
+        });
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      // assert
+      await expect(
+        (callback.mock.calls[0][0] as NetworkRequest).frameAncestors
+      ).resolves.toEqual([]);
+    });
+
     it('should add an event source message to the request', async () => {
       // arrange
       when(networkMock.getRequestBody('1')).thenResolve({

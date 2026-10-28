@@ -79,14 +79,14 @@ describe('DefaultHarExporter', () => {
     const readAll = async (
       exporter: DefaultHarExporter
     ): Promise<Entry[] | undefined> => {
-      const entries = await exporter.read();
-      if (!entries) {
+      const har = await exporter.read();
+      if (!har) {
         return undefined;
       }
 
       const result: Entry[] = [];
-      for await (const entry of entries) {
-        result.push(JSON.parse(entry));
+      for await (const { json } of har.entries) {
+        result.push(JSON.parse(json));
       }
 
       return result;
@@ -142,6 +142,119 @@ describe('DefaultHarExporter', () => {
       // assert
       expect(result?.map(x => x.request.url)).toEqual([url, url]);
       sut.end();
+    });
+
+    describe('pages', () => {
+      const navigation = (
+        id: string,
+        url: string,
+        frameId: string,
+        ancestors?: string[]
+      ): NetworkRequest => {
+        const request = new NetworkRequest(
+          id,
+          url,
+          url,
+          id,
+          undefined,
+          frameId
+        );
+
+        request.resourceType = 'Document';
+        request.frameAncestors = ancestors
+          ? Promise.resolve(ancestors)
+          : undefined;
+
+        return request;
+      };
+
+      const readHar = async (sut: DefaultHarExporter) => {
+        const har = await sut.read();
+        const entries: { pageref?: string; url: string }[] = [];
+
+        for await (const { json, pageref } of har?.entries ?? []) {
+          const { pageref: own, request } = JSON.parse(json);
+
+          entries.push({ pageref: pageref ?? own, url: request.url });
+        }
+
+        return { pages: har?.pages, entries };
+      };
+
+      it('should return the pages and the page of each entry, even when the document is written last', async () => {
+        // arrange
+        const sut = new DefaultHarExporter(instance(loggerMock), file);
+        const image = new NetworkRequest(
+          '2',
+          'https://example.com/a.png',
+          'https://example.com/',
+          'doc',
+          undefined,
+          'aut'
+        );
+        await sut.write(image);
+        await sut.write(
+          navigation('doc', 'https://example.com/', 'aut', ['runner'])
+        );
+        // act
+        const result = await readHar(sut);
+        // assert
+        expect(result.pages).toEqual([
+          expect.objectContaining({
+            id: 'page_1',
+            title: 'https://example.com/'
+          })
+        ]);
+        expect(result.entries.map(x => x.pageref)).toEqual([
+          'page_1',
+          'page_1'
+        ]);
+        sut.end();
+      });
+
+      it('should leave out the page of a request sent by a document that is not recorded', async () => {
+        // arrange
+        const sut = new DefaultHarExporter(instance(loggerMock), file);
+        await sut.write(networkRequest);
+        // act
+        const result = await readHar(sut);
+        // assert
+        expect(result.pages).toEqual([]);
+        expect(result.entries.map(x => x.pageref)).toEqual([undefined]);
+        sut.end();
+      });
+
+      it('should keep the page set by the transform', async () => {
+        // arrange
+        const sut = new DefaultHarExporter(instance(loggerMock), file, {
+          transform: (entry: Entry): Entry => ({ ...entry, pageref: 'custom' })
+        });
+        await sut.write(
+          navigation('doc', 'https://example.com/', 'aut', ['runner'])
+        );
+        // act
+        const result = await readHar(sut);
+        // assert
+        expect(result.entries.map(x => x.pageref)).toEqual(['custom']);
+        sut.end();
+      });
+
+      it('should start the pages at the epoch when stable is set', async () => {
+        // arrange
+        const sut = new DefaultHarExporter(instance(loggerMock), file, {
+          stable: true
+        });
+        await sut.write(
+          navigation('doc', 'https://example.com/', 'aut', ['runner'])
+        );
+        // act
+        const result = await readHar(sut);
+        // assert
+        expect(result.pages?.[0].startedDateTime).toBe(
+          '1970-01-01T00:00:00.000Z'
+        );
+        sut.end();
+      });
     });
 
     describe('stable', () => {

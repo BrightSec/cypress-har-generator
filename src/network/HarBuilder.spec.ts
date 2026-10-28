@@ -1,4 +1,5 @@
 import { HarBuilder } from './HarBuilder.ts';
+import type { ExportedEntry } from './HarExporter.ts';
 import type { Entry } from 'har-format';
 import { describe, beforeEach, it, expect } from '@jest/globals';
 
@@ -35,9 +36,15 @@ const entries: Entry[] = [
   }
 ];
 
-const entriesOf = async function* (items: Entry[]): AsyncGenerator<string> {
+const entriesOf = async function* (
+  items: Entry[],
+  pageref?: string
+): AsyncGenerator<ExportedEntry> {
   for (const item of items) {
-    yield await Promise.resolve(HarBuilder.formatEntry(item));
+    yield await Promise.resolve({
+      json: HarBuilder.formatEntry(item),
+      pageref
+    });
   }
 };
 
@@ -77,6 +84,58 @@ describe('HarBuilder', () => {
           }
         }
       });
+    });
+
+    it('should write the pages and add the page to each entry as its first field', async () => {
+      // arrange
+      const pages = [
+        {
+          startedDateTime: '2022-04-18T09:09:35.585Z',
+          id: 'page_1',
+          title: 'https://example.com/',
+          pageTimings: {}
+        }
+      ];
+      // act
+      const result = await read(
+        new HarBuilder(entriesOf(entries, 'page_1'), pages).build()
+      );
+      // assert
+      const { log } = JSON.parse(result);
+      expect(log.pages).toEqual(pages);
+      expect(log.entries).toEqual([{ pageref: 'page_1', ...entries[0] }]);
+      expect(Object.keys(log.entries[0])[0]).toBe('pageref');
+    });
+
+    it('should write the same text as the whole HAR serialized at once when the entries have pages', async () => {
+      // arrange
+      const { name, version, homepage: comment } = pkg;
+      const pages = [
+        {
+          startedDateTime: '2022-04-18T09:09:35.585Z',
+          id: 'page_1',
+          title: 'https://example.com/[]',
+          pageTimings: {}
+        }
+      ];
+      const expected = JSON.stringify(
+        {
+          log: {
+            version: '1.2',
+            pages,
+            creator: { name, version, comment },
+            entries: [{ pageref: 'page_1', ...entries[0] }]
+          }
+        },
+        null,
+        2
+      );
+      // act
+      const result = await read(
+        new HarBuilder(entriesOf(entries, 'page_1'), pages).build()
+      );
+      // assert
+      expect(result).toBe(expected);
     });
 
     it.each([0, 1, 3])(

@@ -8,5 +8,7 @@ export const MAX_NETWORK_IDLE_DURATION = 5000;
 export const DEFAULT_EXCLUDE_PATHS: readonly string[] = [
   '^\\/__(cypress[\\w-]*)?\\/'
 ];
+// written by the `stable` option in place of a start time
+export const STABLE_STARTED_DATE_TIME = new Date(0).toISOString();
 export const HARS_FOLDER_KEY = 'hars_folder';
 export const HARS_UPDATE_KEY = 'hars_update';

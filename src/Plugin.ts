@@ -198,9 +198,9 @@ Please refer to the documentation:
   }
 
   private async buildHar(): Promise<AsyncIterable<string> | undefined> {
-    const entries = await this.exporter?.read();
+    const har = await this.exporter?.read();
 
-    return entries ? new HarBuilder(entries).build() : undefined;
+    return har ? new HarBuilder(har.entries, har.pages).build() : undefined;
   }
 
   private waitForNetworkIdle(

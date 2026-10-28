@@ -665,4 +665,98 @@ describe('DefaultNetwork', () => {
       expect(result).toMatchObject(expected);
     });
   });
+
+  describe('getFrameAncestors', () => {
+    const frameTree = {
+      frame: {
+        id: 'runner',
+        loaderId: '1',
+        url: '',
+        securityOrigin: '',
+        mimeType: ''
+      },
+      childFrames: [
+        {
+          frame: {
+            id: 'reporter',
+            parentId: 'runner',
+            loaderId: '2',
+            url: '',
+            securityOrigin: '',
+            mimeType: ''
+          }
+        },
+        {
+          frame: {
+            id: 'aut',
+            parentId: 'runner',
+            loaderId: '3',
+            url: '',
+            securityOrigin: '',
+            mimeType: ''
+          },
+          childFrames: [
+            {
+              frame: {
+                id: 'iframe',
+                parentId: 'aut',
+                loaderId: '4',
+                url: '',
+                securityOrigin: '',
+                mimeType: ''
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    beforeEach(() => {
+      when(
+        clientMock.send('Page.getFrameTree', undefined, anything() as string)
+      ).thenResolve({ frameTree } as never);
+    });
+
+    it.each([
+      { frameId: 'runner', expected: [] },
+      { frameId: 'aut', expected: ['runner'] },
+      { frameId: 'iframe', expected: ['aut', 'runner'] },
+      { frameId: 'gone', expected: [] }
+    ])(
+      'should return $expected above the $frameId frame',
+      async ({ frameId, expected }) => {
+        // act
+        const result = await sut.getFrameAncestors('1', frameId);
+        // assert
+        expect(result).toEqual(expected);
+      }
+    );
+
+    it('should read the tree of the target that sent the request', async () => {
+      // arrange
+      when(clientMock.on('Network.requestWillBeSent', anyFunction())).thenCall(
+        (_, callback) => callback({ requestId: '1' }, 'session')
+      );
+      await sut.attachToTargets(listener);
+      // act
+      await sut.getFrameAncestors('1', 'aut');
+      // assert
+      verify(clientMock.send('Page.getFrameTree', undefined, 'session')).once();
+    });
+
+    it('should start from the parent of a target that is a frame of another one', async () => {
+      // arrange
+      when(
+        clientMock.send('Page.getFrameTree', undefined, anything() as string)
+      ).thenResolve({
+        frameTree: {
+          frame: { ...frameTree.frame, id: 'oopif', parentId: 'aut' }
+        }
+      } as never);
+      // act
+      const result = await sut.getFrameAncestors('1', 'oopif');
+      // assert
+      expect(result).toEqual(['aut']);
+    });
+  });
 });

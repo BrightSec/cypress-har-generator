@@ -397,7 +397,7 @@ cy.recordHar({ stable: true });
 
 | Field                                              | With `stable: true`        |
 | -------------------------------------------------- | -------------------------- |
-| `startedDateTime`                                  | `1970-01-01T00:00:00.000Z` |
+| `startedDateTime` of the entries and the pages     | `1970-01-01T00:00:00.000Z` |
 | `time`, `timings`                                  | `-1`                       |
 | `time` of WebSocket and server-sent event messages | `-1`                       |
 | `connection`                                       | removed                    |
@@ -500,6 +500,8 @@ export default (entry: Entry): Entry => {
 </details>
 
 It removes the listed headers with the cookies parsed from them, and replaces the listed fields of a JSON body with `***`, at any depth. Since the masked values can differ in length, it also leaves out the sizes measured on the wire, which HAR 1.2 allows with `-1`, and sets `content.size` to the size of the masked body.
+
+The HAR groups the entries by page, as Chrome DevTools exports it: each document the app loads, such as with `cy.visit()` or a link, is a page of `log.pages`, and each entry has the `pageref` of the page whose document sent it. The requests of an iframe belong to the page that holds the iframe, and a popup has pages of its own. A page is titled with its URL and keeps no timings, so `pageTimings` is empty. A request sent by a document loaded before `cy.recordHar()`, or left out of the HAR by the options, has no `pageref`.
 
 ### saveHar
 

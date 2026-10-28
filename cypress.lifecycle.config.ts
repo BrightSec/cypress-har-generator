@@ -103,6 +103,23 @@ export default defineConfig({
               `${path} has Cypress internal requests: ${internal.join(', ')}`
             );
           }
+
+          // the first URL is the document of the spec's page, which every request of the spec was sent from
+          const pages: string[] = log.pages.map(
+            ({ title }: { title: string }) => title
+          );
+          const outside: string[] = log.entries
+            .filter(({ pageref }: { pageref?: string }) => pageref !== 'page_1')
+            .map(({ request }: { request: { url: string } }) => request.url);
+
+          if (
+            pages[0] !== `${config.baseUrl}${expected[0]}` ||
+            outside.length
+          ) {
+            throw new Error(
+              `${path} has the pages ${pages.join(', ')} and entries outside the first one: ${outside.join(', ')}`
+            );
+          }
         }
       });
     }

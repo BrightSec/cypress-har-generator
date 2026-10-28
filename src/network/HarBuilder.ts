@@ -1,11 +1,15 @@
 import pkg from '../../package.json' with { type: 'json' };
-import type { Entry, Har } from 'har-format';
+import type { ExportedEntry } from './HarExporter.ts';
+import type { Entry, Har, Page } from 'har-format';
 
 // An entry sits three levels deep, at `log.entries[i]`.
 const ENTRY_INDENT = ' '.repeat(6);
 
 export class HarBuilder {
-  constructor(private readonly entries: AsyncIterable<string>) {}
+  constructor(
+    private readonly entries: AsyncIterable<ExportedEntry>,
+    private readonly pages: Page[] = []
+  ) {}
 
   // Serializes an entry the way it reads inside the HAR, so `build` writes it as is.
   public static formatEntry(entry: Entry): string {
@@ -18,7 +22,7 @@ export class HarBuilder {
     const har: Har = {
       log: {
         version: '1.2',
-        pages: [],
+        pages: this.pages,
         creator: {
           name,
           version,
@@ -33,8 +37,18 @@ export class HarBuilder {
 
     yield json.slice(0, entriesStart);
 
-    for await (const entry of this.entries) {
-      yield `${separator}\n${ENTRY_INDENT}${entry}`;
+    // the entry is yielded on its own, as joining it with the text around it would copy it
+    for await (const { json: entry, pageref } of this.entries) {
+      yield `${separator}\n${ENTRY_INDENT}`;
+
+      if (pageref === undefined) {
+        yield entry;
+      } else {
+        // HAR 1.2 lists `pageref` first, right after the opening brace of the entry
+        yield `{\n${ENTRY_INDENT}  "pageref": ${JSON.stringify(pageref)},`;
+        yield entry.slice(1);
+      }
+
       separator = ',';
     }
 

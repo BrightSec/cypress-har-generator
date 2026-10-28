@@ -136,6 +136,19 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     entry.setIssueTime(timestamp, wallTime);
     entry.resourceType = type ?? 'Other';
 
+    // queried as the request starts, while the frame is still in the tree
+    if (entry.isNavigation() && !entry.frameAncestors) {
+      entry.frameAncestors = this.network
+        .getFrameAncestors(requestId, entry.frameId)
+        .catch((e: unknown): Protocol.Page.FrameId[] => {
+          this.logger.debug(
+            `Failed to read the frames above ${entry.frameId}: ${e}`
+          );
+
+          return [];
+        });
+    }
+
     this.getExtraInfoBuilder(requestId).addRequest(entry);
 
     this.startRequest(entry);

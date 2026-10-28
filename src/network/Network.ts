@@ -23,6 +23,14 @@ export interface Network {
     requestId: string
   ): Promise<Protocol.Network.GetRequestPostDataResponse>;
 
+  /**
+   * The frames that hold the given frame, from its parent up to the top frame of the target that sent the request.
+   */
+  getFrameAncestors(
+    requestId: string,
+    frameId: Protocol.Page.FrameId
+  ): Promise<Protocol.Page.FrameId[]>;
+
   attachToTargets(listener: (event: NetworkEvent) => unknown): Promise<void>;
 
   detachFromTargets(): Promise<void>;

@@ -110,6 +110,44 @@ export class DefaultNetwork implements Network {
     );
   }
 
+  public async getFrameAncestors(
+    requestId: string,
+    frameId: Protocol.Page.FrameId
+  ): Promise<Protocol.Page.FrameId[]> {
+    const { frameTree }: Protocol.Page.GetFrameTreeResponse =
+      await this.cdp.send(
+        'Page.getFrameTree',
+        undefined,
+        this.sessions.get(requestId)
+      );
+
+    return this.findAncestors(frameTree, frameId) ?? [];
+  }
+
+  // the root of a target's tree has a parent when the target is a frame of another target, such as an out-of-process iframe
+  private findAncestors(
+    { frame, childFrames = [] }: Protocol.Page.FrameTree,
+    frameId: Protocol.Page.FrameId,
+    ancestors: Protocol.Page.FrameId[] = frame.parentId ? [frame.parentId] : []
+  ): Protocol.Page.FrameId[] | undefined {
+    if (frame.id === frameId) {
+      return ancestors;
+    }
+
+    for (const child of childFrames) {
+      const found = this.findAncestors(child, frameId, [
+        frame.id,
+        ...ancestors
+      ]);
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
   private async ignoreCertificateError(): Promise<void> {
     this.cdp.on('Security.certificateError', this.certificateErrorListener);
     try {

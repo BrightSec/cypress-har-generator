@@ -5,7 +5,7 @@ import type { Logger } from './utils/Logger.ts';
 import type { FileManager } from './utils/FileManager.ts';
 import type { Observer } from './network/Observer.ts';
 import type { ObserverFactory } from './network/ObserverFactory.ts';
-import type { HarExporter } from './network/HarExporter.ts';
+import type { HarExport, HarExporter } from './network/HarExporter.ts';
 import type { HarExporterFactory } from './network/HarExporterFactory.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import type { Connection } from './cdp/Connection.ts';
@@ -69,11 +69,12 @@ const useFakeTimers = () => {
     });
 };
 
-const entriesOf = async function* (
-  ...entries: string[]
-): AsyncGenerator<string> {
-  yield* entries;
-};
+const entriesOf = (...entries: string[]): HarExport => ({
+  pages: [],
+  entries: (async function* () {
+    yield* entries.map(json => ({ json }));
+  })()
+});
 
 const entry = {
   startedDateTime: '2022-04-18T09:09:35.585Z',
