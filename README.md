@@ -404,6 +404,100 @@ cy.recordHar({ stable: true });
 
 The entries keep their order by start time, so requests sent at the same time can still swap places between runs. The headers, such as `Date`, and the bodies are kept as the server sent them. It applies after `filter` and `transform`, which still get the real times.
 
+The headers and the bodies often hold values that change on every run too, such as the `Date` header, session cookies, request IDs and the IDs and timestamps in a JSON body. They depend on your app, so leave them out with a `transform`:
+
+```js
+cy.recordHar({ stable: true, transform: '../support/remove-volatile-data.ts' });
+```
+
+Here's what the `remove-volatile-data.ts` module might look like:
+
+```ts
+import type { Entry, PostData } from 'har-format';
+
+// the headers and JSON fields whose values change on every run: add the ones your app sends
+const VOLATILE_HEADERS = new Set([
+  'date',
+  'content-length',
+  'expires',
+  'age',
+  'cookie',
+  'set-cookie',
+  'etag',
+  'x-request-id',
+  'traceparent',
+  'server-timing'
+]);
+const VOLATILE_FIELDS = new Set([
+  'id',
+  'token',
+  'createdAt',
+  'updatedAt',
+  'timestamp'
+]);
+
+const mask = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(mask);
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, x]) => [
+        key,
+        VOLATILE_FIELDS.has(key) ? '***' : mask(x)
+      ])
+    );
+  }
+
+  return value;
+};
+
+const maskJson = (text: string): string => {
+  try {
+    return JSON.stringify(mask(JSON.parse(text)));
+  } catch {
+    // not a JSON body
+    return text;
+  }
+};
+
+const maskBody = (body?: PostData | Entry['response']['content']): void => {
+  if (body?.text && !('encoding' in body && body.encoding === 'base64')) {
+    body.text = maskJson(body.text);
+  }
+};
+
+export default (entry: Entry): Entry => {
+  for (const message of [entry.request, entry.response]) {
+    message.headers = message.headers.filter(
+      ({ name }) => !VOLATILE_HEADERS.has(name.toLowerCase())
+    );
+    // the cookies come from the removed `Cookie` and `Set-Cookie` headers
+    message.cookies = [];
+    // the sizes as sent depend on the values masked here, so they are left out as HAR 1.2 allows
+    message.headersSize = -1;
+    message.bodySize = -1;
+  }
+
+  maskBody(entry.request.postData);
+  maskBody(entry.response.content);
+
+  const { content } = entry.response;
+
+  content.size = Buffer.byteLength(
+    content.text ?? '',
+    content.encoding === 'base64' ? 'base64' : 'utf-8'
+  );
+  delete content.compression;
+  delete entry.response._transferSize;
+
+  return entry;
+};
+```
+
+It removes the listed headers with the cookies parsed from them, and replaces the listed fields of a JSON body with `***`, at any depth. Since the masked values can differ in length, it also leaves out the sizes measured on the wire, which HAR 1.2 allows with `-1`, and sets `content.size` to the size of the masked body.
+
 ### saveHar
 
 Stops recording and saves all requests that have occurred since `recordHar` was run to a HAR file. By default, the file is saved to the root of the project with a file name that includes the current spec's name (e.g. `{specName}.har`).
