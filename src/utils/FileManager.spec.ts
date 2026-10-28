@@ -57,6 +57,31 @@ describe('FileManager', () => {
       expect(result).toEqual(data);
     });
 
+    it('should write the chunks of an async iterable in order', async () => {
+      // arrange
+      const chunks = ['{', '"a": 1', '}'];
+      async function* content(): AsyncGenerator<string> {
+        yield* chunks;
+      }
+      // act
+      await sut.writeFile(path, content());
+      // assert
+      const result = await sut.readFile(path);
+      expect(result).toEqual(chunks.join(''));
+    });
+
+    it('should reject when the async iterable throws', async () => {
+      // arrange
+      async function* content(): AsyncGenerator<string> {
+        yield '{';
+        throw new Error('read failed');
+      }
+      // act & assert
+      await expect(sut.writeFile(path, content())).rejects.toThrow(
+        'read failed'
+      );
+    });
+
     it('should rewrite data in a file if exists', async () => {
       // arrange
       const prevData = 'test';

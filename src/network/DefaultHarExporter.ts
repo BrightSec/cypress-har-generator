@@ -25,6 +25,8 @@ interface Slot {
   startedAt: number;
   // the loader of the document that sent the request, unless the `transform` set the page itself
   loaderId?: string;
+  // the `transform` set the test itself
+  hasTestref?: true;
 }
 
 export class DefaultHarExporter implements HarExporter {
@@ -102,7 +104,13 @@ export class DefaultHarExporter implements HarExporter {
     entries: Slot[],
     tests: TestTimeline
   ): AsyncGenerator<ExportedEntry> {
-    for (const { position, length, loaderId, startedAt } of entries) {
+    for (const {
+      position,
+      length,
+      loaderId,
+      startedAt,
+      hasTestref
+    } of entries) {
       const { buffer, bytesRead } = await this.file.read(
         Buffer.alloc(length),
         0,
@@ -113,7 +121,7 @@ export class DefaultHarExporter implements HarExporter {
       yield {
         json: buffer.toString('utf-8', 0, bytesRead),
         pageref: loaderId ? this.pages.idOf(loaderId) : undefined,
-        testref: tests.idAt(startedAt)
+        testref: hasTestref ? undefined : tests.idAt(startedAt)
       };
     }
   }
@@ -176,7 +184,8 @@ ${stack}`
     const slot: Slot = {
       startedAt,
       ...location,
-      ...('pageref' in result ? {} : { loaderId: networkRequest.loaderId })
+      ...('pageref' in result ? {} : { loaderId: networkRequest.loaderId }),
+      ...('_testref' in result ? { hasTestref: true as const } : {})
     };
 
     this.store(slot, kept, key);

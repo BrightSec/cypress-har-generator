@@ -1,5 +1,6 @@
 /// <reference types="node" preserve="true" />
 import { Logger } from './Logger.ts';
+import { CoalescedChunks } from './CoalescedChunks.ts';
 import {
   access,
   writeFile,
@@ -47,10 +48,13 @@ export class FileManager {
     path: string,
     content: T | AsyncIterable<string>
   ): Promise<void> {
+    // `writeFile` makes a system call for each chunk of an async iterable
     const data =
-      typeof content === 'string' || isAsyncIterable(content)
+      typeof content === 'string'
         ? content
-        : JSON.stringify(content);
+        : isAsyncIterable(content)
+          ? new CoalescedChunks(content)
+          : JSON.stringify(content);
 
     await writeFile(path, data);
   }

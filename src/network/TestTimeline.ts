@@ -1,4 +1,5 @@
 import type { TestStart } from './TestStart.ts';
+import { StartOrder } from './StartOrder.ts';
 
 export interface HarTest {
   startedDateTime: string;
@@ -11,7 +12,11 @@ export interface HarTest {
  * The tests in the order they started, so each entry can tell the test that was running as it started.
  */
 export class TestTimeline {
-  constructor(private readonly starts: readonly TestStart[] = []) {}
+  private readonly starts: StartOrder<TestStart>;
+
+  constructor(starts: Iterable<TestStart> = []) {
+    this.starts = new StartOrder(starts);
+  }
 
   /**
    * The tests that were running at the given times, as the start times of the entries,
@@ -21,7 +26,7 @@ export class TestTimeline {
     const selected = new Set<number>();
 
     for (const time of times) {
-      const index: number = this.indexAt(time);
+      const index: number = this.starts.indexAt(time);
 
       if (index >= 0) {
         selected.add(index);
@@ -29,7 +34,7 @@ export class TestTimeline {
     }
 
     return new TestTimeline(
-      this.starts.filter((_: TestStart, index: number): boolean =>
+      this.starts.items.filter((_: TestStart, index: number): boolean =>
         selected.has(index)
       )
     );
@@ -39,7 +44,7 @@ export class TestTimeline {
    * The ID of the test that was running at the given time: the last one that started by then.
    */
   public idAt(time: number): string | undefined {
-    const index: number = this.indexAt(time);
+    const index: number = this.starts.indexAt(time);
 
     return index >= 0 ? this.idOf(index) : undefined;
   }
@@ -47,7 +52,7 @@ export class TestTimeline {
   public toArray({
     startedDateTime
   }: { startedDateTime?: string } = {}): HarTest[] {
-    return this.starts.map(
+    return this.starts.items.map(
       (
         { titlePath, attempt, startedAt }: TestStart,
         index: number
@@ -62,24 +67,5 @@ export class TestTimeline {
 
   private idOf(index: number): string {
     return `test_${index + 1}`;
-  }
-
-  private indexAt(time: number): number {
-    let low = 0;
-    let high: number = this.starts.length - 1;
-    let found = -1;
-
-    while (low <= high) {
-      const middle: number = Math.floor((low + high) / 2);
-
-      if (this.starts[middle].startedAt <= time) {
-        found = middle;
-        low = middle + 1;
-      } else {
-        high = middle - 1;
-      }
-    }
-
-    return found;
   }
 }

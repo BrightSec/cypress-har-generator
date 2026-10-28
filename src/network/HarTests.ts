@@ -1,12 +1,13 @@
 import type { TestStart } from './TestStart.ts';
 import { TestTimeline } from './TestTimeline.ts';
+import { StartOrder } from './StartOrder.ts';
 
 /**
  * Collects the tests of the current spec from the payloads the pages send as each test starts.
  */
 export class HarTests {
   private spec?: string;
-  private starts: TestStart[] = [];
+  private starts = new StartOrder<TestStart>();
 
   /**
    * Adds a test from the payload the page sends as it starts, ignoring a payload the commands would not send,
@@ -21,18 +22,15 @@ export class HarTests {
 
     if (start.spec !== this.spec) {
       this.spec = start.spec;
-      this.starts = [];
+      this.starts = new StartOrder();
     }
 
-    this.starts.push(start);
     // a test starts after the previous one, unless the clock of the page was set back
-    this.starts.sort(
-      (a: TestStart, b: TestStart): number => a.startedAt - b.startedAt
-    );
+    this.starts.insert(start);
   }
 
   public timeline(): TestTimeline {
-    return new TestTimeline([...this.starts]);
+    return new TestTimeline(this.starts.items);
   }
 
   private parse(payload: string): TestStart | undefined {

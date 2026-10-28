@@ -1,3 +1,4 @@
+import { StartOrder } from './StartOrder.ts';
 import type { Page } from 'har-format';
 import type { Protocol } from 'devtools-protocol';
 
@@ -101,28 +102,24 @@ export class HarPages {
 
   // the parent of a document is the one of the nearest recorded frame above, which was loaded there when the document started
   private findParents(): Map<LoaderId, LoaderId> {
-    const byFrame = new Map<Protocol.Page.FrameId, HarDocument[]>();
+    const byFrame = new Map<Protocol.Page.FrameId, StartOrder<HarDocument>>();
 
     for (const document of this.documents.values()) {
-      const loaded: HarDocument[] | undefined = byFrame.get(document.frameId);
+      const loaded: StartOrder<HarDocument> | undefined = byFrame.get(
+        document.frameId
+      );
 
       if (loaded) {
-        loaded.push(document);
+        loaded.insert(document);
       } else {
-        byFrame.set(document.frameId, [document]);
+        byFrame.set(document.frameId, new StartOrder([document]));
       }
-    }
-
-    for (const loaded of byFrame.values()) {
-      loaded.sort(
-        (a: HarDocument, b: HarDocument): number => a.startedAt - b.startedAt
-      );
     }
 
     const parents = new Map<LoaderId, LoaderId>();
 
     for (const { loaderId, ancestors, startedAt } of this.documents.values()) {
-      const loaded: HarDocument[] | undefined = ancestors
+      const loaded: StartOrder<HarDocument> | undefined = ancestors
         .map((frameId: Protocol.Page.FrameId) => byFrame.get(frameId))
         .find(Boolean);
 
@@ -134,21 +131,8 @@ export class HarPages {
     return parents;
   }
 
-  // the last of the documents, sorted by start, that started by the given time, or the first one when none did
-  private loadedAt(loaded: HarDocument[], time: number): HarDocument {
-    let low = 0;
-    let high: number = loaded.length - 1;
-
-    while (low < high) {
-      const middle: number = Math.ceil((low + high) / 2);
-
-      if (loaded[middle].startedAt <= time) {
-        low = middle;
-      } else {
-        high = middle - 1;
-      }
-    }
-
-    return loaded[low];
+  // the last of the documents that started by the given time, or the first one when none did
+  private loadedAt(loaded: StartOrder<HarDocument>, time: number): HarDocument {
+    return loaded.items[Math.max(loaded.indexAt(time), 0)];
   }
 }
