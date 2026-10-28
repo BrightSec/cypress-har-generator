@@ -30,14 +30,20 @@ export class DefaultHarExporterFactory implements HarExporterFactory {
   private async createSettings({
     filter,
     transform,
-    rootDir
+    rootDir,
+    dedupe = false
   }: HarExporterOptions) {
+    if (typeof dedupe !== 'boolean') {
+      throw new TypeError('The `dedupe` option must be a boolean.');
+    }
+
     const [preProcessor, postProcessor]: (Filter | Transformer | undefined)[] =
       await Promise.all(
         [filter, transform].map(path => this.loadCustomProcessor(path, rootDir))
       );
 
     return {
+      dedupe,
       filter: preProcessor,
       transform: postProcessor,
       transformPath: transform

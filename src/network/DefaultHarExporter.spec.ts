@@ -144,6 +144,154 @@ describe('DefaultHarExporter', () => {
       sut.end();
     });
 
+    describe('dedupe', () => {
+      const url = 'https://example.com/api';
+      const at = (ms: number): string => new Date(1e12 + ms).toISOString();
+
+      // each request gets the given start time, a comment to tell it apart and, optionally, its body
+      const createExporter = (
+        requests: Record<
+          string,
+          { startedAt: number; method?: string; body?: string; ws?: boolean }
+        >,
+        { dedupe }: { dedupe?: boolean } = { dedupe: true }
+      ) =>
+        new DefaultHarExporter(instance(loggerMock), file, {
+          dedupe,
+          transform: (entry: Entry): Entry => {
+            const id: string = new URL(entry.request.url).pathname.slice(1);
+            const { startedAt, method, body, ws } = requests[id];
+
+            return {
+              ...entry,
+              startedDateTime: at(startedAt),
+              comment: id,
+              request: {
+                ...entry.request,
+                url,
+                method: method ?? 'GET',
+                ...(body
+                  ? { postData: { mimeType: 'application/json', text: body } }
+                  : {})
+              },
+              ...(ws
+                ? {
+                    _webSocketMessages: [
+                      { type: 'receive', time: startedAt, opcode: 1, data: id }
+                    ]
+                  }
+                : {})
+            };
+          }
+        });
+
+      const request = (id: string): NetworkRequest =>
+        new NetworkRequest(
+          id,
+          `https://example.com/${id}`,
+          'https://example.com/',
+          '1'
+        );
+
+      const writeAll = async (sut: DefaultHarExporter, ids: string[]) => {
+        for (const id of ids) {
+          await sut.write(request(id));
+        }
+      };
+
+      it('should keep the first of the repeated requests', async () => {
+        // arrange
+        const sut = createExporter({
+          first: { startedAt: 0 },
+          second: { startedAt: 1 },
+          third: { startedAt: 2 }
+        });
+        await writeAll(sut, ['first', 'second', 'third']);
+        // act
+        const result = await readAll(sut);
+        // assert
+        expect(result?.map(x => x.comment)).toEqual(['first']);
+        sut.end();
+      });
+
+      it('should keep the repeat that started first when it is written last', async () => {
+        // arrange
+        const sut = createExporter({
+          later: { startedAt: 5 },
+          earlier: { startedAt: 1 }
+        });
+        await writeAll(sut, ['later', 'earlier']);
+        // act
+        const result = await readAll(sut);
+        // assert
+        expect(result?.map(x => x.comment)).toEqual(['earlier']);
+        sut.end();
+      });
+
+      it('should keep the repeat that started first when both are written at once', async () => {
+        // arrange
+        const sut = createExporter({
+          later: { startedAt: 5 },
+          earlier: { startedAt: 1 }
+        });
+        await Promise.all(
+          ['later', 'earlier'].map(id => sut.write(request(id)))
+        );
+        // act
+        const result = await readAll(sut);
+        // assert
+        expect(result?.map(x => x.comment)).toEqual(['earlier']);
+        sut.end();
+      });
+
+      it('should keep the requests that differ in method or body', async () => {
+        // arrange
+        const sut = createExporter({
+          get: { startedAt: 0 },
+          post: { startedAt: 1, method: 'POST', body: '{"a":1}' },
+          other: { startedAt: 2, method: 'POST', body: '{"a":2}' },
+          repeat: { startedAt: 3, method: 'POST', body: '{"a":1}' }
+        });
+        await writeAll(sut, ['get', 'post', 'other', 'repeat']);
+        // act
+        const result = await readAll(sut);
+        // assert
+        expect(result?.map(x => x.comment)).toEqual(['get', 'post', 'other']);
+        sut.end();
+      });
+
+      it('should keep every WebSocket entry with frames', async () => {
+        // arrange
+        const sut = createExporter({
+          first: { startedAt: 0, ws: true },
+          second: { startedAt: 1, ws: true }
+        });
+        await writeAll(sut, ['first', 'second']);
+        // act
+        const result = await readAll(sut);
+        // assert
+        expect(result?.map(x => x.comment)).toEqual(['first', 'second']);
+        sut.end();
+      });
+
+      it.each([false, undefined])(
+        'should keep the repeated requests when dedupe is %p',
+        async dedupe => {
+          // arrange
+          const sut = createExporter(
+            { first: { startedAt: 0 }, second: { startedAt: 1 } },
+            { dedupe }
+          );
+          await writeAll(sut, ['first', 'second']);
+          // act
+          const result = await readAll(sut);
+          // assert
+          expect(result?.map(x => x.comment)).toEqual(['first', 'second']);
+          sut.end();
+        }
+      );
+    });
+
     it('should wait for the entries being written', async () => {
       // arrange
       let flush: (() => void) | undefined;

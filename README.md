@@ -381,6 +381,14 @@ cy.recordHar({
 });
 ```
 
+To keep one entry for each request that the page sends again and again, such as a poll, set `dedupe` to `true`. Requests with the same method, URL and body count as one, and the HAR keeps the one that started first. This keeps a HAR fed to a scanner small, without changing which requests it covers:
+
+```js
+cy.recordHar({ dedupe: true });
+```
+
+The check applies after `filter` and `transform`, so it compares the entries as they are saved. Headers are not compared, since they often differ only in tokens or cookies. WebSocket and server-sent event entries with messages are always kept.
+
 ### saveHar
 
 Stops recording and saves all requests that have occurred since `recordHar` was run to a HAR file. By default, the file is saved to the root of the project with a file name that includes the current spec's name (e.g. `{specName}.har`).

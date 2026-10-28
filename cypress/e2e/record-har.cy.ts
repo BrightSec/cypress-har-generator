@@ -207,6 +207,44 @@ describe('Record HAR', () => {
       });
   });
 
+  it('keeps one entry for each repeated request with dedupe', () => {
+    const post = (args: number[]) =>
+      cy.window().then(win =>
+        win.fetch('/api/math', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'sum', args })
+        })
+      );
+
+    cy.recordHar({ dedupe: true });
+
+    for (let i = 0; i < 3; i++) {
+      cy.window().then(win => win.fetch('/api/products'));
+    }
+    post([1, 2]);
+    post([3, 4]);
+    post([1, 2]);
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .then((entries: Entry[]) =>
+        entries
+          .filter(({ request }) => /\/api\/(products|math)$/.test(request.url))
+          .map(
+            ({ request }) =>
+              `${request.method} ${new URL(request.url).pathname} ${request.postData?.text ?? ''}`
+          )
+      )
+      .should('deep.equal', [
+        'GET /api/products ',
+        'POST /api/math {"op":"sum","args":[1,2]}',
+        'POST /api/math {"op":"sum","args":[3,4]}'
+      ]);
+  });
+
   it('excludes a request by the status code', () => {
     cy.recordHar({ excludeStatusCodes: [500] });
 

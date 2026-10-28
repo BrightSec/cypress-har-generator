@@ -15,6 +15,12 @@ import type { WriteStream } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
 import { format } from 'node:util';
 
+interface Slot {
+  position: number;
+  length: number;
+  startedAt: number;
+}
+
 export class DefaultHarExporter implements HarExporter {
   private get filter(): Filter | undefined {
     return this.options?.filter;
@@ -27,11 +33,9 @@ export class DefaultHarExporter implements HarExporter {
   private readonly buffer: WriteStream;
   private readonly pendingWrites = new Set<Promise<void>>();
   // Where each entry is in the file, so the HAR is built by reading one entry at a time.
-  private readonly index: {
-    position: number;
-    length: number;
-    startedAt: number;
-  }[] = [];
+  private readonly index: Slot[] = [];
+  // where in `index` each request written so far is, when `dedupe` is set
+  private readonly slots = new Map<string, number>();
   private size = 0;
   private invalidTransformResultReported = false;
 
@@ -129,22 +133,78 @@ ${stack}`
 
     const result = await this.transformEntry(entry);
 
-    if (this.buffer.writable && result) {
-      const json = HarBuilder.formatEntry(result);
-      const length = Buffer.byteLength(json);
-      // the stream appends the chunks in the order they are written
-      const position = this.size;
-
-      this.size += length;
-      await new Promise<void>((resolve, reject) =>
-        this.buffer.write(json, e => (e ? reject(e) : resolve()))
-      );
-      this.index.push({
-        position,
-        length,
-        startedAt: Date.parse(result.startedDateTime)
-      });
+    if (!this.buffer.writable || !result) {
+      return;
     }
+
+    const startedAt = Date.parse(result.startedDateTime);
+    const key: string | undefined = this.dedupeKeyOf(result);
+    const kept: number | undefined = key ? this.slots.get(key) : undefined;
+
+    // requests finish in any order, so a request that started earlier can be written after its repeat
+    if (kept !== undefined && this.index[kept].startedAt <= startedAt) {
+      return;
+    }
+
+    // the slot is set before awaiting the write, so a repeat finishing meanwhile sees where this entry is
+    const { written, ...location } = this.append(result);
+    const slot: Slot = { startedAt, ...location };
+
+    if (kept !== undefined) {
+      this.index[kept] = slot;
+    } else {
+      this.index.push(slot);
+
+      if (key) {
+        this.slots.set(key, this.index.length - 1);
+      }
+    }
+
+    await written;
+  }
+
+  private append(
+    entry: Entry
+  ): Pick<Slot, 'position' | 'length'> & { written: Promise<void> } {
+    const json = HarBuilder.formatEntry(entry);
+    const length = Buffer.byteLength(json);
+    // the stream appends the chunks in the order they are written
+    const position = this.size;
+
+    this.size += length;
+
+    return {
+      position,
+      length,
+      written: new Promise<void>((resolve, reject) =>
+        this.buffer.write(json, e => (e ? reject(e) : resolve()))
+      )
+    };
+  }
+
+  private dedupeKeyOf({
+    request,
+    _webSocketMessages,
+    _eventSourceMessages
+  }: Entry): string | undefined {
+    const hasMessages: boolean = [
+      _webSocketMessages,
+      _eventSourceMessages
+    ].some(
+      (messages: unknown): boolean =>
+        Array.isArray(messages) && messages.length > 0
+    );
+
+    if (!this.options?.dedupe || hasMessages) {
+      return undefined;
+    }
+
+    return JSON.stringify([
+      request.method,
+      request.url,
+      request.postData?.mimeType,
+      request.postData?.text
+    ]);
   }
 
   private warnAboutInvalidTransformResult(result: unknown): void {

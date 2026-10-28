@@ -7,4 +7,5 @@ export interface DefaultHarExporterOptions {
   filter?: Filter;
   transform?: Transformer;
   transformPath?: string;
+  dedupe?: boolean;
 }
