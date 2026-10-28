@@ -31,9 +31,9 @@ export class DefaultHarExporterFactory implements HarExporterFactory {
     filter,
     transform,
     rootDir,
-    dedupe
+    dedupe = false
   }: HarExporterOptions) {
-    if (dedupe !== undefined && typeof dedupe !== 'boolean') {
+    if (typeof dedupe !== 'boolean') {
       throw new TypeError('The `dedupe` option must be a boolean.');
     }
 
@@ -43,10 +43,10 @@ export class DefaultHarExporterFactory implements HarExporterFactory {
       );
 
     return {
+      dedupe,
       filter: preProcessor,
       transform: postProcessor,
-      transformPath: transform,
-      dedupe
+      transformPath: transform
     } as DefaultHarExporterOptions;
   }
 

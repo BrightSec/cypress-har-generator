@@ -95,14 +95,34 @@ describe('DefaultHarExporterFactory', () => {
       expect(result).toBeInstanceOf(DefaultHarExporter);
     });
 
+    it.each([
+      { dedupe: undefined, expected: false },
+      { dedupe: false, expected: false },
+      { dedupe: true, expected: true }
+    ])(
+      'should create a HarExporter with dedupe $expected when dedupe is $dedupe',
+      async ({ dedupe, expected }) => {
+        // arrange
+        when(fileManagerMock.createTmpFile()).thenResolve(
+          resolvableInstance(fileMock)
+        );
+
+        // act
+        const result = await factory.create({ dedupe, rootDir: '/root' });
+
+        // assert
+        expect(result).toHaveProperty('options.dedupe', expected);
+      }
+    );
+
     it.each([1, 'true', null])(
       'should throw a TypeError when dedupe is %j',
       async dedupe => {
         // act
         const act = () =>
           factory.create({
-            rootDir: '/',
-            dedupe: dedupe as unknown as boolean
+            dedupe: dedupe as unknown as boolean,
+            rootDir: '/'
           });
 
         // assert

@@ -34,8 +34,8 @@ export class DefaultHarExporter implements HarExporter {
   private readonly pendingWrites = new Set<Promise<void>>();
   // Where each entry is in the file, so the HAR is built by reading one entry at a time.
   private readonly index: Slot[] = [];
-  // the slot of each request written so far, when `dedupe` is set
-  private readonly slots = new Map<string, Slot>();
+  // where in `index` each request written so far is, when `dedupe` is set
+  private readonly slots = new Map<string, number>();
   private size = 0;
   private invalidTransformResultReported = false;
 
@@ -139,25 +139,24 @@ ${stack}`
 
     const startedAt = Date.parse(result.startedDateTime);
     const key: string | undefined = this.dedupeKeyOf(result);
-    const slot: Slot | undefined = key ? this.slots.get(key) : undefined;
+    const kept: number | undefined = key ? this.slots.get(key) : undefined;
 
     // requests finish in any order, so a request that started earlier can be written after its repeat
-    if (slot && slot.startedAt <= startedAt) {
+    if (kept !== undefined && this.index[kept].startedAt <= startedAt) {
       return;
     }
 
     // the slot is set before awaiting the write, so a repeat finishing meanwhile sees where this entry is
     const { written, ...location } = this.append(result);
+    const slot: Slot = { startedAt, ...location };
 
-    if (slot) {
-      Object.assign(slot, location, { startedAt });
+    if (kept !== undefined) {
+      this.index[kept] = slot;
     } else {
-      const added: Slot = { ...location, startedAt };
-
-      this.index.push(added);
+      this.index.push(slot);
 
       if (key) {
-        this.slots.set(key, added);
+        this.slots.set(key, this.index.length - 1);
       }
     }
 
