@@ -17,6 +17,7 @@ describe('commands', () => {
     Object.assign(globalThis, {
       Cypress: {
         spec: { absolute: '/project/cypress/e2e/spec.cy.ts' },
+        config: () => undefined,
         Commands: {
           add: (name: string, fn: Command) => commands.set(name, fn)
         }
