@@ -10,6 +10,7 @@ import {
 } from './messages.ts';
 import type { Connection } from './Connection.ts';
 import type { Network } from '../network/Network.ts';
+import type { TestStartedSource } from '../network/TestStartedSource.ts';
 import { DefaultNetwork } from './DefaultNetwork.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type { NetworkOptions } from './NetworkOptions.ts';
@@ -18,7 +19,7 @@ import CDP, { Version } from 'chrome-remote-interface';
 import type { Options } from 'chrome-remote-interface';
 
 export class CDPConnection implements Connection {
-  private _network?: Network;
+  private _network?: Network & TestStartedSource;
   private _cdp?: CDPClient;
 
   get cdp() {
@@ -69,7 +70,9 @@ export class CDPConnection implements Connection {
     }
   }
 
-  public discoverNetwork(options?: NetworkOptions): Network {
+  public discoverNetwork(
+    options?: NetworkOptions
+  ): Network & TestStartedSource {
     if (!this.cdp) {
       throw new Error(CONNECTION_NOT_ESTABLISHED);
     }

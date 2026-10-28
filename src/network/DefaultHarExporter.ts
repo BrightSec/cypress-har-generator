@@ -5,7 +5,7 @@ import { StableEntry } from './StableEntry.ts';
 import type { NetworkRequest } from './NetworkRequest.ts';
 import type { ExportedEntry, HarExport, HarExporter } from './HarExporter.ts';
 import { HarPages } from './HarPages.ts';
-import { HarTests } from './HarTests.ts';
+import { TestTimeline } from './TestTimeline.ts';
 import { STABLE_STARTED_DATE_TIME } from '../constants.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
@@ -55,7 +55,7 @@ export class DefaultHarExporter implements HarExporter {
   }
 
   public async read(
-    tests: HarTests = new HarTests()
+    tests: TestTimeline = new TestTimeline()
   ): Promise<HarExport | undefined> {
     await Promise.allSettled(this.pendingWrites);
 
@@ -71,7 +71,7 @@ export class DefaultHarExporter implements HarExporter {
     const stamp = this.options?.stable
       ? { startedDateTime: STABLE_STARTED_DATE_TIME }
       : {};
-    const selected: HarTests = tests.select(
+    const selected: TestTimeline = tests.select(
       entries.map(({ startedAt }: Slot): number => startedAt)
     );
 
@@ -100,7 +100,7 @@ export class DefaultHarExporter implements HarExporter {
 
   private async *readEntries(
     entries: Slot[],
-    tests: HarTests
+    tests: TestTimeline
   ): AsyncGenerator<ExportedEntry> {
     for (const { position, length, loaderId, startedAt } of entries) {
       const { buffer, bytesRead } = await this.file.read(

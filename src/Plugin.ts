@@ -15,7 +15,7 @@ import { NetworkIdleMonitor } from './network/NetworkIdleMonitor.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import { ErrorUtils } from './utils/ErrorUtils.ts';
 import type { Connection } from './cdp/Connection.ts';
-import type { Network } from './network/Network.ts';
+import type { TestStartedSource } from './network/TestStartedSource.ts';
 import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
 import type { NetworkOptions } from './cdp/NetworkOptions.ts';
 import {
@@ -63,7 +63,7 @@ interface Addr {
 export class Plugin {
   private exporter?: HarExporter;
   private networkObservable?: Observer<NetworkRequest>;
-  private network?: Network;
+  private testStartedSource?: TestStartedSource;
   private addr?: Addr;
   private _connection?: Connection;
   private supported?: boolean;
@@ -183,8 +183,8 @@ export class Plugin {
   private async stopObserving(): Promise<void> {
     await this.networkObservable?.unsubscribe();
     delete this.networkObservable;
-    this.network?.offTestStarted();
-    delete this.network;
+    this.testStartedSource?.offTestStarted();
+    delete this.testStartedSource;
   }
 
   private parseElectronSwitches(browser: Cypress.Browser): string[] {
@@ -205,7 +205,7 @@ Please refer to the documentation:
   }
 
   private async buildHar(): Promise<AsyncIterable<string> | undefined> {
-    const har = await this.exporter?.read(this.tests);
+    const har = await this.exporter?.read(this.tests.timeline());
 
     return har
       ? new HarBuilder(har.entries, har.pages, har.tests).build()
@@ -230,12 +230,14 @@ Please refer to the documentation:
   }
 
   private async listenNetworkEvents(options: RecordOptions): Promise<void> {
-    this.network = this._connection?.discoverNetwork(options);
-    this.network?.onTestStarted((payload: string) => this.tests.start(payload));
+    const network = this._connection?.discoverNetwork(options);
+
+    this.testStartedSource = network;
+    network?.onTestStarted((payload: string) => this.tests.start(payload));
 
     this.networkObservable = this.observerFactory.createNetworkObserver(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.network!,
+      network!,
       options
     );
 

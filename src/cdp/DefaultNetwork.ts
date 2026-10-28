@@ -1,4 +1,5 @@
 import type { Network, NetworkEvent } from '../network/Network.ts';
+import type { TestStartedSource } from '../network/TestStartedSource.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { TEST_STARTED_BINDING } from '../constants.ts';
@@ -11,7 +12,7 @@ import type { CDPClient } from './CDPClient.ts';
 import type { EventMessage } from 'chrome-remote-interface';
 import type { Protocol } from 'devtools-protocol';
 
-export class DefaultNetwork implements Network {
+export class DefaultNetwork implements Network, TestStartedSource {
   private readonly DOMAIN = 'Network';
   private readonly ALLOWED_TARGETS = new Set([
     'service_worker',

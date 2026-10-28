@@ -1,5 +1,5 @@
 import type { NetworkRequest } from './NetworkRequest.ts';
-import type { HarTest, HarTests } from './HarTests.ts';
+import type { HarTest, TestTimeline } from './TestTimeline.ts';
 import type { Page } from 'har-format';
 
 export interface ExportedEntry {
@@ -16,7 +16,7 @@ export interface HarExport {
 }
 
 export interface HarExporter {
-  read(tests?: HarTests): Promise<HarExport | undefined>;
+  read(tests?: TestTimeline): Promise<HarExport | undefined>;
 
   write(networkRequest: NetworkRequest): Promise<void>;
 

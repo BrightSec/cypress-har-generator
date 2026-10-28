@@ -1,6 +1,6 @@
 import pkg from '../../package.json' with { type: 'json' };
 import type { ExportedEntry } from './HarExporter.ts';
-import type { HarTest } from './HarTests.ts';
+import type { HarTest } from './TestTimeline.ts';
 import type { Entry, Har, Page } from 'har-format';
 
 // An entry sits three levels deep, at `log.entries[i]`.

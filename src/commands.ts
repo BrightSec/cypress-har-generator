@@ -5,7 +5,7 @@ import {
   HARS_FOLDER_KEY,
   TEST_STARTED_BINDING
 } from './constants.ts';
-import type { TestStart } from './network/HarTests.ts';
+import type { TestStart } from './network/TestStart.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { HarRouter } from './replay/HarRouter.ts';
 import { ReplayResponse } from './replay/ReplayResponse.ts';

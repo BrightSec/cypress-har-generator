@@ -10,6 +10,7 @@ import type { HarExporterFactory } from './network/HarExporterFactory.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import type { Connection } from './cdp/Connection.ts';
 import type { Network } from './network/Network.ts';
+import type { TestStartedSource } from './network/TestStartedSource.ts';
 import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
 import {
   anyFunction,
@@ -126,7 +127,7 @@ describe('Plugin', () => {
   const harExporterFactoryMock = mock<HarExporterFactory>();
   const harExporterMock = mock<HarExporter>();
   const connectionMock = mock<Connection>();
-  const networkMock = mock<Network>();
+  const networkMock = mock<Network & TestStartedSource>();
   const processEnv = process.env;
 
   let plugin!: Plugin;
@@ -158,7 +159,7 @@ describe('Plugin', () => {
       | Logger
       | FileManager
       | Connection
-      | Network
+      | (Network & TestStartedSource)
       | ConnectionFactory
       | ObserverFactory
       | Observer<NetworkRequest>

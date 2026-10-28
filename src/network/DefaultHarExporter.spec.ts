@@ -306,7 +306,7 @@ describe('DefaultHarExporter', () => {
         const sut = exporterAt(times);
         await writeAll(sut, times.length);
         // act
-        const har = await sut.read(tests);
+        const har = await sut.read(tests.timeline());
         const testrefs: (string | undefined)[] = [];
         for await (const { testref } of har?.entries ?? []) {
           testrefs.push(testref);
@@ -338,7 +338,7 @@ describe('DefaultHarExporter', () => {
         const sut = exporterAt(times, { stable: true });
         await writeAll(sut, times.length);
         // act
-        const har = await sut.read(tests);
+        const har = await sut.read(tests.timeline());
         // assert
         expect(har?.tests[0].startedDateTime).toBe('1970-01-01T00:00:00.000Z');
         sut.end();
