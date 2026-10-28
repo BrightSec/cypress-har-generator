@@ -320,7 +320,9 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read()).thenResolve(JSON.stringify(entry));
+      when(harExporterMock.read()).thenResolve(
+        entriesOf(HarBuilder.formatEntry(entry as Entry))
+      );
       // act
       await plugin.saveHar({
         fileName: options.fileName,
