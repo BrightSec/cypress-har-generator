@@ -21,11 +21,13 @@ describe('commands', () => {
           name: 'spec.cy.ts',
           absolute: '/project/cypress/e2e/spec.cy.ts'
         },
+        minimatch: (url: string, pattern: string) =>
+          pattern === '**/other/**' ? url.includes('/other/') : false,
         Commands: {
           add: (name: string, fn: Command) => commands.set(name, fn)
         }
       },
-      cy: { task, intercept }
+      cy: { task, intercept, wrap: jest.fn() }
     });
 
     await import('./commands.ts');
@@ -95,15 +97,17 @@ describe('commands', () => {
       task.mockReturnValue({
         then: (callback: (x: unknown) => unknown) => callback(result)
       });
+      const calls: number = intercept.mock.calls.length;
       commands.get('replayHar')?.(...args);
 
+      type Route = [unknown, unknown];
+      const routes: Route[] = intercept.mock.calls.slice(calls) as Route[];
+      const isHandler = ([, x]: Route): boolean => typeof x === 'function';
       const [matcher, handler]: [unknown, (req: unknown) => void] =
-        (intercept.mock.calls.at(-1) ?? []) as [
-          unknown,
-          (req: unknown) => void
-        ];
+        (routes.find(isHandler) ?? []) as [unknown, (req: unknown) => void];
+      const staticRoutes: Route[] = routes.filter(x => !isHandler(x));
 
-      return { matcher, handler };
+      return { matcher, handler, staticRoutes };
     };
 
     const createRequest = (requestUrl: string, resourceType = 'fetch') => ({
@@ -125,7 +129,9 @@ describe('commands', () => {
       replay('example.har');
 
       // assert
-      expect(task).toHaveBeenCalledWith('readHar', 'example.har');
+      expect(task).toHaveBeenCalledWith('readHar', 'example.har', {
+        log: false
+      });
     });
 
     it('should read the HAR of the spec without a path', () => {
@@ -133,10 +139,11 @@ describe('commands', () => {
       replay();
 
       // assert
-      expect(task).toHaveBeenCalledWith('replaySpecHar', {
-        name: 'spec.cy.ts',
-        absolute: '/project/cypress/e2e/spec.cy.ts'
-      });
+      expect(task).toHaveBeenCalledWith(
+        'replaySpecHar',
+        { name: 'spec.cy.ts', absolute: '/project/cypress/e2e/spec.cy.ts' },
+        { log: false }
+      );
     });
 
     it('should take the options without a path', () => {
@@ -148,6 +155,11 @@ describe('commands', () => {
     });
 
     it('should not intercept while the spec records its HAR', () => {
+      // arrange
+      Object.assign(Cypress.spec, {
+        absolute: '/project/cypress/e2e/record.cy.ts'
+      });
+
       // act
       replayEntries(null);
 
@@ -205,6 +217,66 @@ describe('commands', () => {
       // assert
       expect(req.reply).not.toHaveBeenCalled();
       expect(req.destroy).not.toHaveBeenCalled();
+    });
+
+    it('should serve a GET that always got the same response with a static route left out of the Command Log', () => {
+      // act
+      const { staticRoutes } = replay('example.har');
+
+      // assert
+      expect(staticRoutes).toEqual([
+        [
+          { method: 'GET', url: /^https:\/\/example\.com\/api(#.*)?$/ },
+          { statusCode: 200, headers: {}, body: 'ok', log: false }
+        ]
+      ]);
+    });
+
+    it.each([
+      {
+        name: 'a POST',
+        entries: [
+          {
+            ...entries[0],
+            request: { method: 'POST', url, postData: { text: '{}' } }
+          }
+        ]
+      },
+      { name: 'a GET with different responses', entries: twice },
+      {
+        name: 'a page',
+        entries: [{ ...entries[0], _resourceType: 'Document' }]
+      }
+    ])('should serve $name through the function handler only', x => {
+      // act
+      const { staticRoutes } = replayEntries(x.entries, 'example.har');
+
+      // assert
+      expect(staticRoutes).toEqual([]);
+    });
+
+    it('should not add a static route outside the given URL', () => {
+      // act
+      const { staticRoutes } = replay('example.har', { url: '**/other/**' });
+
+      // assert
+      expect(staticRoutes).toEqual([]);
+    });
+
+    it('should not read the HAR of the spec again in the next test', () => {
+      // arrange
+      Object.assign(Cypress.spec, {
+        absolute: '/project/cypress/e2e/cached.cy.ts'
+      });
+      replay();
+      task.mockClear();
+
+      // act
+      const { handler } = replay();
+
+      // assert
+      expect(task).not.toHaveBeenCalled();
+      expect(handler).toBeInstanceOf(Function);
     });
 
     it('should intercept every request by default', () => {
