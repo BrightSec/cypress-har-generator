@@ -9,6 +9,7 @@ import type { HarExport, HarExporter } from './network/HarExporter.ts';
 import type { HarExporterFactory } from './network/HarExporterFactory.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import type { Connection } from './cdp/Connection.ts';
+import type { Network } from './network/Network.ts';
 import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
 import {
   anyFunction,
@@ -125,6 +126,7 @@ describe('Plugin', () => {
   const harExporterFactoryMock = mock<HarExporterFactory>();
   const harExporterMock = mock<HarExporter>();
   const connectionMock = mock<Connection>();
+  const networkMock = mock<Network>();
   const processEnv = process.env;
 
   let plugin!: Plugin;
@@ -156,6 +158,7 @@ describe('Plugin', () => {
       | Logger
       | FileManager
       | Connection
+      | Network
       | ConnectionFactory
       | ObserverFactory
       | Observer<NetworkRequest>
@@ -166,6 +169,7 @@ describe('Plugin', () => {
       loggerMock,
       fileManagerMock,
       connectionMock,
+      networkMock,
       connectionFactoryMock,
       observerFactoryMock,
       networkObserverMock,
@@ -671,6 +675,23 @@ describe('Plugin', () => {
       await plugin.disposeOfHar();
       // assert
       verify(networkObserverMock.unsubscribe()).once();
+    });
+
+    it('should stop listening to the started tests', async () => {
+      // arrange
+      when(connectionMock.discoverNetwork(anything())).thenReturn(
+        instance(networkMock)
+      );
+      plugin.ensureBrowserFlags(chrome, []);
+      await plugin.recordHar({
+        rootDir: '/'
+      });
+      // act
+      await plugin.disposeOfHar();
+      // assert
+      verify(networkMock.onTestStarted(anyFunction())).calledBefore(
+        networkMock.offTestStarted()
+      );
     });
 
     it('should close the connection', async () => {

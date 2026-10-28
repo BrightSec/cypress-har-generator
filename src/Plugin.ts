@@ -15,6 +15,7 @@ import { NetworkIdleMonitor } from './network/NetworkIdleMonitor.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import { ErrorUtils } from './utils/ErrorUtils.ts';
 import type { Connection } from './cdp/Connection.ts';
+import type { Network } from './network/Network.ts';
 import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
 import type { NetworkOptions } from './cdp/NetworkOptions.ts';
 import {
@@ -62,6 +63,7 @@ interface Addr {
 export class Plugin {
   private exporter?: HarExporter;
   private networkObservable?: Observer<NetworkRequest>;
+  private network?: Network;
   private addr?: Addr;
   private _connection?: Connection;
   private supported?: boolean;
@@ -181,6 +183,8 @@ export class Plugin {
   private async stopObserving(): Promise<void> {
     await this.networkObservable?.unsubscribe();
     delete this.networkObservable;
+    this.network?.offTestStarted();
+    delete this.network;
   }
 
   private parseElectronSwitches(browser: Cypress.Browser): string[] {
@@ -226,13 +230,12 @@ Please refer to the documentation:
   }
 
   private async listenNetworkEvents(options: RecordOptions): Promise<void> {
-    const network = this._connection?.discoverNetwork(options);
-
-    network?.onTestStarted((payload: string) => this.tests.start(payload));
+    this.network = this._connection?.discoverNetwork(options);
+    this.network?.onTestStarted((payload: string) => this.tests.start(payload));
 
     this.networkObservable = this.observerFactory.createNetworkObserver(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      network!,
+      this.network!,
       options
     );
 

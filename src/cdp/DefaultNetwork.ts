@@ -50,6 +50,10 @@ export class DefaultNetwork implements Network {
     this.testStartedListener = listener;
   }
 
+  public offTestStarted(): void {
+    delete this.testStartedListener;
+  }
+
   public async attachToTargets(
     listener: (event: NetworkEvent) => unknown
   ): Promise<void> {

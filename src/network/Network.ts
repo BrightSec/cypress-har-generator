@@ -36,6 +36,8 @@ export interface Network {
    */
   onTestStarted(listener: (payload: string) => unknown): void;
 
+  offTestStarted(): void;
+
   attachToTargets(listener: (event: NetworkEvent) => unknown): Promise<void>;
 
   detachFromTargets(): Promise<void>;

@@ -376,6 +376,26 @@ describe('DefaultNetwork', () => {
       }
     );
 
+    it('should stop passing on the payloads once the listener is removed', async () => {
+      // arrange
+      const started = jest.fn();
+      let call: ((...args: unknown[]) => void) | undefined;
+      when(clientMock.on('Runtime.bindingCalled', anyFunction())).thenCall(
+        (_, callback) => (call = callback)
+      );
+      sut.onTestStarted(started);
+      await sut.attachToTargets(listener);
+      // act
+      sut.offTestStarted();
+      call?.({
+        name: '__cypressHarTestStarted',
+        payload: '{}',
+        executionContextId: 1
+      });
+      // assert
+      expect(started).not.toHaveBeenCalled();
+    });
+
     it('should release a service worker attached to the browser instead of tracking it twice', async () => {
       // arrange
       const sessionId = '1';
