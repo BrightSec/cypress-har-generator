@@ -1,18 +1,18 @@
 import type { FileManager } from '../utils/FileManager.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
-import type { Entry, Har } from 'har-format';
+import type { RecordedHar } from './RecordedHar.ts';
 
 export class HarReader {
   constructor(private readonly fileManager: FileManager) {}
 
-  public async read(path: string): Promise<Entry[]> {
+  public async read(path: string): Promise<RecordedHar> {
     const data: string | undefined = await this.fileManager.readFile(path);
 
     if (data === undefined) {
       throw new Error(`Failed to read the HAR file at ${path}.`);
     }
 
-    let har: Partial<Har> | undefined;
+    let har: { log?: { entries?: unknown; _tests?: unknown } } | undefined;
 
     try {
       har = JSON.parse(data);
@@ -23,7 +23,7 @@ export class HarReader {
       );
     }
 
-    const entries: unknown = har?.log?.entries;
+    const { entries, _tests: tests = [] } = har?.log ?? {};
 
     if (!Array.isArray(entries)) {
       throw new TypeError(
@@ -31,6 +31,12 @@ export class HarReader {
       );
     }
 
-    return entries;
+    if (!Array.isArray(tests)) {
+      throw new TypeError(
+        `The file at ${path} is not a HAR file: its \`log._tests\` is not an array.`
+      );
+    }
+
+    return { entries, tests };
   }
 }

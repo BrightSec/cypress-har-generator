@@ -13,8 +13,8 @@ import {
 } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { HarReader } from './replay/HarReader.ts';
+import type { RecordedHar } from './replay/RecordedHar.ts';
 import type { ReplayOptions, UpdateMode } from './replay/ReplayOptions.ts';
-import type { Entry } from 'har-format';
 import picomatch from 'picomatch';
 import {
   basename,
@@ -120,7 +120,7 @@ export const install = (
 
       return null;
     },
-    readHar: (path: string): Promise<Entry[]> =>
+    readHar: (path: string): Promise<RecordedHar> =>
       harReader.read(resolve(config.projectRoot, path)),
     replaySpecHar
   });
@@ -213,7 +213,7 @@ const createReplaySpecHar = (
   replayedSpecs: Set<string>
 ): ((
   spec: Pick<Cypress.Spec, 'name' | 'absolute'>
-) => Promise<Entry[] | null>) => {
+) => Promise<RecordedHar | null>) => {
   const update: UpdateMode = config.expose?.[HARS_UPDATE_KEY] ?? 'missing';
 
   if (!UPDATE_MODES.includes(update)) {

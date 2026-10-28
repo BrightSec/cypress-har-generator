@@ -8,6 +8,8 @@ import {
 import type { TestStart } from './network/TestStart.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { HarRouter } from './replay/HarRouter.ts';
+import type { RecordedHar } from './replay/RecordedHar.ts';
+import { SpecHar } from './replay/SpecHar.ts';
 import { ReplayResponse } from './replay/ReplayResponse.ts';
 import type { NotFoundAction, ReplayOptions } from './replay/ReplayOptions.ts';
 import type { Entry } from 'har-format';
@@ -96,19 +98,22 @@ Cypress.Commands.add('disposeOfHar', (): Cypress.Chainable =>
 
 const NOT_FOUND_ACTIONS: readonly NotFoundAction[] = ['abort', 'fallback'];
 
-// the HAR of the spec holds the requests of all its tests, so each test goes on from where the previous one stopped
-let specRouter: { spec: string; router: HarRouter } | undefined;
+// read once for all the tests of the spec
+let specHar: { spec: string; har: SpecHar } | undefined;
 
-const cachedSpecRouter = (): HarRouter | undefined =>
-  specRouter?.spec === Cypress.spec.absolute ? specRouter.router : undefined;
+const cachedSpecHar = (): SpecHar | undefined =>
+  specHar?.spec === Cypress.spec.absolute ? specHar.har : undefined;
 
-const routeSpecHar = (entries: Entry[]): HarRouter => {
-  const router = new HarRouter(entries);
+const cacheSpecHar = (recorded: RecordedHar): SpecHar => {
+  const har = new SpecHar(recorded);
 
-  specRouter = { spec: Cypress.spec.absolute, router };
+  specHar = { spec: Cypress.spec.absolute, har };
 
-  return router;
+  return har;
 };
+
+const routeTest = (har: SpecHar): HarRouter =>
+  har.routerFor(Cypress.currentTest.titlePath);
 
 const inScope = (url: string, scope?: string | RegExp): boolean => {
   if (scope === undefined) {
@@ -214,28 +219,30 @@ Cypress.Commands.add(
       );
     }
 
-    const cached: HarRouter | undefined =
-      path === undefined ? cachedSpecRouter() : undefined;
+    const cached: SpecHar | undefined =
+      path === undefined ? cachedSpecHar() : undefined;
 
     if (cached) {
-      intercept(cached, options);
+      intercept(routeTest(cached), options);
 
       return cy.wrap(null, { log: false });
     }
 
-    const entries: Cypress.Chainable<Entry[] | null> =
+    const har: Cypress.Chainable<RecordedHar | null> =
       path === undefined
-        ? cy.task<Entry[] | null>(
+        ? cy.task<RecordedHar | null>(
             'replaySpecHar',
             { name: Cypress.spec.name, absolute: Cypress.spec.absolute },
             { log: false }
           )
-        : cy.task<Entry[] | null>('readHar', path, { log: false });
+        : cy.task<RecordedHar | null>('readHar', path, { log: false });
 
-    return entries.then(result => {
+    return har.then(result => {
       if (result) {
         intercept(
-          path === undefined ? routeSpecHar(result) : new HarRouter(result),
+          path === undefined
+            ? routeTest(cacheSpecHar(result))
+            : new HarRouter(result.entries),
           options
         );
       }

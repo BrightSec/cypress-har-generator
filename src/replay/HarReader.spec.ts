@@ -20,7 +20,33 @@ describe('HarReader', () => {
     const result = await reader.read('/project/example.har');
 
     // assert
-    expect(result).toEqual(entries);
+    expect(result).toEqual({ entries, tests: [] });
+  });
+
+  it('should return the tests of the HAR file', async () => {
+    // arrange
+    const tests = [{ id: 'test_1', titlePath: ['a'], attempt: 1 }];
+    when(fileManagerMock.readFile('/project/example.har')).thenResolve(
+      JSON.stringify({ log: { entries: [], _tests: tests } })
+    );
+
+    // act
+    const result = await reader.read('/project/example.har');
+
+    // assert
+    expect(result.tests).toEqual(tests);
+  });
+
+  it('should throw a TypeError when the tests are not an array', async () => {
+    // arrange
+    when(fileManagerMock.readFile('/project/example.har')).thenResolve(
+      JSON.stringify({ log: { entries: [], _tests: {} } })
+    );
+
+    // act & assert
+    await expect(reader.read('/project/example.har')).rejects.toThrow(
+      TypeError
+    );
   });
 
   it('should throw when the file cannot be read', async () => {

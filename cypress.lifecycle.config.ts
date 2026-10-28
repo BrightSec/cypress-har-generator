@@ -22,9 +22,33 @@ const harPaths = [
   }
 ];
 
-// `cy.replayHar()` in the spec serves this HAR, which must not be overwritten with the replayed responses
-const replayedHarPath = join('cypress', 'hars', 'replay.cy.har');
-const replayedValues = ['first', 'second'];
+// `cy.replayHar()` in these specs serves their HARs, which must not be overwritten with the replayed responses
+interface ReplayedHar {
+  path: string;
+  tests?: { id: string; titlePath: string[]; attempt: number }[];
+  entries: { value: string; testref?: string }[];
+}
+
+const replayedHars: ReplayedHar[] = [
+  {
+    path: join('cypress', 'hars', 'replay.cy.har'),
+    entries: [{ value: 'first' }, { value: 'second' }]
+  },
+  // listed in another order than the spec runs its tests, with a failed try of the first test
+  {
+    path: join('cypress', 'hars', 'replay-tests.cy.har'),
+    tests: [
+      { id: 'test_1', titlePath: ['Replay each test', 'second'], attempt: 1 },
+      { id: 'test_2', titlePath: ['Replay each test', 'first'], attempt: 1 },
+      { id: 'test_3', titlePath: ['Replay each test', 'first'], attempt: 2 }
+    ],
+    entries: [
+      { value: 'second', testref: 'test_1' },
+      { value: 'failed try', testref: 'test_2' },
+      { value: 'first', testref: 'test_3' }
+    ]
+  }
+];
 
 export default defineConfig({
   ...base,
@@ -37,11 +61,16 @@ export default defineConfig({
     ): void {
       install(on, config);
 
-      const replayedHar = (baseUrl: string) => ({
+      const replayedHar = (
+        baseUrl: string,
+        { tests, entries }: ReplayedHar
+      ) => ({
         log: {
           version: '1.2',
           creator: { name: 'test', version: '1' },
-          entries: replayedValues.map(value => ({
+          ...(tests ? { _tests: tests } : {}),
+          entries: entries.map(({ value, testref }) => ({
+            ...(testref ? { _testref: testref } : {}),
             request: {
               method: 'GET',
               url: `${baseUrl}/api/random`,
@@ -61,23 +90,34 @@ export default defineConfig({
         }
       });
 
+      const assertNotOverwritten = async (
+        replayed: ReplayedHar
+      ): Promise<void> => {
+        const content: string = await readFile(replayed.path, 'utf-8');
+
+        if (
+          content !==
+          JSON.stringify(replayedHar(config.baseUrl ?? '', replayed))
+        ) {
+          throw new Error(`${replayed.path} was overwritten`);
+        }
+      };
+
       on('before:run', async () => {
         await Promise.all(
           harPaths.map(({ path }) => rm(path, { force: true }))
         );
-        await mkdir(dirname(replayedHarPath), { recursive: true });
-        await writeFile(
-          replayedHarPath,
-          JSON.stringify(replayedHar(config.baseUrl ?? ''))
-        );
+        for (const replayed of replayedHars) {
+          await mkdir(dirname(replayed.path), { recursive: true });
+          await writeFile(
+            replayed.path,
+            JSON.stringify(replayedHar(config.baseUrl ?? '', replayed))
+          );
+        }
       });
       // `Cypress.stop()` skips the rest of the run, so the HAR can only be checked once the run is over
       on('after:run', async () => {
-        const replayed: string = await readFile(replayedHarPath, 'utf-8');
-
-        if (replayed !== JSON.stringify(replayedHar(config.baseUrl ?? ''))) {
-          throw new Error(`${replayedHarPath} was overwritten`);
-        }
+        await Promise.all(replayedHars.map(assertNotOverwritten));
 
         for (const { path, urls: expected } of harPaths) {
           const { log } = JSON.parse(await readFile(path, 'utf-8'));
