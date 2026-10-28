@@ -443,7 +443,7 @@ describe('DefaultHarExporter', () => {
           const sut = exporterAt(times);
           await writeAll(sut, times.length);
           // act
-          const har = await sut.read(tests.timeline(), keepSecond);
+          const har = await sut.read(tests.timeline().only(keepSecond));
           const urls: string[] = [];
           for await (const { json } of har?.entries ?? []) {
             urls.push(JSON.parse(json).request.url);
@@ -464,7 +464,7 @@ describe('DefaultHarExporter', () => {
           const sut = exporterAt(times);
           await writeAll(sut, times.length);
           // act
-          const har = await sut.read(tests.timeline(), keepSecond);
+          const har = await sut.read(tests.timeline().only(keepSecond));
           // assert
           expect(har).toBeUndefined();
           sut.end();
@@ -495,7 +495,7 @@ describe('DefaultHarExporter', () => {
             await sut.write(request);
           }
           // act
-          const har = await sut.read(tests.timeline(), keepSecond);
+          const har = await sut.read(tests.timeline().only(keepSecond));
           const pagerefs: (string | undefined)[] = [];
           for await (const { pageref } of har?.entries ?? []) {
             pagerefs.push(pageref);

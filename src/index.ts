@@ -212,18 +212,16 @@ const enableLifecycle = (
 
         const path = specHarPath(spec, config);
 
-        return plugin.saveHar(
-          {
-            waitForIdle,
-            minIdleDuration,
-            maxWaitDuration,
-            fileName: basename(path),
-            outDir: dirname(path)
-          },
-          failedTestsOnly && results
-            ? new FailedTests(results.tests).includes
-            : undefined
-        );
+        return plugin.saveHar({
+          waitForIdle,
+          minIdleDuration,
+          maxWaitDuration,
+          fileName: basename(path),
+          outDir: dirname(path),
+          ...(failedTestsOnly && results
+            ? { keep: new FailedTests(results.tests).includes }
+            : {})
+        });
       }
     );
   }

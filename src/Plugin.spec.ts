@@ -298,7 +298,7 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read(anything(), anything())).thenResolve(
+      when(harExporterMock.read(anything())).thenResolve(
         entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
@@ -327,7 +327,7 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read(anything(), anything())).thenResolve(
+      when(harExporterMock.read(anything())).thenResolve(
         entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
@@ -355,7 +355,7 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read(anything(), anything())).thenResolve(
+      when(harExporterMock.read(anything())).thenResolve(
         entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
@@ -390,14 +390,14 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read(anything(), anything())).thenResolve(
+      when(harExporterMock.read(anything())).thenResolve(
         entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
       await plugin.saveHar(options);
       // assert
       verify(networkObserverMock.unsubscribe()).calledBefore(
-        harExporterMock.read(anything(), anything())
+        harExporterMock.read(anything())
       );
     });
 
@@ -417,7 +417,7 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read(anything(), anything())).thenReject(
+      when(harExporterMock.read(anything())).thenReject(
         new Error('something went wrong')
       );
       // act
@@ -465,14 +465,14 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read(anything(), anything())).thenResolve(
+      when(harExporterMock.read(anything())).thenResolve(
         entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act
       await plugin.saveHar(options);
       // assert
       verify(networkObserverMock.unsubscribe()).calledBefore(
-        harExporterMock.read(anything(), anything())
+        harExporterMock.read(anything())
       );
     });
 
@@ -492,7 +492,7 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read(anything(), anything())).thenResolve(
+      when(harExporterMock.read(anything())).thenResolve(
         entriesOf(HarBuilder.formatEntry(entry as Entry))
       );
       // act

@@ -114,16 +114,13 @@ describe('install', () => {
     );
 
     // assert
-    expect(saveHar).toHaveBeenCalledWith(
-      {
-        waitForIdle: true,
-        minIdleDuration: 200,
-        maxWaitDuration: 3000,
-        fileName: 'spec.cy.har',
-        outDir: '.'
-      },
-      undefined
-    );
+    expect(saveHar).toHaveBeenCalledWith({
+      waitForIdle: true,
+      minIdleDuration: 200,
+      maxWaitDuration: 3000,
+      fileName: 'spec.cy.har',
+      outDir: '.'
+    });
   });
 
   describe('failedTestsOnly', () => {
@@ -152,7 +149,7 @@ describe('install', () => {
       });
 
       // assert
-      const keep = saveHar.mock.calls[0]?.[1];
+      const keep = saveHar.mock.calls[0]?.[0].keep;
       expect(
         [1, 2].map(attempt =>
           keep?.({ titlePath: ['suite', 'flaky'], attempt })
@@ -172,7 +169,7 @@ describe('install', () => {
       await handlers.get('after:spec')?.(spec, undefined);
 
       // assert
-      expect(saveHar).toHaveBeenCalledWith(expect.anything(), undefined);
+      expect(saveHar.mock.calls[0]?.[0]).not.toHaveProperty('keep');
     });
 
     it.each([{ input: null }, { input: 1 }, { input: 'true' }])(
@@ -293,8 +290,7 @@ describe('install', () => {
 
       // assert
       expect(saveHar).toHaveBeenCalledWith(
-        expect.objectContaining({ outDir: expected }),
-        undefined
+        expect.objectContaining({ outDir: expected })
       );
       saveHar.mockRestore();
     }
@@ -378,8 +374,7 @@ describe('install', () => {
 
       // assert
       expect(saveHar).toHaveBeenCalledWith(
-        expect.objectContaining({ fileName: 'login.cy.har', outDir: expected }),
-        undefined
+        expect.objectContaining({ fileName: 'login.cy.har', outDir: expected })
       );
     }
   );
@@ -516,8 +511,7 @@ describe('install', () => {
         expect.objectContaining({
           fileName: 'login.cy.har',
           outDir: join('hars', 'a')
-        }),
-        undefined
+        })
       );
     });
 
