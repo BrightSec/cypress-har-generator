@@ -37,6 +37,7 @@ export interface EventSourceMessage {
 
 export class NetworkRequest {
   private _contentData?: Promise<ContentData>;
+  private _frameAncestors?: Promise<Protocol.Page.FrameId[]>;
   private _wallIssueTime: Protocol.Network.TimeSinceEpoch = -1;
   private _requestHeaderValues: Map<string, string> = new Map<string, string>();
   private _responseHeaderValues: Map<string, string> = new Map<
@@ -540,8 +541,30 @@ export class NetworkRequest {
     this.url = url;
   }
 
+  // set for the document a frame navigates to, which a page of the HAR can only be once the frames above it are known
+  get frameAncestors(): Promise<Protocol.Page.FrameId[]> | undefined {
+    return this._frameAncestors;
+  }
+
+  set frameAncestors(value: Promise<Protocol.Page.FrameId[]> | undefined) {
+    this._frameAncestors = value;
+  }
+
+  // the request a frame navigates with, whose ID Chrome uses as the ID of the document it loads
+  public isNavigation(): boolean {
+    return (
+      this.resourceType === 'Document' &&
+      !!this.frameId &&
+      this.requestId === this.loaderId
+    );
+  }
+
   public async waitForCompletion(): Promise<void> {
-    await Promise.all([this._contentData, this._formParametersPromise]);
+    await Promise.all([
+      this._contentData,
+      this._formParametersPromise,
+      this._frameAncestors
+    ]);
   }
 
   public isBlob(): boolean {

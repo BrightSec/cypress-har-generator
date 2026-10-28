@@ -3,7 +3,9 @@ import { EntryBuilder } from './EntryBuilder.ts';
 import { HarBuilder } from './HarBuilder.ts';
 import { StableEntry } from './StableEntry.ts';
 import type { NetworkRequest } from './NetworkRequest.ts';
-import type { HarExporter } from './HarExporter.ts';
+import type { ExportedEntry, HarExport, HarExporter } from './HarExporter.ts';
+import { HarPages } from './HarPages.ts';
+import { STABLE_STARTED_DATE_TIME } from '../constants.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type {
@@ -20,6 +22,8 @@ interface Slot {
   position: number;
   length: number;
   startedAt: number;
+  // the loader of the document that sent the request, unless the `transform` set the page itself
+  loaderId?: string;
 }
 
 export class DefaultHarExporter implements HarExporter {
@@ -37,6 +41,7 @@ export class DefaultHarExporter implements HarExporter {
   private readonly index: Slot[] = [];
   // where in `index` each request written so far is, when `dedupe` is set
   private readonly slots = new Map<string, number>();
+  private readonly pages = new HarPages();
   private size = 0;
   private invalidTransformResultReported = false;
 
@@ -48,7 +53,7 @@ export class DefaultHarExporter implements HarExporter {
     this.buffer = file.createWriteStream({ encoding: 'utf-8' });
   }
 
-  public async read(): Promise<AsyncIterable<string> | undefined> {
+  public async read(): Promise<HarExport | undefined> {
     await Promise.allSettled(this.pendingWrites);
 
     if (!this.index.length) {
@@ -60,7 +65,14 @@ export class DefaultHarExporter implements HarExporter {
       .slice()
       .sort((a, b) => a.startedAt - b.startedAt);
 
-    return this.readEntries(entries);
+    return {
+      pages: this.pages.toArray(
+        this.options?.stable
+          ? { startedDateTime: STABLE_STARTED_DATE_TIME }
+          : {}
+      ),
+      entries: this.readEntries(entries)
+    };
   }
 
   public async write(networkRequest: NetworkRequest): Promise<void> {
@@ -79,18 +91,19 @@ export class DefaultHarExporter implements HarExporter {
     this.buffer.end();
   }
 
-  private async *readEntries(
-    entries: { position: number; length: number }[]
-  ): AsyncGenerator<string> {
-    for (const { position, length } of entries) {
+  private async *readEntries(entries: Slot[]): AsyncGenerator<ExportedEntry> {
+    for (const { position, length, loaderId } of entries) {
       const { buffer, bytesRead } = await this.file.read(
         Buffer.alloc(length),
         0,
         length,
         position
       );
-
-      yield buffer.toString('utf-8', 0, bytesRead);
+      // the page is known only once every document is written, so it is added as the entry is read
+      yield {
+        json: buffer.toString('utf-8', 0, bytesRead),
+        pageref: loaderId ? this.pages.idOf(loaderId) : undefined
+      };
     }
   }
 
@@ -149,19 +162,40 @@ ${stack}`
 
     // the slot is set before awaiting the write, so a repeat finishing meanwhile sees where this entry is
     const { written, ...location } = this.append(result);
-    const slot: Slot = { startedAt, ...location };
+    const slot: Slot = {
+      startedAt,
+      ...location,
+      ...('pageref' in result ? {} : { loaderId: networkRequest.loaderId })
+    };
 
+    this.store(slot, kept, key);
+    await this.addDocument(networkRequest, startedAt);
+    await written;
+  }
+
+  private store(slot: Slot, kept?: number, key?: string): void {
     if (kept !== undefined) {
       this.index[kept] = slot;
-    } else {
-      this.index.push(slot);
 
-      if (key) {
-        this.slots.set(key, this.index.length - 1);
-      }
+      return;
     }
 
-    await written;
+    this.index.push(slot);
+
+    if (key) {
+      this.slots.set(key, this.index.length - 1);
+    }
+  }
+
+  private async addDocument(
+    { frameAncestors, frameId, loaderId, url }: NetworkRequest,
+    startedAt: number
+  ): Promise<void> {
+    const ancestors: string[] | undefined = await frameAncestors;
+
+    if (ancestors) {
+      this.pages.add({ ancestors, frameId, loaderId, startedAt, url });
+    }
   }
 
   private append(

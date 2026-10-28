@@ -1,4 +1,4 @@
-import { Entry } from 'har-format';
+import { Entry, Page } from 'har-format';
 
 const openWebSocket = () =>
   cy.window().then(
@@ -204,6 +204,42 @@ describe('Record HAR', () => {
         request: {
           url: /^\/api\/products$/
         }
+      });
+  });
+
+  it('records a page for each document of the app, holding the requests of its iframes', () => {
+    cy.recordHar();
+
+    cy.visit('/pages/fetch');
+    cy.get('ul > li').should('have.length.gte', 1);
+    cy.visit('/pages/nested-frame');
+    cy.get('iframe')
+      .its('0.contentDocument.body')
+      .find('ul > li')
+      .should('have.length.gte', 1);
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log')
+      .then(({ pages, entries }: { pages: Page[]; entries: Entry[] }) => {
+        const path = (url: string) => new URL(url).pathname;
+
+        expect(pages.map(({ id, title }) => [id, path(title)])).to.deep.equal([
+          ['page_1', '/pages/fetch'],
+          ['page_2', '/pages/nested-frame']
+        ]);
+        expect(
+          entries
+            .filter(({ request }) => /^\/(pages|api)\//.test(path(request.url)))
+            .map(({ pageref, request }) => [pageref, path(request.url)])
+        ).to.deep.equal([
+          ['page_1', '/pages/fetch'],
+          ['page_1', '/api/products'],
+          ['page_2', '/pages/nested-frame'],
+          ['page_2', '/pages/fetch'],
+          ['page_2', '/api/products']
+        ]);
       });
   });
 

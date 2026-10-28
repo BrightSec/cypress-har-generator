@@ -1,8 +1,8 @@
+import { STABLE_STARTED_DATE_TIME } from '../constants.ts';
 import type { Entry } from 'har-format';
 
 // written in place of a time, as Playwright does when it omits timing
 const NO_TIME = -1;
-const START = new Date(0).toISOString();
 
 interface Message {
   time: number;
@@ -23,7 +23,7 @@ export class StableEntry {
 
     return {
       ...entry,
-      startedDateTime: START,
+      startedDateTime: STABLE_STARTED_DATE_TIME,
       time: NO_TIME,
       timings: {
         send: NO_TIME,
