@@ -94,5 +94,21 @@ describe('DefaultHarExporterFactory', () => {
       // assert
       expect(result).toBeInstanceOf(DefaultHarExporter);
     });
+
+    it.each([1, 'true', null])(
+      'should throw a TypeError when dedupe is %j',
+      async dedupe => {
+        // act
+        const act = () =>
+          factory.create({
+            rootDir: '/',
+            dedupe: dedupe as unknown as boolean
+          });
+
+        // assert
+        await expect(act()).rejects.toThrow(TypeError);
+        verify(fileManagerMock.createTmpFile()).never();
+      }
+    );
   });
 });
