@@ -842,6 +842,90 @@ content of txt...\r
     });
   });
 
+  describe('setFromMemoryCache', () => {
+    it('should drop the timing', () => {
+      // arrange
+      sut.timing = timing;
+      // act
+      sut.setFromMemoryCache();
+      // assert
+      expect(sut).toMatchObject({ fromMemoryCache: true, timing: undefined });
+    });
+
+    it('should ignore a timing set afterwards', () => {
+      // arrange
+      sut.setIssueTime(5, 1);
+      sut.setFromMemoryCache();
+      // act
+      sut.timing = timing;
+      // assert
+      expect(sut).toMatchObject({ timing: undefined, startTime: 5 });
+    });
+  });
+
+  describe('cached', () => {
+    it.each([
+      {
+        fromMemoryCache: true,
+        fromDiskCache: false,
+        transferSize: 0,
+        expected: true
+      },
+      {
+        fromMemoryCache: false,
+        fromDiskCache: true,
+        transferSize: 0,
+        expected: true
+      },
+      {
+        fromMemoryCache: false,
+        fromDiskCache: true,
+        transferSize: 10,
+        expected: false
+      },
+      {
+        fromMemoryCache: false,
+        fromDiskCache: false,
+        transferSize: 0,
+        expected: false
+      }
+    ])(
+      'should return $expected when served from the memory cache is $fromMemoryCache, from the disk cache is $fromDiskCache and the transfer size is $transferSize',
+      ({ fromMemoryCache, fromDiskCache, transferSize, expected }) => {
+        // arrange
+        if (fromMemoryCache) {
+          sut.setFromMemoryCache();
+        }
+        sut.fromDiskCache = fromDiskCache;
+        sut.transferSize = transferSize;
+        // act
+        const result = sut.cached();
+        // assert
+        expect(result).toBe(expected);
+      }
+    );
+  });
+
+  describe('cachedInMemory', () => {
+    it('should return false for a response served from the disk cache', () => {
+      // arrange
+      sut.fromDiskCache = true;
+      // act
+      const result = sut.cachedInMemory();
+      // assert
+      expect(result).toBe(false);
+    });
+
+    it('should return true for a response served from the memory cache', () => {
+      // arrange
+      sut.setFromMemoryCache();
+      // act
+      const result = sut.cachedInMemory();
+      // assert
+      expect(result).toBe(true);
+    });
+  });
+
   describe('endTime', () => {
     it('should return -1 by default', () => {
       // act

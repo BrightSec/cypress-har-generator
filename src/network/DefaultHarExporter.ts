@@ -1,5 +1,6 @@
 /// <reference types="node" preserve="true" />
 import { EntryBuilder } from './EntryBuilder.ts';
+import { HarBuilder } from './HarBuilder.ts';
 import type { NetworkRequest } from './NetworkRequest.ts';
 import type { HarExporter } from './HarExporter.ts';
 import type { Logger } from '../utils/Logger.ts';
@@ -12,8 +13,7 @@ import type {
 import type { Entry } from 'har-format';
 import type { WriteStream } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
-import { EOL } from 'node:os';
-import { format, promisify } from 'node:util';
+import { format } from 'node:util';
 
 export class DefaultHarExporter implements HarExporter {
   private get filter(): Filter | undefined {
@@ -26,6 +26,13 @@ export class DefaultHarExporter implements HarExporter {
 
   private readonly buffer: WriteStream;
   private readonly pendingWrites = new Set<Promise<void>>();
+  // Where each entry is in the file, so the HAR is built by reading one entry at a time.
+  private readonly index: {
+    position: number;
+    length: number;
+    startedAt: number;
+  }[] = [];
+  private size = 0;
   private invalidTransformResultReported = false;
 
   constructor(
@@ -36,18 +43,19 @@ export class DefaultHarExporter implements HarExporter {
     this.buffer = file.createWriteStream({ encoding: 'utf-8' });
   }
 
-  public async read(): Promise<string> {
+  public async read(): Promise<AsyncIterable<string> | undefined> {
     await Promise.allSettled(this.pendingWrites);
 
-    const { size } = await this.file.stat();
-    const { buffer, bytesRead } = await this.file.read(
-      Buffer.alloc(size),
-      0,
-      size,
-      0
-    );
+    if (!this.index.length) {
+      return undefined;
+    }
 
-    return buffer.toString('utf-8', 0, bytesRead);
+    // Entries are recorded as requests finish; HAR 1.2 orders them by start time.
+    const entries = this.index
+      .slice()
+      .sort((a, b) => a.startedAt - b.startedAt);
+
+    return this.readEntries(entries);
   }
 
   public async write(networkRequest: NetworkRequest): Promise<void> {
@@ -62,7 +70,26 @@ export class DefaultHarExporter implements HarExporter {
     }
   }
 
-  public async serializeEntry(entry: Entry): Promise<string | undefined> {
+  public end(): void {
+    this.buffer.end();
+  }
+
+  private async *readEntries(
+    entries: { position: number; length: number }[]
+  ): AsyncGenerator<string> {
+    for (const { position, length } of entries) {
+      const { buffer, bytesRead } = await this.file.read(
+        Buffer.alloc(length),
+        0,
+        length,
+        position
+      );
+
+      yield buffer.toString('utf-8', 0, bytesRead);
+    }
+  }
+
+  private async transformEntry(entry: Entry): Promise<Entry | undefined> {
     try {
       const result =
         typeof this.transform === 'function'
@@ -75,7 +102,7 @@ export class DefaultHarExporter implements HarExporter {
         return undefined;
       }
 
-      return JSON.stringify(result);
+      return result;
     } catch (e) {
       const stack = ErrorUtils.isError(e) ? e.stack : e;
 
@@ -93,10 +120,6 @@ ${stack}`
     }
   }
 
-  public end(): void {
-    this.buffer.end();
-  }
-
   private async writeEntry(networkRequest: NetworkRequest): Promise<void> {
     const entry = await new EntryBuilder(networkRequest).build();
 
@@ -104,11 +127,23 @@ ${stack}`
       return;
     }
 
-    const json = await this.serializeEntry(entry);
+    const result = await this.transformEntry(entry);
 
-    if (this.buffer.writable && json) {
-      // @ts-expect-error signature mismatch due to overloading issues
-      await promisify(this.buffer.write).call(this.buffer, `${json}${EOL}`);
+    if (this.buffer.writable && result) {
+      const json = HarBuilder.formatEntry(result);
+      const length = Buffer.byteLength(json);
+      // the stream appends the chunks in the order they are written
+      const position = this.size;
+
+      this.size += length;
+      await new Promise<void>((resolve, reject) =>
+        this.buffer.write(json, e => (e ? reject(e) : resolve()))
+      );
+      this.index.push({
+        position,
+        length,
+        startedAt: Date.parse(result.startedDateTime)
+      });
     }
   }
 

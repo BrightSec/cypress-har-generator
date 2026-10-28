@@ -23,6 +23,7 @@ describe('commands', () => {
         },
         minimatch: (url: string, pattern: string) =>
           pattern === '**/other/**' ? url.includes('/other/') : false,
+        config: () => undefined,
         Commands: {
           add: (name: string, fn: Command) => commands.set(name, fn)
         }

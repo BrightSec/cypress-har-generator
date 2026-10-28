@@ -1,4 +1,5 @@
 import { StringUtils } from './utils/StringUtils.ts';
+import { HostPattern } from './utils/HostPattern.ts';
 import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { HarRouter } from './replay/HarRouter.ts';
@@ -8,18 +9,27 @@ import type { Entry } from 'har-format';
 
 Cypress.Commands.add(
   'recordHar',
-  (options?: Partial<RecordOptions>): Cypress.Chainable =>
-    cy.task('recordHar', {
+  (options?: Partial<RecordOptions>): Cypress.Chainable => {
+    const { includeBaseUrlHost, ...recordOptions } = options ?? {};
+    const includeHosts = HostPattern.withBaseUrlHost(
+      recordOptions.includeHosts,
+      includeBaseUrlHost,
+      Cypress.config('baseUrl')
+    );
+
+    return cy.task('recordHar', {
       content: true,
       rootDir: StringUtils.dirname(Cypress.spec.absolute),
-      ...options,
-      excludePaths: (options?.excludePaths ?? DEFAULT_EXCLUDE_PATHS).map(x =>
-        StringUtils.toRegexSource(x)
+      ...recordOptions,
+      excludePaths: (recordOptions.excludePaths ?? DEFAULT_EXCLUDE_PATHS).map(
+        x => StringUtils.toRegexSource(x)
       ),
-      includeHosts: options?.includeHosts?.map(x =>
-        StringUtils.toRegexSource(x)
+      includeHosts: includeHosts?.map(x => HostPattern.toSource(x)),
+      excludeHosts: recordOptions.excludeHosts?.map(x =>
+        HostPattern.toSource(x)
       )
-    })
+    });
+  }
 );
 
 Cypress.Commands.add(

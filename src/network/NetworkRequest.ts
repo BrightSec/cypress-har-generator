@@ -218,6 +218,55 @@ export class NetworkRequest {
     this._transferSize = value ?? 0;
   }
 
+  private _fromMemoryCache: boolean = false;
+
+  get fromMemoryCache(): boolean {
+    return this._fromMemoryCache;
+  }
+
+  private _fromDiskCache: boolean = false;
+
+  get fromDiskCache(): boolean {
+    return this._fromDiskCache;
+  }
+
+  set fromDiskCache(value: boolean) {
+    this._fromDiskCache = value;
+  }
+
+  private _fetchedViaServiceWorker: boolean = false;
+
+  get fetchedViaServiceWorker(): boolean {
+    return this._fetchedViaServiceWorker;
+  }
+
+  set fetchedViaServiceWorker(value: boolean) {
+    this._fetchedViaServiceWorker = value;
+  }
+
+  private _responseCacheStorageCacheName?: string;
+
+  get responseCacheStorageCacheName(): string | undefined {
+    return this._responseCacheStorageCacheName;
+  }
+
+  set responseCacheStorageCacheName(value: string | undefined) {
+    this._responseCacheStorageCacheName = value;
+  }
+
+  private _serviceWorkerResponseSource?: Protocol.Network.ServiceWorkerResponseSource;
+
+  get serviceWorkerResponseSource():
+    Protocol.Network.ServiceWorkerResponseSource | undefined {
+    return this._serviceWorkerResponseSource;
+  }
+
+  set serviceWorkerResponseSource(
+    value: Protocol.Network.ServiceWorkerResponseSource | undefined
+  ) {
+    this._serviceWorkerResponseSource = value;
+  }
+
   private _timing?: Protocol.Network.ResourceTiming;
 
   get timing() {
@@ -225,7 +274,8 @@ export class NetworkRequest {
   }
 
   set timing(timingInfo) {
-    if (!timingInfo) {
+    // A response served from the memory cache carries the timing of the request that first loaded it.
+    if (!timingInfo || this._fromMemoryCache) {
       return;
     }
 
@@ -496,6 +546,19 @@ export class NetworkRequest {
 
   public isBlob(): boolean {
     return this._url.startsWith('blob:');
+  }
+
+  public setFromMemoryCache(): void {
+    this._fromMemoryCache = true;
+    this._timing = undefined;
+  }
+
+  public cached(): boolean {
+    return (this._fromMemoryCache || this._fromDiskCache) && !this.transferSize;
+  }
+
+  public cachedInMemory(): boolean {
+    return this._fromMemoryCache && !this.transferSize;
   }
 
   public setRemoteAddress(ip: string, port: number): void {
