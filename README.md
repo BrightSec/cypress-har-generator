@@ -146,6 +146,9 @@ describe('my tests', () => {
 
 By default, the plugin will save the generated HAR file to the root of your project with a file name that includes the current spec's name (e.g. `{specName}.har`).
 
+> [!NOTE]
+> The plugin records only what the browser sends. Requests that Cypress sends from Node, such as `cy.request()`, and requests made in `cy.task()` handlers never reach the browser, so they are not in the HAR.
+
 You can also specify a different destination folder for the generated HAR file by setting the `hars_folder` field in the `expose` object in your Cypress config file (Cypress 15.10 and later):
 
 ```json
@@ -380,6 +383,8 @@ You can pass a file name to change the default naming behavior.
 ```js
 cy.saveHar({ fileName: 'example.com.har' });
 ```
+
+Only the name is used, so a folder in `fileName`, as in `hars/example.com.har`, is dropped. To choose the folder, use `outDir`.
 
 You can customize a destination folder overriding any previous settings:
 
