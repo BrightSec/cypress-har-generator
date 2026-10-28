@@ -612,7 +612,7 @@ npx cypress run --expose hars_update=all
 npx cypress run --expose hars_update=none
 ```
 
-Recording needs the HAR recorded for each spec, so it does not work with `lifecycle: false`, or in `cypress open` without [`experimentalInteractiveRunEvents`](https://docs.cypress.io/guides/references/experiments#Configuration): there, a missing HAR fails the test. The HAR holds the requests of all the tests of the spec in the order they ran, so each test goes on from where the previous one stopped. Run the tests in the same order as when recording: `it.only`, a skipped test or a retry shifts which response a request gets.
+Recording needs the HAR recorded for each spec, so it does not work with `lifecycle: false`, or in `cypress open` without [`experimentalInteractiveRunEvents`](https://docs.cypress.io/guides/references/experiments#Configuration): there, a missing HAR fails the test. Each test is served the entries it sent, found by its title in the [`log._tests`](#recordhar) of the HAR, so `it.only`, a skipped test or a change in order does not change which response a request gets. A test tried more than once is served the entries of its last try, and each try starts from the first of them. A test missing from `_tests`, e.g. one added after recording, or a HAR recorded without `_tests`, is served from all the entries of the HAR in the recorded order, going on from where the previous such test stopped.
 
 > [!WARNING]
 > Commit the HARs you replay, so do not ignore `hars_folder` in Git. A HAR keeps cookies, tokens and the other headers and bodies of the recorded traffic: remove the secrets before committing it.

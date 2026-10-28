@@ -27,6 +27,7 @@ describe('commands', () => {
         },
         minimatch: (url: string, pattern: string) =>
           pattern === '**/other/**' ? url.includes('/other/') : false,
+        currentTest: { title: 'test', titlePath: ['suite', 'test'] },
         config: () => undefined,
         on: (event: string, handler: (...args: unknown[]) => unknown) =>
           events.set(event, handler),
@@ -163,7 +164,10 @@ describe('commands', () => {
 
     const replayEntries = (result: unknown, ...args: unknown[]) => {
       task.mockReturnValue({
-        then: (callback: (x: unknown) => unknown) => callback(result)
+        then: (callback: (x: unknown) => unknown) =>
+          callback(
+            Array.isArray(result) ? { entries: result, tests: [] } : result
+          )
       });
       const calls: number = intercept.mock.calls.length;
       commands.get('replayHar')?.(...args);
@@ -252,6 +256,33 @@ describe('commands', () => {
         expect.objectContaining({ statusCode: 201 })
       );
       expect(second.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ statusCode: 202 })
+      );
+    });
+
+    it('should serve each test of the spec the entries it sent', () => {
+      // arrange
+      Object.assign(Cypress.spec, {
+        absolute: '/project/cypress/e2e/tests.cy.ts'
+      });
+      const [first, second]: typeof twice = twice;
+      const har = {
+        entries: [
+          { ...first, _testref: 'test_1' },
+          { ...second, _testref: 'test_2' }
+        ],
+        tests: [
+          { id: 'test_1', titlePath: ['suite', 'other'], attempt: 1 },
+          { id: 'test_2', titlePath: ['suite', 'test'], attempt: 1 }
+        ]
+      };
+      const req = createRequest(url);
+
+      // act
+      replayEntries(har).handler(req);
+
+      // assert
+      expect(req.reply).toHaveBeenCalledWith(
         expect.objectContaining({ statusCode: 202 })
       );
     });
