@@ -49,6 +49,15 @@ export class TestTimeline {
     return index >= 0 ? this.idOf(index) : undefined;
   }
 
+  /**
+   * The test that was running at the given time: the last one that started by then.
+   */
+  public testAt(time: number): TestStart | undefined {
+    const index: number = this.starts.indexAt(time);
+
+    return index >= 0 ? this.starts.items[index] : undefined;
+  }
+
   public toArray({
     startedDateTime
   }: { startedDateTime?: string } = {}): HarTest[] {

@@ -45,6 +45,25 @@ export class HarPages {
     return this.getRefs().get(loaderId);
   }
 
+  /**
+   * The pages holding the documents loaded by the given loaders, with their documents, numbered again in the order they started.
+   */
+  public select(loaderIds: Iterable<LoaderId>): HarPages {
+    const refs: Map<LoaderId, string> = this.getRefs();
+    const kept = new Set<string | undefined>(
+      [...loaderIds].map((loaderId: LoaderId) => refs.get(loaderId))
+    );
+    const selected = new HarPages();
+
+    for (const [loaderId, document] of this.documents) {
+      if (kept.has(refs.get(loaderId))) {
+        selected.documents.set(loaderId, document);
+      }
+    }
+
+    return selected;
+  }
+
   public toArray({
     startedDateTime
   }: { startedDateTime?: string } = {}): Page[] {

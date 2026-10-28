@@ -1,7 +1,7 @@
 /// <reference types="cypress" preserve="true" />
 import { Logger } from './utils/Logger.ts';
 import { FileManager } from './utils/FileManager.ts';
-import type { HarExporter } from './network/HarExporter.ts';
+import type { HarExporter, TestFilter } from './network/HarExporter.ts';
 import type {
   HarExporterFactory,
   HarExporterOptions
@@ -129,7 +129,10 @@ export class Plugin {
     await this.listenNetworkEvents(options);
   }
 
-  public async saveHar(options: SaveOptions): Promise<void> {
+  /**
+   * @param keep - Keeps only the entries sent by the tests it accepts, and writes no HAR when none is left.
+   */
+  public async saveHar(options: SaveOptions, keep?: TestFilter): Promise<void> {
     if (!this.supported) {
       return;
     }
@@ -151,7 +154,7 @@ export class Plugin {
 
       await this.stopObserving();
 
-      const har: AsyncIterable<string> | undefined = await this.buildHar();
+      const har: AsyncIterable<string> | undefined = await this.buildHar(keep);
 
       if (har) {
         await this.fileManager.writeFile(filePath, har);
@@ -204,8 +207,10 @@ Please refer to the documentation:
     return process.env.ELECTRON_EXTRA_LAUNCH_ARGS.split(' ');
   }
 
-  private async buildHar(): Promise<AsyncIterable<string> | undefined> {
-    const har = await this.exporter?.read(this.tests.timeline());
+  private async buildHar(
+    keep?: TestFilter
+  ): Promise<AsyncIterable<string> | undefined> {
+    const har = await this.exporter?.read(this.tests.timeline(), keep);
 
     return har
       ? new HarBuilder(har.entries, har.pages, har.tests).build()

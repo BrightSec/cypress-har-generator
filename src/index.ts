@@ -13,6 +13,7 @@ import {
 } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { HarReader } from './replay/HarReader.ts';
+import { FailedTests } from './FailedTests.ts';
 import type { RecordedHar } from './replay/RecordedHar.ts';
 import type { ReplayOptions, UpdateMode } from './replay/ReplayOptions.ts';
 import picomatch from 'picomatch';
@@ -72,6 +73,12 @@ export interface InstallOptions
    * @defaultValue true
    */
   lifecycle?: boolean;
+  /**
+   * Keeps only the entries sent by the tries of the tests that failed, and writes no HAR for a spec where none failed.
+   * Cypress reports the results only in `cypress run`, so `cypress open` keeps every entry.
+   * @defaultValue false
+   */
+  failedTestsOnly?: boolean;
 }
 
 /**
@@ -89,6 +96,13 @@ export const install = (
     throw new TypeError(
       '`install` requires the config: call `install(on, config)` in `setupNodeEvents(on, config)`.'
     );
+  }
+
+  if (
+    harOptions.failedTestsOnly !== undefined &&
+    typeof harOptions.failedTestsOnly !== 'boolean'
+  ) {
+    throw new TypeError('The `failedTestsOnly` option must be a boolean.');
   }
 
   // the specs that replay their HAR, which must not be overwritten with the replayed responses
@@ -159,6 +173,7 @@ const enableLifecycle = (
     minIdleDuration,
     maxWaitDuration,
     includeBaseUrlHost,
+    failedTestsOnly = false,
     ...recordOptions
   }: Omit<InstallOptions, 'lifecycle'>,
   replayedSpecs: Set<string>
@@ -187,20 +202,28 @@ const enableLifecycle = (
     );
     on(
       'after:spec',
-      (spec: Cypress.Spec, _: CypressCommandLine.RunResult): Promise<void> => {
+      (
+        spec: Cypress.Spec,
+        results?: CypressCommandLine.RunResult
+      ): Promise<void> => {
         if (replayedSpecs.delete(spec.absolute)) {
           return plugin.disposeOfHar();
         }
 
         const path = specHarPath(spec, config);
 
-        return plugin.saveHar({
-          waitForIdle,
-          minIdleDuration,
-          maxWaitDuration,
-          fileName: basename(path),
-          outDir: dirname(path)
-        });
+        return plugin.saveHar(
+          {
+            waitForIdle,
+            minIdleDuration,
+            maxWaitDuration,
+            fileName: basename(path),
+            outDir: dirname(path)
+          },
+          failedTestsOnly && results
+            ? new FailedTests(results.tests).includes
+            : undefined
+        );
       }
     );
   }

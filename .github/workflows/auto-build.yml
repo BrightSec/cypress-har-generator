@@ -38,8 +38,9 @@ jobs:
 
   # `default` is the Cypress version the repository depends on; 15.10 is the earliest version the plugin supports
   # the `lifecycle` suite records a HAR for each spec, which the default suite turns off to test the commands
+  # the `failed-tests` suite records a HAR for each spec with `failedTestsOnly`
   e2e:
-    name: e2e (cypress ${{ matrix.cypress }}${{ matrix.suite == 'lifecycle' && ', lifecycle' || '' }})
+    name: e2e (cypress ${{ matrix.cypress }}${{ matrix.suite != 'default' && format(', {0}', matrix.suite) || '' }})
     runs-on: ubuntu-latest
     needs: install-deps
     strategy:
@@ -50,6 +51,8 @@ jobs:
         include:
           - cypress: 'default'
             suite: 'lifecycle'
+          - cypress: 'default'
+            suite: 'failed-tests'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,7 +73,7 @@ jobs:
           wait-on-timeout: 120
           start: npm start
           browser: chrome
-          config-file: ${{ matrix.suite == 'lifecycle' && 'cypress.lifecycle.config.ts' || 'cypress.config.ts' }}
+          config-file: ${{ matrix.suite != 'default' && format('cypress.{0}.config.ts', matrix.suite) || 'cypress.config.ts' }}
           record: ${{ matrix.cypress == 'default' && matrix.suite == 'default' && github.repository == 'BrightSec/cypress-har-generator' }}
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}

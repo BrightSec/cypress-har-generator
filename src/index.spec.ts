@@ -114,13 +114,79 @@ describe('install', () => {
     );
 
     // assert
-    expect(saveHar).toHaveBeenCalledWith({
-      waitForIdle: true,
-      minIdleDuration: 200,
-      maxWaitDuration: 3000,
-      fileName: 'spec.cy.har',
-      outDir: '.'
+    expect(saveHar).toHaveBeenCalledWith(
+      {
+        waitForIdle: true,
+        minIdleDuration: 200,
+        maxWaitDuration: 3000,
+        fileName: 'spec.cy.har',
+        outDir: '.'
+      },
+      undefined
+    );
+  });
+
+  describe('failedTestsOnly', () => {
+    const spec = {
+      name: 'spec.cy.ts',
+      absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+    };
+
+    it('should keep only the entries of the failed tries when it is set', async () => {
+      // arrange
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
+      install(on, config, { failedTestsOnly: true });
+
+      // act
+      await handlers.get('after:spec')?.(spec, {
+        tests: [
+          {
+            title: ['suite', 'flaky'],
+            state: 'passed',
+            attempts: [{ state: 'failed' }, { state: 'passed' }]
+          }
+        ]
+      });
+
+      // assert
+      const keep = saveHar.mock.calls[0]?.[1];
+      expect(
+        [1, 2].map(attempt =>
+          keep?.({ titlePath: ['suite', 'flaky'], attempt })
+        )
+      ).toEqual([true, false]);
     });
+
+    it('should keep every entry when Cypress reports no results, as in cypress open', async () => {
+      // arrange
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
+      install(on, config, { failedTestsOnly: true });
+
+      // act
+      await handlers.get('after:spec')?.(spec, undefined);
+
+      // assert
+      expect(saveHar).toHaveBeenCalledWith(expect.anything(), undefined);
+    });
+
+    it.each([{ input: null }, { input: 1 }, { input: 'true' }])(
+      'should throw a TypeError when it is $input',
+      ({ input }) => {
+        // arrange
+        const { on } = createEvents();
+
+        // act & assert
+        expect(() =>
+          install(on, config, { failedTestsOnly: input as unknown as boolean })
+        ).toThrow(TypeError);
+      }
+    );
   });
 
   it('should not pass the saving options to the recording', async () => {
@@ -227,7 +293,8 @@ describe('install', () => {
 
       // assert
       expect(saveHar).toHaveBeenCalledWith(
-        expect.objectContaining({ outDir: expected })
+        expect.objectContaining({ outDir: expected }),
+        undefined
       );
       saveHar.mockRestore();
     }
@@ -311,7 +378,8 @@ describe('install', () => {
 
       // assert
       expect(saveHar).toHaveBeenCalledWith(
-        expect.objectContaining({ fileName: 'login.cy.har', outDir: expected })
+        expect.objectContaining({ fileName: 'login.cy.har', outDir: expected }),
+        undefined
       );
     }
   );
@@ -448,7 +516,8 @@ describe('install', () => {
         expect.objectContaining({
           fileName: 'login.cy.har',
           outDir: join('hars', 'a')
-        })
+        }),
+        undefined
       );
     });
 
