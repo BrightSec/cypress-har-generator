@@ -61,14 +61,15 @@ export class DefaultHarExporter implements HarExporter {
   ): Promise<HarExport | undefined> {
     await Promise.allSettled(this.pendingWrites);
 
-    if (!this.index.length) {
-      return undefined;
-    }
-
     // Entries are recorded as requests finish; HAR 1.2 orders them by start time.
     const entries = this.index
       .slice()
-      .sort((a, b) => a.startedAt - b.startedAt);
+      .sort((a, b) => a.startedAt - b.startedAt)
+      .filter(({ startedAt }: Slot): boolean => tests.keeps(startedAt));
+
+    if (!entries.length) {
+      return undefined;
+    }
 
     const stamp = this.options?.stable
       ? { startedDateTime: STABLE_STARTED_DATE_TIME }
@@ -77,10 +78,20 @@ export class DefaultHarExporter implements HarExporter {
       entries.map(({ startedAt }: Slot): number => startedAt)
     );
 
+    // every page holds an entry, the document that started it, unless entries were left out
+    const pages: HarPages =
+      entries.length < this.index.length
+        ? this.pages.select(
+            entries.flatMap(({ loaderId }: Slot): string[] =>
+              loaderId ? [loaderId] : []
+            )
+          )
+        : this.pages;
+
     return {
-      pages: this.pages.toArray(stamp),
+      pages: pages.toArray(stamp),
       tests: selected.toArray(stamp),
-      entries: this.readEntries(entries, selected)
+      entries: this.readEntries(entries, pages, selected)
     };
   }
 
@@ -102,6 +113,7 @@ export class DefaultHarExporter implements HarExporter {
 
   private async *readEntries(
     entries: Slot[],
+    pages: HarPages,
     tests: TestTimeline
   ): AsyncGenerator<ExportedEntry> {
     for (const {
@@ -120,7 +132,7 @@ export class DefaultHarExporter implements HarExporter {
       // the page is known only once every document is written, so it is added as the entry is read
       yield {
         json: buffer.toString('utf-8', 0, bytesRead),
-        pageref: loaderId ? this.pages.idOf(loaderId) : undefined,
+        pageref: loaderId ? pages.idOf(loaderId) : undefined,
         testref: hasTestref ? undefined : tests.idAt(startedAt)
       };
     }

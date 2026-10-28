@@ -101,4 +101,27 @@ describe('TestTimeline', () => {
       expect([result.idAt(5), result.idAt(35)]).toEqual([undefined, 'test_1']);
     });
   });
+
+  describe('keeps', () => {
+    it('should keep the entries of every time when no filter is set', () => {
+      // arrange
+      const sut = new TestTimeline([start(['a', 'first'], 10)]);
+      // act
+      const result = [5, 15].map(x => sut.keeps(x));
+      // assert
+      expect(result).toEqual([true, true]);
+    });
+
+    it('should keep only the entries sent by the accepted tests, leaving out those sent before the first one', () => {
+      // arrange
+      const sut = new TestTimeline([
+        start(['a', 'first'], 10),
+        start(['a', 'second'], 20)
+      ]).only(({ titlePath }) => titlePath[1] === 'second');
+      // act
+      const result = [5, 15, 25].map(x => sut.keeps(x));
+      // assert
+      expect(result).toEqual([false, false, true]);
+    });
+  });
 });

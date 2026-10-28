@@ -423,6 +423,91 @@ describe('DefaultHarExporter', () => {
         expect(har?.tests).toEqual([]);
         sut.end();
       });
+
+      describe('when only some tests are kept', () => {
+        const keepSecond = ({ titlePath }: { titlePath: string[] }): boolean =>
+          titlePath[1] === 'second';
+
+        it('should keep only the entries of the kept tests, numbering the tests again', async () => {
+          // arrange
+          const times = [
+            '2022-04-18T09:09:34.900Z',
+            '2022-04-18T09:09:35.100Z',
+            '2022-04-18T09:09:35.300Z',
+            '2022-04-18T09:09:35.500Z'
+          ];
+          const tests = new HarTests();
+          tests.start(start('first', '2022-04-18T09:09:35.000Z'));
+          tests.start(start('second', '2022-04-18T09:09:35.200Z'));
+          tests.start(start('third', '2022-04-18T09:09:35.400Z'));
+          const sut = exporterAt(times);
+          await writeAll(sut, times.length);
+          // act
+          const har = await sut.read(tests.timeline().only(keepSecond));
+          const urls: string[] = [];
+          for await (const { json } of har?.entries ?? []) {
+            urls.push(JSON.parse(json).request.url);
+          }
+          // assert
+          expect(urls).toEqual(['https://example.com/2']);
+          expect(har?.tests.map(x => [x.id, x.titlePath[1]])).toEqual([
+            ['test_1', 'second']
+          ]);
+          sut.end();
+        });
+
+        it('should return nothing when no kept test sent an entry', async () => {
+          // arrange
+          const times = ['2022-04-18T09:09:35.100Z'];
+          const tests = new HarTests();
+          tests.start(start('first', '2022-04-18T09:09:35.000Z'));
+          const sut = exporterAt(times);
+          await writeAll(sut, times.length);
+          // act
+          const har = await sut.read(tests.timeline().only(keepSecond));
+          // assert
+          expect(har).toBeUndefined();
+          sut.end();
+        });
+
+        it('should keep only the pages of the kept entries, numbering them again', async () => {
+          // arrange
+          const times = [
+            '2022-04-18T09:09:35.100Z',
+            '2022-04-18T09:09:35.300Z'
+          ];
+          const tests = new HarTests();
+          tests.start(start('first', '2022-04-18T09:09:35.000Z'));
+          tests.start(start('second', '2022-04-18T09:09:35.200Z'));
+          const sut = exporterAt(times);
+          for (const index of [0, 1]) {
+            const url = `https://example.com/${index}`;
+            const request = new NetworkRequest(
+              `${index}`,
+              url,
+              url,
+              `doc${index}`,
+              undefined,
+              'aut'
+            );
+            request.resourceType = 'Document';
+            request.frameAncestors = Promise.resolve(['runner']);
+            await sut.write(request);
+          }
+          // act
+          const har = await sut.read(tests.timeline().only(keepSecond));
+          const pagerefs: (string | undefined)[] = [];
+          for await (const { pageref } of har?.entries ?? []) {
+            pagerefs.push(pageref);
+          }
+          // assert
+          expect(har?.pages.map(x => [x.id, x.title])).toEqual([
+            ['page_1', 'https://example.com/1']
+          ]);
+          expect(pagerefs).toEqual(['page_1']);
+          sut.end();
+        });
+      });
     });
 
     describe('stable', () => {

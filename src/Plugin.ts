@@ -11,6 +11,7 @@ import type { Observer } from './network/Observer.ts';
 import type { ObserverFactory } from './network/ObserverFactory.ts';
 import { HarBuilder } from './network/HarBuilder.ts';
 import { HarTests } from './network/HarTests.ts';
+import type { TestFilter, TestTimeline } from './network/TestTimeline.ts';
 import { NetworkIdleMonitor } from './network/NetworkIdleMonitor.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import { ErrorUtils } from './utils/ErrorUtils.ts';
@@ -38,6 +39,14 @@ export interface SaveOptions {
   waitForIdle?: boolean;
   minIdleDuration?: number;
   maxWaitDuration?: number;
+}
+
+// what `install` saves for each spec, which a function can be part of, unlike the options `cy.task` sends as JSON
+export interface SpecSaveOptions extends SaveOptions {
+  /**
+   * Keeps only the entries sent by the tests it accepts, and writes no HAR when none is left.
+   */
+  keep?: TestFilter;
 }
 
 export interface HostScopeOptions {
@@ -129,7 +138,7 @@ export class Plugin {
     await this.listenNetworkEvents(options);
   }
 
-  public async saveHar(options: SaveOptions): Promise<void> {
+  public async saveHar(options: SpecSaveOptions): Promise<void> {
     if (!this.supported) {
       return;
     }
@@ -151,7 +160,8 @@ export class Plugin {
 
       await this.stopObserving();
 
-      const har: AsyncIterable<string> | undefined = await this.buildHar();
+      const har: AsyncIterable<string> | undefined =
+        await this.buildHar(options);
 
       if (har) {
         await this.fileManager.writeFile(filePath, har);
@@ -204,8 +214,15 @@ Please refer to the documentation:
     return process.env.ELECTRON_EXTRA_LAUNCH_ARGS.split(' ');
   }
 
-  private async buildHar(): Promise<AsyncIterable<string> | undefined> {
-    const har = await this.exporter?.read(this.tests.timeline());
+  private async buildHar({
+    keep
+  }: Pick<SpecSaveOptions, 'keep'>): Promise<
+    AsyncIterable<string> | undefined
+  > {
+    const timeline: TestTimeline = this.tests.timeline();
+    const har = await this.exporter?.read(
+      keep ? timeline.only(keep) : timeline
+    );
 
     return har
       ? new HarBuilder(har.entries, har.pages, har.tests).build()

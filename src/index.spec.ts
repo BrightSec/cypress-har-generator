@@ -123,6 +123,69 @@ describe('install', () => {
     });
   });
 
+  describe('failedTestsOnly', () => {
+    const spec = {
+      name: 'spec.cy.ts',
+      absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+    };
+
+    it('should keep only the entries of the failed tries when it is set', async () => {
+      // arrange
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
+      install(on, config, { failedTestsOnly: true });
+
+      // act
+      await handlers.get('after:spec')?.(spec, {
+        tests: [
+          {
+            title: ['suite', 'flaky'],
+            state: 'passed',
+            attempts: [{ state: 'failed' }, { state: 'passed' }]
+          }
+        ]
+      });
+
+      // assert
+      const keep = saveHar.mock.calls[0]?.[0].keep;
+      expect(
+        [1, 2].map(attempt =>
+          keep?.({ titlePath: ['suite', 'flaky'], attempt })
+        )
+      ).toEqual([true, false]);
+    });
+
+    it('should keep every entry when Cypress reports no results, as in cypress open', async () => {
+      // arrange
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
+      install(on, config, { failedTestsOnly: true });
+
+      // act
+      await handlers.get('after:spec')?.(spec, undefined);
+
+      // assert
+      expect(saveHar.mock.calls[0]?.[0]).not.toHaveProperty('keep');
+    });
+
+    it.each([{ input: null }, { input: 1 }, { input: 'true' }])(
+      'should throw a TypeError when it is $input',
+      ({ input }) => {
+        // arrange
+        const { on } = createEvents();
+
+        // act & assert
+        expect(() =>
+          install(on, config, { failedTestsOnly: input as unknown as boolean })
+        ).toThrow(TypeError);
+      }
+    );
+  });
+
   it('should not pass the saving options to the recording', async () => {
     // arrange
     const recordHar = jest

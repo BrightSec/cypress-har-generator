@@ -145,6 +145,14 @@ The HAR is always named after the spec and written to `hars_folder`, so `fileNam
 
 As with `cy.saveHar()`, the HAR of each spec waits for the network to be idle before it is saved, so requests still running when the spec ends are kept. It waits up to `maxWaitDuration` (5 seconds by default) for each spec, so a spec that keeps polling ends up to that much later. Pass `waitForIdle: false` to save right away.
 
+To keep only what the failed tests sent, pass `failedTestsOnly: true`:
+
+```js
+install(on, config, { failedTestsOnly: true });
+```
+
+The HAR then has only the entries of the [tests](#recordhar) whose try failed, with their pages, and a spec where no test failed gets no HAR. A test that passes on a retry keeps the entries of its failed tries, and a failed `before` hook counts against the first test, as Cypress reports it. Requests sent before the first test, or by a test that passed, are left out. Because nothing is written for a passing spec, a HAR from an earlier run is left in place. Cypress reports which tests failed only in `cypress run`, so `cypress open` keeps every entry. Do not combine it with [`cy.replayHar()`](#replayhar), whose spec HAR must hold every test.
+
 To control what is recorded and when with the [commands](#commands) instead, turn this off:
 
 ```js
