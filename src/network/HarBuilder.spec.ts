@@ -35,26 +35,37 @@ const entries: Entry[] = [
   }
 ];
 
-describe('HarBuilder', () => {
-  let builder: HarBuilder;
+const entriesOf = async function* (items: Entry[]): AsyncGenerator<string> {
+  for (const item of items) {
+    yield await Promise.resolve(HarBuilder.formatEntry(item));
+  }
+};
 
-  beforeEach(() => {
-    builder = new HarBuilder(entries);
+const read = async (chunks: AsyncIterable<string>): Promise<string> => {
+  let result = '';
+  for await (const chunk of chunks) {
+    result += chunk;
+  }
+
+  return result;
+};
+
+describe('HarBuilder', () => {
+  let pkg!: { name: string; version: string; homepage: string };
+
+  beforeEach(async () => {
+    pkg = (await import('../../package.json', { with: { type: 'json' } }))
+      .default;
   });
 
   describe('build', () => {
     it('should return an HAR', async () => {
       // arrange
-      const {
-        name,
-        version,
-        homepage: comment
-      } = (await import('../../package.json', { with: { type: 'json' } }))
-        .default;
+      const { name, version, homepage: comment } = pkg;
       // act
-      const result = builder.build();
+      const result = await read(new HarBuilder(entriesOf(entries)).build());
       // assert
-      expect(result).toMatchObject({
+      expect(JSON.parse(result)).toEqual({
         log: {
           entries,
           version: '1.2',
@@ -68,29 +79,32 @@ describe('HarBuilder', () => {
       });
     });
 
-    it('should sort entries by startedDateTime, keeping the order of entries started at the same time', () => {
-      // arrange
-      const entry: Entry = entries[0];
-      const at = (startedDateTime: string, url: string): Entry => ({
-        ...entry,
-        startedDateTime,
-        request: { ...entry.request, url }
-      });
-      const unsorted: Entry[] = [
-        at('2022-04-18T09:09:35.705Z', 'https://example.com/logo.png'),
-        at('2022-04-18T09:09:35.704Z', 'https://example.com/style.css'),
-        at('2022-04-18T09:09:35.705Z', 'https://example.com/app.js'),
-        at('2022-04-18T09:09:35.585Z', 'https://example.com/')
-      ];
-      // act
-      const result = new HarBuilder(unsorted).build();
-      // assert
-      expect(result.log.entries.map(x => x.request.url)).toEqual([
-        'https://example.com/',
-        'https://example.com/style.css',
-        'https://example.com/logo.png',
-        'https://example.com/app.js'
-      ]);
-    });
+    it.each([0, 1, 3])(
+      'should write the same text as the whole HAR serialized at once (%i entries)',
+      async (count: number) => {
+        // arrange
+        const { name, version, homepage: comment } = pkg;
+        const items: Entry[] = Array.from({ length: count }, (_, idx) => ({
+          ...entries[0],
+          request: { ...entries[0].request, url: `https://example.com/${idx}` }
+        }));
+        const expected = JSON.stringify(
+          {
+            log: {
+              version: '1.2',
+              pages: [],
+              creator: { name, version, comment },
+              entries: items
+            }
+          },
+          null,
+          2
+        );
+        // act
+        const result = await read(new HarBuilder(entriesOf(items)).build());
+        // assert
+        expect(result).toBe(expected);
+      }
+    );
   });
 });

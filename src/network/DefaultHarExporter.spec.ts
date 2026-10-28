@@ -1,5 +1,6 @@
 import { NetworkRequest } from './NetworkRequest.ts';
 import { DefaultHarExporter } from './DefaultHarExporter.ts';
+import { HarBuilder } from './HarBuilder.ts';
 import type { Logger } from '../utils/Logger.ts';
 import type { DefaultHarExporterOptions } from './DefaultHarExporterOptions.ts';
 import {
@@ -16,9 +17,11 @@ import {
 } from 'ts-mockito';
 import type { Entry } from 'har-format';
 import { beforeEach, describe, it, jest, expect } from '@jest/globals';
-import type { Stats, WriteStream } from 'node:fs';
-import type { FileHandle } from 'node:fs/promises';
-import { EOL } from 'node:os';
+import type { WriteStream } from 'node:fs';
+import { open, rm, type FileHandle } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 describe('DefaultHarExporter', () => {
   const fileMock = mock<FileHandle>();
@@ -63,23 +66,82 @@ describe('DefaultHarExporter', () => {
   });
 
   describe('read', () => {
-    it('should read the whole file', async () => {
+    let file!: FileHandle;
+    let path!: string;
+
+    beforeEach(async () => {
+      path = join(tmpdir(), `har-exporter-${randomUUID()}`);
+      file = await open(path, 'w+');
+    });
+
+    afterEach(() => rm(path, { force: true }));
+
+    const readAll = async (
+      exporter: DefaultHarExporter
+    ): Promise<Entry[] | undefined> => {
+      const entries = await exporter.read();
+      if (!entries) {
+        return undefined;
+      }
+
+      const result: Entry[] = [];
+      for await (const entry of entries) {
+        result.push(JSON.parse(entry));
+      }
+
+      return result;
+    };
+
+    it('should return nothing when no entries are written', async () => {
       // arrange
-      const expected = 'entry';
-      when(fileMock.stat()).thenResolve({ size: expected.length } as Stats);
-      when(fileMock.read(anything(), 0, expected.length, 0)).thenCall(
-        (buffer: Buffer) => {
-          const bytesRead = buffer.write(expected);
-
-          return Promise.resolve({ buffer, bytesRead });
-        }
-      );
-
+      const sut = new DefaultHarExporter(instance(loggerMock), file);
       // act
-      const result = await harExporter.read();
-
+      const result = await readAll(sut);
       // assert
-      expect(result).toBe(expected);
+      expect(result).toBeUndefined();
+      sut.end();
+    });
+
+    it('should return the written entries sorted by startedDateTime, keeping the order of entries started at the same time', async () => {
+      // arrange
+      const startedAt: Record<string, string> = {
+        'https://example.com/logo.png': '2022-04-18T09:09:35.705Z',
+        'https://example.com/style.css': '2022-04-18T09:09:35.704Z',
+        'https://example.com/app.js': '2022-04-18T09:09:35.705Z',
+        'https://example.com/': '2022-04-18T09:09:35.585Z'
+      };
+      const sut = new DefaultHarExporter(instance(loggerMock), file, {
+        transform: (entry: Entry): Entry => ({
+          ...entry,
+          startedDateTime: startedAt[entry.request.url]
+        })
+      });
+      for (const url of Object.keys(startedAt)) {
+        await sut.write(new NetworkRequest('1', url, url, '1'));
+      }
+      // act
+      const result = await readAll(sut);
+      // assert
+      expect(result?.map(x => x.request.url)).toEqual([
+        'https://example.com/',
+        'https://example.com/style.css',
+        'https://example.com/logo.png',
+        'https://example.com/app.js'
+      ]);
+      sut.end();
+    });
+
+    it('should return entries with multibyte characters as written', async () => {
+      // arrange
+      const url = 'https://example.com/ŭ/€/😀';
+      const sut = new DefaultHarExporter(instance(loggerMock), file);
+      await sut.write(new NetworkRequest('1', url, url, '1'));
+      await sut.write(new NetworkRequest('2', url, url, '1'));
+      // act
+      const result = await readAll(sut);
+      // assert
+      expect(result?.map(x => x.request.url)).toEqual([url, url]);
+      sut.end();
     });
 
     it('should wait for the entries being written', async () => {
@@ -89,25 +151,21 @@ describe('DefaultHarExporter', () => {
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => (flush = callback)
       );
-      when(fileMock.stat()).thenResolve({ size: 0 } as Stats);
-      when(fileMock.read(anything(), 0, 0, 0)).thenResolve({
-        buffer: Buffer.alloc(0),
-        bytesRead: 0
-      });
       const write = harExporter.write(networkRequest);
       while (!flush) {
         await new Promise(resolve => setImmediate(resolve));
       }
 
       // act
-      const read = harExporter.read();
+      let done = false;
+      const read = harExporter.read().then(() => (done = true));
       await new Promise(resolve => setImmediate(resolve));
 
       // assert
-      verify(fileMock.stat()).never();
+      expect(done).toBe(false);
       flush?.();
       await Promise.all([write, read]);
-      verify(fileMock.stat()).once();
+      expect(done).toBe(true);
     });
   });
 
@@ -135,7 +193,7 @@ describe('DefaultHarExporter', () => {
       await harExporter.write(networkRequest);
 
       // assert
-      verify(streamMock.write(match(`${EOL}`), anyFunction())).once();
+      verify(streamMock.write(anyString(), anyFunction())).once();
     });
 
     it('should write the entry to the buffer if the predicate returns throws an error', async () => {
@@ -153,13 +211,13 @@ describe('DefaultHarExporter', () => {
       await harExporter.write(networkRequest);
 
       // assert
-      verify(streamMock.write(match(`${EOL}`), anyFunction())).once();
+      verify(streamMock.write(anyString(), anyFunction())).once();
     });
 
     it('should transform the entry before writing to the buffer', async () => {
       // arrange
       const entry = { foo: 'bar' } as unknown as Entry;
-      const entryString = JSON.stringify(entry);
+      const entryString = HarBuilder.formatEntry(entry);
       when(streamMock.writable).thenReturn(true);
       when(streamMock.write(anyString(), anyFunction())).thenCall(
         (_, callback) => callback()
@@ -171,9 +229,7 @@ describe('DefaultHarExporter', () => {
       await harExporter.write(networkRequest);
 
       // assert
-      verify(
-        streamMock.write(match(`${entryString}${EOL}`), anyFunction())
-      ).once();
+      verify(streamMock.write(entryString, anyFunction())).once();
     });
 
     it('should skip the entry when the transformation is failed with an error', async () => {

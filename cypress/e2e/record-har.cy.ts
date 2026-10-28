@@ -16,6 +16,28 @@ const openWebSocket = () =>
       })
   );
 
+// `127.0.0.1` reaches the same app as `localhost` under another host.
+const fetchFromBothHosts = () =>
+  cy.window().then(win =>
+    Promise.all([
+      win.fetch('/api/products'),
+      win.fetch(`http://127.0.0.1:${win.location.port}/api/products`, {
+        mode: 'no-cors'
+      })
+    ])
+  );
+
+const expectOnlyLocalhost = () =>
+  cy
+    .findHar()
+    .its('log.entries')
+    .should('contain.something.like', {
+      request: { url: /^http:\/\/localhost:\d+\/api\/products$/ }
+    })
+    .and('not.contain.something.like', {
+      request: { url: /^http:\/\/127\.0\.0\.1:/ }
+    });
+
 describe('Record HAR', () => {
   beforeEach(() => cy.visit('/'));
 
@@ -217,6 +239,36 @@ describe('Record HAR', () => {
       });
   });
 
+  it('includes only a request when its host name matches regardless of the port', () => {
+    cy.recordHar({ includeHosts: ['localhost'] });
+
+    fetchFromBothHosts();
+
+    cy.saveHar({ waitForIdle: true });
+
+    expectOnlyLocalhost();
+  });
+
+  it('excludes a request by its host', () => {
+    cy.recordHar({ excludeHosts: ['127.0.0.1'] });
+
+    fetchFromBothHosts();
+
+    cy.saveHar({ waitForIdle: true });
+
+    expectOnlyLocalhost();
+  });
+
+  it('includes only a request to the host of the base URL', () => {
+    cy.recordHar({ includeBaseUrlHost: true });
+
+    fetchFromBothHosts();
+
+    cy.saveHar({ waitForIdle: true });
+
+    expectOnlyLocalhost();
+  });
+
   it('records a response body', () => {
     cy.recordHar();
 
@@ -279,6 +331,69 @@ describe('Record HAR', () => {
         );
 
         expect(keys).to.have.length(new Set(keys).size);
+      });
+  });
+
+  it('records a response served by the Service Worker from the Cache Storage', () => {
+    cy.recordHar();
+
+    cy.get('a[href$=service-worker]').click();
+    cy.window().then(win => win.navigator.serviceWorker.ready);
+    cy.reload();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should((entries: Entry[]) => {
+        const entry = entries.find(
+          ({ request, response }: Entry) =>
+            request.url.endsWith('/service-worker.css') &&
+            (response as { _serviceWorkerResponseSource?: string })
+              ._serviceWorkerResponseSource === 'cache-storage'
+        );
+
+        expect(entry).to.deep.include({ _fromCache: 'disk' });
+        expect(entry?.response).to.deep.include({
+          bodySize: 0,
+          _fetchedViaServiceWorker: true,
+          _responseCacheStorageCacheName: 'v1'
+        });
+        expect(entry?.timings)
+          .to.have.property('_workerRespondWithSettled')
+          .that.is.at.least(0);
+      });
+  });
+
+  it('records a response served from the memory cache without the timings of the original request', () => {
+    cy.recordHar();
+
+    cy.visit('/pages/memory-cache');
+    cy.visit('/');
+    cy.go('back');
+    cy.get('img').should(($images: JQuery<HTMLImageElement>) =>
+      expect([...$images].every(({ complete }) => complete)).to.equal(true)
+    );
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should((entries: Entry[]) => {
+        const cached = entries.filter(
+          ({ _fromCache }: Entry) => _fromCache === 'memory'
+        );
+
+        expect(cached).to.have.length.greaterThan(0);
+        cached.forEach(({ timings, response }: Entry) => {
+          expect(response.bodySize).to.equal(0);
+          expect(timings).to.include({
+            blocked: -1,
+            dns: -1,
+            connect: -1,
+            ssl: -1
+          });
+        });
       });
   });
 
@@ -653,4 +768,74 @@ describe('Record HAR', () => {
         }
       });
   });
+
+  it('records a binary blob request body', () => {
+    cy.recordHar({ content: false });
+
+    cy.get('a[href$=post-data]').click();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: {
+          url: /api\/upload\/blob$/,
+          postData: {
+            text: /^GIF89a/
+          }
+        }
+      });
+  });
+
+  it('records a binary request body greater than maxPostDataSize', () => {
+    cy.recordHar({ content: false, maxPostDataSize: 1 });
+
+    cy.get('a[href$=post-data]').click();
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: {
+          url: /api\/upload\/bytes$/,
+          postData: {
+            text: /^GIF89a/
+          }
+        }
+      });
+  });
+
+  [
+    { api: 'fetch', name: 'form-data' },
+    { api: 'XHR', name: 'xhr-form-data' }
+  ].forEach(({ api, name }: { api: string; name: string }) =>
+    it(`records the parameters of a multipart request body with a binary file sent by ${api}`, () => {
+      cy.recordHar({ content: false });
+
+      cy.get('a[href$=post-data]').click();
+
+      cy.saveHar({ waitForIdle: true });
+
+      cy.findHar()
+        .its('log.entries')
+        .should('contain.something.like', {
+          request: {
+            url: new RegExp(`api/upload/${name}$`),
+            postData: {
+              params: [
+                { name: 'field', value: 'value' },
+                {
+                  name: 'file',
+                  fileName: 'image.gif',
+                  contentType: 'image/gif',
+                  value: /^GIF89a/
+                }
+              ]
+            }
+          }
+        });
+    })
+  );
 });
