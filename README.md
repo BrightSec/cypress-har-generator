@@ -431,7 +431,37 @@ describe('my tests', () => {
 
 ### replayHar
 
-Serves the requests of the test with the responses recorded in a HAR file, as Playwright's [`routeFromHAR`](https://playwright.dev/docs/mock#mocking-with-har-files) does, so you can record a HAR once and replay it as a network mock in later runs. It is built on `cy.intercept()`, so it works in any browser and does not need a recording to be active. The path is relative to the project root:
+Serves the requests of the test with the responses recorded in a HAR, as Playwright's [`routeFromHAR`](https://playwright.dev/docs/mock#mocking-with-har-files) does, so a spec can run against the traffic of an earlier run instead of the real backend. It is built on `cy.intercept()`, so it works in any browser and does not need a recording to be active.
+
+Without a path, it works like a snapshot: it replays the HAR that the plugin writes for the spec to `hars_folder`, and the first run records it:
+
+```js
+beforeEach(() => {
+  cy.replayHar();
+});
+```
+
+| HAR of the spec | `hars_update`         | `cy.replayHar()`                                                       |
+| --------------- | --------------------- | ---------------------------------------------------------------------- |
+| missing         | `'missing'` (default) | lets the requests reach the server, and the spec records its HAR       |
+| exists          | `'missing'` (default) | serves the requests from the HAR, which is not written again           |
+| any             | `'all'`               | lets the requests reach the server, and the spec records its HAR again |
+| missing         | `'none'`              | fails the test                                                         |
+| exists          | `'none'`              | serves the requests from the HAR                                       |
+
+Set `hars_update` through `expose`, as `hars_folder`. Use `all` to record the HARs again after the backend changes, and `none` in CI, so a missing HAR fails the run instead of being recorded:
+
+```bash
+npx cypress run --expose hars_update=all
+npx cypress run --expose hars_update=none
+```
+
+Recording needs the HAR recorded for each spec, so it does not work with `lifecycle: false`, or in `cypress open` without [`experimentalInteractiveRunEvents`](https://docs.cypress.io/guides/references/experiments#Configuration): there, a missing HAR fails the test. The HAR holds the requests of all the tests of the spec in the order they ran, so each test goes on from where the previous one stopped. Run the tests in the same order as when recording: `it.only`, a skipped test or a retry shifts which response a request gets.
+
+> [!WARNING]
+> Commit the HARs you replay, so do not ignore `hars_folder` in Git. A HAR keeps cookies, tokens and the other headers and bodies of the recorded traffic: remove the secrets before committing it.
+
+To replay a HAR file you pass yourself, give its path, relative to the project root. Each call serves it from its first entry:
 
 ```js
 cy.replayHar('cypress/hars/products.har');
@@ -443,17 +473,18 @@ A request is served by the entry with the same method, URL and body. A JSON body
 By default, a request that no entry matches fails with a network error. To pass it on to your other `cy.intercept()` handlers and the network instead, pass `notFound: 'fallback'`:
 
 ```js
+cy.replayHar({ notFound: 'fallback' });
 cy.replayHar('cypress/hars/products.har', { notFound: 'fallback' });
 ```
 
 To serve only some requests from the HAR, pass a glob pattern or a regular expression in `url`, as for `cy.intercept()`. The other requests reach the network as usual:
 
 ```js
-cy.replayHar('cypress/hars/products.har', { url: '**/api/**' });
+cy.replayHar({ url: '**/api/**' });
 ```
 
 > [!NOTE]
-> WebSocket and server-sent event entries are not served: `cy.intercept()` cannot reply with WebSocket frames or an event stream, and a HAR keeps no body for an event stream. `cy.intercept()` takes one value per header, so of several recorded `Set-Cookie` headers only the first one is served. The status text and the timings of the recorded response are not replayed.
+> Pages are always loaded from the server: Cypress injects its runner script into each page it loads, so a page recorded through Cypress already carries that script and would run it twice. WebSocket and server-sent event entries are not served: `cy.intercept()` cannot reply with WebSocket frames or an event stream, and a HAR keeps no body for an event stream. `cy.intercept()` takes one value per header, so of several recorded `Set-Cookie` headers only the first one is served. The status text and the timings of the recorded response are not replayed.
 
 ## Example Usage
 

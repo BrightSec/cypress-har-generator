@@ -5,13 +5,25 @@ import { DefaultConnectionFactory } from './cdp/DefaultConnectionFactory.ts';
 import { DefaultHarExporterFactory } from './network/DefaultHarExporterFactory.ts';
 import { DefaultObserverFactory } from './network/DefaultObserverFactory.ts';
 import { StringUtils } from './utils/StringUtils.ts';
-import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
+import {
+  DEFAULT_EXCLUDE_PATHS,
+  HARS_FOLDER_KEY,
+  HARS_UPDATE_KEY
+} from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { HarReader } from './replay/HarReader.ts';
-import type { ReplayOptions } from './replay/ReplayOptions.ts';
+import type { ReplayOptions, UpdateMode } from './replay/ReplayOptions.ts';
 import type { Entry } from 'har-format';
 import picomatch from 'picomatch';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep
+} from 'node:path';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -20,6 +32,12 @@ declare global {
       saveHar(options?: Partial<SaveOptions>): Chainable<Subject>;
       recordHar(options?: Partial<RecordOptions>): Chainable<Subject>;
       disposeOfHar(): Chainable<Subject>;
+      /**
+       * Serves the matching requests with the responses recorded in the HAR of the spec, the one written for each spec to `hars_folder`.
+       * Without that HAR, lets the requests reach the network so the spec records it, as `hars_update` in `expose` sets.
+       * @param options - See {@link ReplayOptions}.
+       */
+      replayHar(options?: ReplayOptions): Chainable<null>;
       /**
        * Serves the matching requests with the responses recorded in a HAR file, which works without recording.
        * @param path - The path to the HAR file, relative to the project root.
@@ -38,6 +56,7 @@ const plugin = new Plugin(
   new DefaultHarExporterFactory(FileManager.Instance, Logger.Instance)
 );
 const harReader = new HarReader(FileManager.Instance);
+const UPDATE_MODES: readonly UpdateMode[] = ['missing', 'all', 'none'];
 
 /**
  * Besides `lifecycle`, takes the options of `cy.recordHar()` and `cy.saveHar()` for the HAR recorded for each spec,
@@ -71,6 +90,17 @@ export const install = (
     );
   }
 
+  // the specs that replay their HAR, which must not be overwritten with the replayed responses
+  const replayedSpecs = new Set<string>();
+  const recordsSpecs: boolean =
+    lifecycle &&
+    (config.isTextTerminal || !!config.experimentalInteractiveRunEvents);
+  const replaySpecHar = createReplaySpecHar(
+    config,
+    recordsSpecs,
+    replayedSpecs
+  );
+
   // ADHOC: Cypress expect the return value to be null to signal that the given event has been handled properly.
   // https://docs.cypress.io/api/commands/task#Usage
   on('task', {
@@ -90,7 +120,8 @@ export const install = (
       return null;
     },
     readHar: (path: string): Promise<Entry[]> =>
-      harReader.read(resolve(config.projectRoot, path))
+      harReader.read(resolve(config.projectRoot, path)),
+    replaySpecHar
   });
 
   on(
@@ -111,7 +142,7 @@ export const install = (
   );
 
   if (lifecycle) {
-    enableLifecycle(on, config, harOptions);
+    enableLifecycle(on, config, harOptions, replayedSpecs);
   } else if (Object.keys(harOptions).length > 0) {
     Logger.Instance.warn(
       'The recording and saving options passed to `install` apply only to the HAR recorded for each spec, which `lifecycle: false` turns off.'
@@ -127,7 +158,8 @@ const enableLifecycle = (
     minIdleDuration,
     maxWaitDuration,
     ...recordOptions
-  }: Omit<InstallOptions, 'lifecycle'> = {}
+  }: Omit<InstallOptions, 'lifecycle'>,
+  replayedSpecs: Set<string>
 ): void => {
   // FIXME: `isInteractive` is always true. For details see https://github.com/cypress-io/cypress/issues/20789
   if (!config.isTextTerminal && !config.experimentalInteractiveRunEvents) {
@@ -143,24 +175,81 @@ const enableLifecycle = (
         ...recordOptions
       })
     );
-    on('after:spec', (spec: Cypress.Spec, _: CypressCommandLine.RunResult) =>
-      plugin.saveHar({
-        waitForIdle,
-        minIdleDuration,
-        maxWaitDuration,
-        fileName: StringUtils.normalizeName(spec.name, { ext: '.har' }),
-        outDir: join(
-          config.expose?.[HARS_FOLDER_KEY] ?? '.',
-          specFolder(spec, config)
-        )
-      })
+    on(
+      'after:spec',
+      (spec: Cypress.Spec, _: CypressCommandLine.RunResult): Promise<void> => {
+        if (replayedSpecs.delete(spec.absolute)) {
+          return plugin.disposeOfHar();
+        }
+
+        const path = specHarPath(spec, config);
+
+        return plugin.saveHar({
+          waitForIdle,
+          minIdleDuration,
+          maxWaitDuration,
+          fileName: basename(path),
+          outDir: dirname(path)
+        });
+      }
     );
   }
 };
 
+// `null` lets the requests reach the network, so the HAR recorded for the spec becomes the one to replay
+const createReplaySpecHar = (
+  config: Cypress.PluginConfigOptions,
+  recordsSpecs: boolean,
+  replayedSpecs: Set<string>
+): ((
+  spec: Pick<Cypress.Spec, 'name' | 'absolute'>
+) => Promise<Entry[] | null>) => {
+  const update: UpdateMode = config.expose?.[HARS_UPDATE_KEY] ?? 'missing';
+
+  if (!UPDATE_MODES.includes(update)) {
+    throw new TypeError(
+      `The \`${HARS_UPDATE_KEY}\` key of \`expose\` must be one of: ${UPDATE_MODES.join(', ')}.`
+    );
+  }
+
+  return async spec => {
+    const path = resolve(config.projectRoot, specHarPath(spec, config));
+
+    if (update !== 'all' && (await FileManager.Instance.pathExists(path))) {
+      replayedSpecs.add(spec.absolute);
+
+      return harReader.read(path);
+    }
+
+    if (update === 'none') {
+      throw new Error(
+        `There is no HAR to replay at ${path}, and \`${HARS_UPDATE_KEY}: 'none'\` does not let the spec record it.`
+      );
+    }
+
+    if (!recordsSpecs) {
+      throw new Error(
+        `There is no HAR to replay at ${path}. To record it, run the spec with the HAR recorded for each spec, which \`lifecycle: false\` and the interactive mode turn off.`
+      );
+    }
+
+    return null;
+  };
+};
+
+const specHarPath = (
+  spec: Pick<Cypress.Spec, 'name' | 'absolute'>,
+  config: Cypress.PluginConfigOptions
+): string =>
+  join(
+    config.expose?.[HARS_FOLDER_KEY] ?? '.',
+    specFolder(spec, config),
+    StringUtils.normalizeName(spec.name, { ext: '.har' })
+  );
+
 // keeps the folders below the fixed start of `specPattern`, so specs with the same name in different folders do not overwrite each other's HAR
 const specFolder = (
-  spec: Cypress.Spec,
+  spec: Pick<Cypress.Spec, 'absolute'>,
   { projectRoot, specPattern }: Cypress.PluginConfigOptions
 ): string => {
   const specDir = dirname(spec.absolute);
@@ -180,4 +269,8 @@ const specFolder = (
 };
 
 export type { SaveOptions, RecordOptions } from './Plugin.ts';
-export type { ReplayOptions, NotFoundAction } from './replay/ReplayOptions.ts';
+export type {
+  ReplayOptions,
+  NotFoundAction,
+  UpdateMode
+} from './replay/ReplayOptions.ts';

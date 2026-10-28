@@ -17,7 +17,10 @@ describe('commands', () => {
   beforeAll(async () => {
     Object.assign(globalThis, {
       Cypress: {
-        spec: { absolute: '/project/cypress/e2e/spec.cy.ts' },
+        spec: {
+          name: 'spec.cy.ts',
+          absolute: '/project/cypress/e2e/spec.cy.ts'
+        },
         Commands: {
           add: (name: string, fn: Command) => commands.set(name, fn)
         }
@@ -29,6 +32,9 @@ describe('commands', () => {
   });
 
   beforeEach(() => {
+    Object.assign(Cypress.spec, {
+      absolute: '/project/cypress/e2e/spec.cy.ts'
+    });
     task.mockReset();
     intercept.mockReset();
   });
@@ -83,25 +89,36 @@ describe('commands', () => {
       }
     ];
 
-    const replay = (...args: unknown[]) => {
+    const replay = (...args: unknown[]) => replayEntries(entries, ...args);
+
+    const replayEntries = (result: unknown, ...args: unknown[]) => {
       task.mockReturnValue({
-        then: (callback: (x: unknown) => unknown) => callback(entries)
+        then: (callback: (x: unknown) => unknown) => callback(result)
       });
       commands.get('replayHar')?.(...args);
 
-      const [matcher, handler]: [unknown, (req: unknown) => void] = intercept
-        .mock.calls[0] as [unknown, (req: unknown) => void];
+      const [matcher, handler]: [unknown, (req: unknown) => void] =
+        (intercept.mock.calls.at(-1) ?? []) as [
+          unknown,
+          (req: unknown) => void
+        ];
 
       return { matcher, handler };
     };
 
-    const createRequest = (requestUrl: string) => ({
+    const createRequest = (requestUrl: string, resourceType = 'fetch') => ({
       method: 'GET',
       url: requestUrl,
       body: '',
+      resourceType,
       reply: jest.fn(),
       destroy: jest.fn()
     });
+
+    const twice = [
+      { ...entries[0], response: { ...entries[0].response, status: 201 } },
+      { ...entries[0], response: { ...entries[0].response, status: 202 } }
+    ];
 
     it('should read the HAR file in the Node process', () => {
       // act
@@ -109,6 +126,85 @@ describe('commands', () => {
 
       // assert
       expect(task).toHaveBeenCalledWith('readHar', 'example.har');
+    });
+
+    it('should read the HAR of the spec without a path', () => {
+      // act
+      replay();
+
+      // assert
+      expect(task).toHaveBeenCalledWith('replaySpecHar', {
+        name: 'spec.cy.ts',
+        absolute: '/project/cypress/e2e/spec.cy.ts'
+      });
+    });
+
+    it('should take the options without a path', () => {
+      // act
+      const { matcher } = replay({ url: '**/api' });
+
+      // assert
+      expect(matcher).toEqual({ url: '**/api' });
+    });
+
+    it('should not intercept while the spec records its HAR', () => {
+      // act
+      replayEntries(null);
+
+      // assert
+      expect(intercept).not.toHaveBeenCalled();
+    });
+
+    it('should go on serving the HAR of the spec from where the previous test stopped', () => {
+      // arrange
+      Object.assign(Cypress.spec, {
+        absolute: '/project/cypress/e2e/next.cy.ts'
+      });
+      const first = createRequest(url);
+      const second = createRequest(url);
+
+      // act
+      replayEntries(twice).handler(first);
+      replayEntries(twice).handler(second);
+
+      // assert
+      expect(first.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ statusCode: 201 })
+      );
+      expect(second.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ statusCode: 202 })
+      );
+    });
+
+    it('should serve a HAR file from its first entry on each call', () => {
+      // arrange
+      const first = createRequest(url);
+      const second = createRequest(url);
+
+      // act
+      replayEntries(twice, 'example.har').handler(first);
+      replayEntries(twice, 'example.har').handler(second);
+
+      // assert
+      expect(first.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ statusCode: 201 })
+      );
+      expect(second.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ statusCode: 201 })
+      );
+    });
+
+    it('should let a page reach the server', () => {
+      // arrange
+      const { handler } = replay('example.har');
+      const req = createRequest(url, 'document');
+
+      // act
+      handler(req);
+
+      // assert
+      expect(req.reply).not.toHaveBeenCalled();
+      expect(req.destroy).not.toHaveBeenCalled();
     });
 
     it('should intercept every request by default', () => {
@@ -169,7 +265,7 @@ describe('commands', () => {
       expect(req.reply).not.toHaveBeenCalled();
     });
 
-    it.each([undefined, '', 42])(
+    it.each(['', 42, null])(
       'should throw a TypeError when the path is %p',
       path => {
         // act & assert

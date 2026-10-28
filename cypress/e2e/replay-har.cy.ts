@@ -174,6 +174,20 @@ describe('Replay HAR', () => {
     cy.get('#text').should('contain.text', 'john.doe@example.com');
   });
 
+  it('loads a recorded page from the server, so Cypress injects its runner script once', () => {
+    record(() => cy.visit('/pages/fetch'));
+
+    cy.get<string>('@path').then(path => cy.replayHar(path));
+
+    cy.visit('/pages/fetch');
+    // the runner script Cypress injects into each page takes the global `Cypress` of the parent window
+    cy.document()
+      .then(doc =>
+        [...doc.scripts].filter(({ text }) => text.includes('parent.Cypress'))
+      )
+      .should('have.length', 1);
+  });
+
   it('serves a route the server does not have, without recording', () => {
     const url = `${Cypress.config('baseUrl')}/api/unavailable`;
 

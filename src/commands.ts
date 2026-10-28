@@ -45,13 +45,52 @@ Cypress.Commands.add('disposeOfHar', (): Cypress.Chainable =>
 
 const NOT_FOUND_ACTIONS: readonly NotFoundAction[] = ['abort', 'fallback'];
 
-Cypress.Commands.add(
-  'replayHar',
-  (path: string, options: ReplayOptions = {}): Cypress.Chainable => {
-    if (!StringUtils.isString(path) || !path) {
-      throw new TypeError('`replayHar` requires the path to a HAR file.');
+// the HAR of the spec holds the requests of all its tests, so each test goes on from where the previous one stopped
+let specRouter: { spec: string; router: HarRouter } | undefined;
+
+const routeSpecHar = (entries: Entry[]): HarRouter => {
+  if (specRouter?.spec !== Cypress.spec.absolute) {
+    specRouter = {
+      spec: Cypress.spec.absolute,
+      router: new HarRouter(entries)
+    };
+  }
+
+  return specRouter.router;
+};
+
+const parseReplayArgs = (
+  pathOrOptions?: string | ReplayOptions,
+  maybeOptions?: ReplayOptions
+): [string | undefined, ReplayOptions] => {
+  if (StringUtils.isString(pathOrOptions)) {
+    if (!pathOrOptions) {
+      throw new TypeError('The path passed to `replayHar` must not be empty.');
     }
 
+    return [pathOrOptions, maybeOptions ?? {}];
+  }
+
+  if (
+    pathOrOptions !== undefined &&
+    (pathOrOptions === null || typeof pathOrOptions !== 'object')
+  ) {
+    throw new TypeError(
+      '`replayHar` takes the path to a HAR file, the options, or both.'
+    );
+  }
+
+  return [undefined, pathOrOptions ?? {}];
+};
+
+Cypress.Commands.add(
+  'replayHar',
+  (
+    pathOrOptions?: string | ReplayOptions,
+    maybeOptions?: ReplayOptions
+  ): Cypress.Chainable => {
+    const [path, options]: [string | undefined, ReplayOptions] =
+      parseReplayArgs(pathOrOptions, maybeOptions);
     const { url, notFound = 'abort' } = options;
 
     if (
@@ -68,10 +107,28 @@ Cypress.Commands.add(
       );
     }
 
-    return cy.task<Entry[]>('readHar', path).then(entries => {
-      const router = new HarRouter(entries);
+    const entries: Cypress.Chainable<Entry[] | null> =
+      path === undefined
+        ? cy.task<Entry[] | null>('replaySpecHar', {
+            name: Cypress.spec.name,
+            absolute: Cypress.spec.absolute
+          })
+        : cy.task<Entry[] | null>('readHar', path);
+
+    return entries.then(result => {
+      if (!result) {
+        return;
+      }
+
+      const router: HarRouter =
+        path === undefined ? routeSpecHar(result) : new HarRouter(result);
 
       cy.intercept({ url: url ?? /.*/ }, req => {
+        // a page recorded through Cypress carries the runner script Cypress injects into it, so serving it would inject the script twice
+        if (req.resourceType === 'document') {
+          return;
+        }
+
         const entry: Entry | undefined = router.find(req);
 
         if (entry) {
