@@ -330,7 +330,9 @@ export class DefaultNetwork implements Network {
       (e.message.includes('Target closed') ||
         e.message.includes('Session closed') ||
         e.message.includes('Session with given id not found') ||
-        e.message.includes('No session with given id'))
+        e.message.includes('No session with given id') ||
+        // chrome-remote-interface rejects the commands still waiting for a reply once the connection closes
+        e.message.includes('WebSocket connection closed'))
     );
   }
 }

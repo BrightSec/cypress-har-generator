@@ -400,7 +400,8 @@ describe('DefaultNetwork', () => {
     it.each([
       { input: 'Target closed' },
       { input: 'Session closed' },
-      { input: 'Session with given id not found.' }
+      { input: 'Session with given id not found.' },
+      { input: 'WebSocket connection closed' }
     ])(
       'should silently handle an error when the $input has been closed',
       async ({ input }) => {
