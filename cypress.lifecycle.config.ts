@@ -1,8 +1,8 @@
 import base from './cypress.config.ts';
 import { install } from './src/index.ts';
 import { defineConfig } from 'cypress';
-import { readFile, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 // the two specs share a name, so each HAR must keep the folder of its spec
 const harPaths = [
@@ -14,8 +14,17 @@ const harPaths = [
   {
     path: join('cypress', 'hars', 'nested', 'stop.cy.har'),
     urls: ['/pages/fetch']
+  },
+  // `cy.replayHar()` finds no HAR for the spec, so the spec records it
+  {
+    path: join('cypress', 'hars', 'record.cy.har'),
+    urls: ['/', '/api/random']
   }
 ];
+
+// `cy.replayHar()` in the spec serves this HAR, which must not be overwritten with the replayed responses
+const replayedHarPath = join('cypress', 'hars', 'replay.cy.har');
+const replayedValues = ['first', 'second'];
 
 export default defineConfig({
   ...base,
@@ -28,13 +37,48 @@ export default defineConfig({
     ): void {
       install(on, config);
 
+      const replayedHar = (baseUrl: string) => ({
+        log: {
+          version: '1.2',
+          creator: { name: 'test', version: '1' },
+          entries: replayedValues.map(value => ({
+            request: {
+              method: 'GET',
+              url: `${baseUrl}/api/random`,
+              headers: []
+            },
+            response: {
+              status: 200,
+              statusText: 'OK',
+              headers: [{ name: 'Content-Type', value: 'application/json' }],
+              content: {
+                size: 0,
+                mimeType: 'application/json',
+                text: JSON.stringify({ value })
+              }
+            }
+          }))
+        }
+      });
+
       on('before:run', async () => {
         await Promise.all(
           harPaths.map(({ path }) => rm(path, { force: true }))
         );
+        await mkdir(dirname(replayedHarPath), { recursive: true });
+        await writeFile(
+          replayedHarPath,
+          JSON.stringify(replayedHar(config.baseUrl ?? ''))
+        );
       });
       // `Cypress.stop()` skips the rest of the run, so the HAR can only be checked once the run is over
       on('after:run', async () => {
+        const replayed: string = await readFile(replayedHarPath, 'utf-8');
+
+        if (replayed !== JSON.stringify(replayedHar(config.baseUrl ?? ''))) {
+          throw new Error(`${replayedHarPath} was overwritten`);
+        }
+
         for (const { path, urls: expected } of harPaths) {
           const { log } = JSON.parse(await readFile(path, 'utf-8'));
           const urls: string[] = log.entries.map(

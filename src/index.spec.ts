@@ -1,6 +1,8 @@
 import { install } from './index.ts';
 import { Plugin } from './Plugin.ts';
 import { Logger } from './utils/Logger.ts';
+import { HarReader } from './replay/HarReader.ts';
+import { FileManager } from './utils/FileManager.ts';
 import { DEFAULT_EXCLUDE_PATHS } from './constants.ts';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { join, resolve } from 'node:path';
@@ -332,6 +334,179 @@ describe('install', () => {
       content: true,
       excludePaths: ['^\\/__(cypress[\\w-]*)?\\/'],
       rootDir: '/project/cypress/e2e'
+    });
+  });
+
+  it('should read the HAR to replay relative to the project root', async () => {
+    // arrange
+    const entries = [{ request: { url: 'https://example.com/' } }];
+    const read = jest
+      .spyOn(HarReader.prototype, 'read')
+      .mockResolvedValue(entries as never);
+    const { handlers, on } = createEvents();
+    install(on, config);
+    const tasks = handlers.get('task') as unknown as Record<
+      string,
+      (path: string) => Promise<unknown>
+    >;
+
+    // act
+    const result = await tasks.readHar('hars/example.har');
+
+    // assert
+    expect(read).toHaveBeenCalledWith(join(projectRoot, 'hars/example.har'));
+    expect(result).toBe(entries);
+  });
+
+  describe('replaySpecHar', () => {
+    const spec = {
+      name: 'login.cy.ts',
+      absolute: join(projectRoot, 'cypress/e2e/a/login.cy.ts')
+    };
+    const entries = [{ request: { url: 'https://example.com/' } }];
+
+    const setup = ({
+      exists,
+      expose = {},
+      ...rest
+    }: {
+      exists: boolean;
+      expose?: Record<string, string>;
+      lifecycle?: boolean;
+      isTextTerminal?: boolean;
+    }) => {
+      jest.spyOn(FileManager.prototype, 'pathExists').mockResolvedValue(exists);
+      const read = jest
+        .spyOn(HarReader.prototype, 'read')
+        .mockResolvedValue(entries as never);
+      const saveHar = jest
+        .spyOn(Plugin.prototype, 'saveHar')
+        .mockResolvedValue(undefined);
+      const disposeOfHar = jest
+        .spyOn(Plugin.prototype, 'disposeOfHar')
+        .mockResolvedValue(undefined);
+      const { handlers, on } = createEvents();
+      install(
+        on,
+        {
+          ...config,
+          isTextTerminal: rest.isTextTerminal ?? true,
+          expose: { hars_folder: 'hars', ...expose }
+        } as Cypress.PluginConfigOptions,
+        { lifecycle: rest.lifecycle ?? true }
+      );
+      const tasks = handlers.get('task') as unknown as Record<
+        string,
+        (x: unknown) => Promise<unknown>
+      >;
+      const afterSpec = () => handlers.get('after:spec')?.(spec, {});
+
+      return { tasks, read, saveHar, disposeOfHar, afterSpec };
+    };
+
+    it('should replay the HAR of the spec from its folder in hars_folder', async () => {
+      // arrange
+      const { tasks, read } = setup({ exists: true });
+
+      // act
+      const result = await tasks.replaySpecHar(spec);
+
+      // assert
+      expect(read).toHaveBeenCalledWith(
+        join(projectRoot, 'hars', 'a', 'login.cy.har')
+      );
+      expect(result).toBe(entries);
+    });
+
+    it('should not overwrite the replayed HAR of the spec', async () => {
+      // arrange
+      const { tasks, saveHar, disposeOfHar, afterSpec } = setup({
+        exists: true
+      });
+      await tasks.replaySpecHar(spec);
+
+      // act
+      await afterSpec();
+
+      // assert
+      expect(saveHar).not.toHaveBeenCalled();
+      expect(disposeOfHar).toHaveBeenCalled();
+    });
+
+    it('should let the spec record its missing HAR', async () => {
+      // arrange
+      const { tasks, read, saveHar, afterSpec } = setup({ exists: false });
+
+      // act
+      const result = await tasks.replaySpecHar(spec);
+      await afterSpec();
+
+      // assert
+      expect(result).toBeNull();
+      expect(read).not.toHaveBeenCalled();
+      expect(saveHar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileName: 'login.cy.har',
+          outDir: join('hars', 'a')
+        })
+      );
+    });
+
+    it('should record the HAR of the spec again when hars_update is all', async () => {
+      // arrange
+      const { tasks, read } = setup({
+        exists: true,
+        expose: { hars_update: 'all' }
+      });
+
+      // act
+      const result = await tasks.replaySpecHar(spec);
+
+      // assert
+      expect(result).toBeNull();
+      expect(read).not.toHaveBeenCalled();
+    });
+
+    it('should fail without the HAR of the spec when hars_update is none', async () => {
+      // arrange
+      const { tasks } = setup({
+        exists: false,
+        expose: { hars_update: 'none' }
+      });
+
+      // act & assert
+      await expect(tasks.replaySpecHar(spec)).rejects.toThrow(
+        /no HAR to replay/
+      );
+    });
+
+    it.each([
+      { lifecycle: false, isTextTerminal: true },
+      { lifecycle: true, isTextTerminal: false }
+    ])(
+      'should fail without the HAR of the spec when the spec cannot record it (%p)',
+      async options => {
+        // arrange
+        const { tasks } = setup({ exists: false, ...options });
+
+        // act & assert
+        await expect(tasks.replaySpecHar(spec)).rejects.toThrow(
+          /no HAR to replay/
+        );
+      }
+    );
+
+    it('should throw on an unknown hars_update', () => {
+      // arrange
+      const { on } = createEvents();
+
+      // act & assert
+      expect(() =>
+        install(on, {
+          ...config,
+          expose: { hars_update: 'new' }
+        } as Cypress.PluginConfigOptions)
+      ).toThrow(TypeError);
     });
   });
 });

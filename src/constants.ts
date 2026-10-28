@@ -9,3 +9,4 @@ export const DEFAULT_EXCLUDE_PATHS: readonly string[] = [
   '^\\/__(cypress[\\w-]*)?\\/'
 ];
 export const HARS_FOLDER_KEY = 'hars_folder';
+export const HARS_UPDATE_KEY = 'hars_update';

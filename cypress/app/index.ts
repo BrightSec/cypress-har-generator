@@ -2,7 +2,7 @@ import express, { type Request, type Response, json, raw } from 'express';
 import minimist from 'minimist';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { setInterval, clearInterval } from 'node:timers';
 
 const app = express();
@@ -93,6 +93,15 @@ app.post(
   raw({ type: ['text/xml', 'application/json'] }),
   (req: Request, res: Response) =>
     res.send(Buffer.isBuffer(req.body) ? req.body.toString() : req.body)
+);
+app.get('/api/random', (_: Request, res: Response) =>
+  res.json({ value: randomUUID() })
+);
+app.get('/api/random-bytes', (_: Request, res: Response) =>
+  res.type('application/octet-stream').send(randomBytes(64))
+);
+app.get('/api/cookies', (_: Request, res: Response) =>
+  res.cookie('first', randomUUID()).cookie('second', randomUUID()).json({})
 );
 app.post(
   '/api/upload/:name',
