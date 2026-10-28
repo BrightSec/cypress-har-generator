@@ -279,6 +279,103 @@ describe('DefaultNetwork', () => {
       }
     );
 
+    it.each([
+      { type: 'page', expected: 1 },
+      { type: 'service_worker', expected: 0 },
+      { type: 'worker', expected: 0 },
+      { type: 'iframe', expected: 0 }
+    ])(
+      'should add the test function $expected time(s) to the $type target',
+      async ({ type, expected }) => {
+        // arrange
+        const sessionId = '1';
+        let act: ((...args: unknown[]) => Promise<void>) | undefined;
+        when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
+          (_, callback) => (act = callback)
+        );
+        await sut.attachToTargets(listener);
+        // act
+        await act?.(
+          {
+            sessionId,
+            targetInfo: {
+              targetId: '1',
+              type,
+              url: '',
+              title: '',
+              attached: true,
+              canAccessOpener: false
+            },
+            waitingForDebugger: false
+          },
+          'parent'
+        );
+        // assert
+        verify(
+          clientMock.send(
+            'Runtime.addBinding',
+            deepEqual({ name: '__cypressHarTestStarted' }),
+            sessionId
+          )
+        ).times(expected);
+      }
+    );
+
+    it('should go on attaching to a page that fails to add the test function', async () => {
+      // arrange
+      const sessionId = '1';
+      let act: ((...args: unknown[]) => Promise<void>) | undefined;
+      when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
+        (_, callback) => (act = callback)
+      );
+      when(
+        clientMock.send('Runtime.addBinding', anything(), sessionId)
+      ).thenReject(new Error('Target closed'));
+      await sut.attachToTargets(listener);
+      // act
+      await act?.(
+        {
+          sessionId,
+          targetInfo: {
+            targetId: '1',
+            type: 'page',
+            url: '',
+            title: '',
+            attached: true,
+            canAccessOpener: false
+          },
+          waitingForDebugger: false
+        },
+        'parent'
+      );
+      // assert
+      verify(
+        clientMock.send('Network.enable', deepEqual({}), sessionId)
+      ).once();
+      verify(loggerMock.warn(anything())).never();
+    });
+
+    it.each([
+      { name: '__cypressHarTestStarted', expected: [['{}']] },
+      { name: 'other', expected: [] }
+    ])(
+      'should pass on the payloads of the $name function',
+      async ({ name, expected }) => {
+        // arrange
+        const started = jest.fn();
+        let call: ((...args: unknown[]) => void) | undefined;
+        when(clientMock.on('Runtime.bindingCalled', anyFunction())).thenCall(
+          (_, callback) => (call = callback)
+        );
+        sut.onTestStarted(started);
+        await sut.attachToTargets(listener);
+        // act
+        call?.({ name, payload: '{}', executionContextId: 1 });
+        // assert
+        expect(started.mock.calls).toEqual(expected);
+      }
+    );
+
     it('should release a service worker attached to the browser instead of tracking it twice', async () => {
       // arrange
       const sessionId = '1';

@@ -31,6 +31,11 @@ export interface Network {
     frameId: Protocol.Page.FrameId
   ): Promise<Protocol.Page.FrameId[]>;
 
+  /**
+   * Listens to the payloads the pages send as each test starts, through a function added to each page as it is attached.
+   */
+  onTestStarted(listener: (payload: string) => unknown): void;
+
   attachToTargets(listener: (event: NetworkEvent) => unknown): Promise<void>;
 
   detachFromTargets(): Promise<void>;

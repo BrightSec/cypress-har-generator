@@ -503,6 +503,14 @@ It removes the listed headers with the cookies parsed from them, and replaces th
 
 The HAR groups the entries by page, as Chrome DevTools exports it: each document the app loads, such as with `cy.visit()` or a link, is a page of `log.pages`, and each entry has the `pageref` of the page whose document sent it. The requests of an iframe belong to the page that holds the iframe, and a popup has pages of its own. A page is titled with its URL and keeps no timings, so `pageTimings` is empty. A request sent by a document loaded before `cy.recordHar()`, or left out of the HAR by the options, has no `pageref`.
 
+Each entry also tells the test that sent it, in the custom `_test` field, so you can find the requests of a failed test or of one try of a retried test:
+
+```json
+"_test": { "titlePath": ["Cart", "adds an item"], "attempt": 2 }
+```
+
+`titlePath` holds the titles of the suites and of the test, as `Cypress.currentTest.titlePath` does, and `attempt` counts the tries from `1`. A request belongs to the test that was running when the request started. Cypress runs the `before` hooks within the first test and the `after` hooks within the last one, so their requests belong to those tests. A request sent before any test started has no `_test`. The page tells the plugin which test started through a function the plugin adds to it while recording, so the commands send nothing and break nothing when no recording is active.
+
 ### saveHar
 
 Stops recording and saves all requests that have occurred since `recordHar` was run to a HAR file. By default, the file is saved to the root of the project with a file name that includes the current spec's name (e.g. `{specName}.har`).

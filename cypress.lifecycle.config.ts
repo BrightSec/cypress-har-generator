@@ -104,6 +104,20 @@ export default defineConfig({
             );
           }
 
+          // each request was sent by a test, as the recording starts before the spec does
+          const untested: string[] = log.entries
+            .filter(
+              ({ _test }: { _test?: { titlePath: string[] } }) =>
+                !_test?.titlePath.length
+            )
+            .map(({ request }: { request: { url: string } }) => request.url);
+
+          if (untested.length) {
+            throw new Error(
+              `${path} has entries with no test: ${untested.join(', ')}`
+            );
+          }
+
           // the first URL is the document of the spec's page, which every request of the spec was sent from
           const pages: string[] = log.pages.map(
             ({ title }: { title: string }) => title

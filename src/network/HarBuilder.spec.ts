@@ -1,5 +1,6 @@
 import { HarBuilder } from './HarBuilder.ts';
 import type { ExportedEntry } from './HarExporter.ts';
+import { HarTests } from './HarTests.ts';
 import type { Entry } from 'har-format';
 import { describe, beforeEach, it, expect } from '@jest/globals';
 
@@ -43,7 +44,8 @@ const entriesOf = async function* (
   for (const item of items) {
     yield await Promise.resolve({
       json: HarBuilder.formatEntry(item),
-      pageref
+      pageref,
+      startedAt: Date.parse(item.startedDateTime)
     });
   }
 };
@@ -105,6 +107,63 @@ describe('HarBuilder', () => {
       expect(log.pages).toEqual(pages);
       expect(log.entries).toEqual([{ pageref: 'page_1', ...entries[0] }]);
       expect(Object.keys(log.entries[0])[0]).toBe('pageref');
+    });
+
+    it('should add the test that sent each entry after its page, as the whole HAR serialized at once would', async () => {
+      // arrange
+      const { name, version, homepage: comment } = pkg;
+      const tests = new HarTests();
+      tests.start(
+        JSON.stringify({
+          spec: 'cypress/e2e/a.cy.ts',
+          titlePath: ['suite', 'test'],
+          attempt: 2,
+          startedAt: Date.parse(entries[0].startedDateTime)
+        })
+      );
+      const expected = JSON.stringify(
+        {
+          log: {
+            version: '1.2',
+            pages: [],
+            creator: { name, version, comment },
+            entries: [
+              {
+                pageref: 'page_1',
+                _test: { titlePath: ['suite', 'test'], attempt: 2 },
+                ...entries[0]
+              }
+            ]
+          }
+        },
+        null,
+        2
+      );
+      // act
+      const result = await read(
+        new HarBuilder(entriesOf(entries, 'page_1'), [], tests).build()
+      );
+      // assert
+      expect(result).toBe(expected);
+    });
+
+    it('should leave out the test of an entry sent before any test started', async () => {
+      // arrange
+      const tests = new HarTests();
+      tests.start(
+        JSON.stringify({
+          spec: 'cypress/e2e/a.cy.ts',
+          titlePath: ['suite', 'test'],
+          attempt: 1,
+          startedAt: Date.parse(entries[0].startedDateTime) + 1
+        })
+      );
+      // act
+      const result = await read(
+        new HarBuilder(entriesOf(entries), [], tests).build()
+      );
+      // assert
+      expect(JSON.parse(result).log.entries[0]).not.toHaveProperty('_test');
     });
 
     it('should write the same text as the whole HAR serialized at once when the entries have pages', async () => {

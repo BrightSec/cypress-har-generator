@@ -1,11 +1,49 @@
 import { StringUtils } from './utils/StringUtils.ts';
 import { HostPattern } from './utils/HostPattern.ts';
-import { DEFAULT_EXCLUDE_PATHS, HARS_FOLDER_KEY } from './constants.ts';
+import {
+  DEFAULT_EXCLUDE_PATHS,
+  HARS_FOLDER_KEY,
+  TEST_STARTED_BINDING
+} from './constants.ts';
+import type { TestStart } from './network/HarTests.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { HarRouter } from './replay/HarRouter.ts';
 import { ReplayResponse } from './replay/ReplayResponse.ts';
 import type { NotFoundAction, ReplayOptions } from './replay/ReplayOptions.ts';
 import type { Entry } from 'har-format';
+
+// Mocha documents `currentRetry` as public, while its types mark it protected
+type MochaTest = Pick<Mocha.Test, 'titlePath'> & { currentRetry(): number };
+
+let currentTest: TestStart | undefined;
+
+// the plugin adds the function to the pages it records, so nothing is sent while no recording is active.
+// A spec frame created after the recording started lacks it, while the runner page above it, of the same origin, has it.
+const findBinding = (): unknown =>
+  [window, window.top]
+    .map(
+      (x: Window | null): unknown =>
+        (x as unknown as Record<string, unknown> | null)?.[TEST_STARTED_BINDING]
+    )
+    .find((x: unknown): boolean => typeof x === 'function');
+
+const sendTestStart = (): void => {
+  const binding: unknown = findBinding();
+
+  if (currentTest && typeof binding === 'function') {
+    binding(JSON.stringify(currentTest));
+  }
+};
+
+Cypress.on('test:before:run', (_: unknown, test: Mocha.Test) => {
+  currentTest = {
+    spec: Cypress.spec.relative,
+    titlePath: test.titlePath(),
+    attempt: (test as unknown as MochaTest).currentRetry() + 1,
+    startedAt: Date.now()
+  };
+  sendTestStart();
+});
 
 Cypress.Commands.add(
   'recordHar',
@@ -17,18 +55,21 @@ Cypress.Commands.add(
       Cypress.config('baseUrl')
     );
 
-    return cy.task('recordHar', {
-      content: true,
-      rootDir: StringUtils.dirname(Cypress.spec.absolute),
-      ...recordOptions,
-      excludePaths: (recordOptions.excludePaths ?? DEFAULT_EXCLUDE_PATHS).map(
-        x => StringUtils.toRegexSource(x)
-      ),
-      includeHosts: includeHosts?.map(x => HostPattern.toSource(x)),
-      excludeHosts: recordOptions.excludeHosts?.map(x =>
-        HostPattern.toSource(x)
-      )
-    });
+    return cy
+      .task('recordHar', {
+        content: true,
+        rootDir: StringUtils.dirname(Cypress.spec.absolute),
+        ...recordOptions,
+        excludePaths: (recordOptions.excludePaths ?? DEFAULT_EXCLUDE_PATHS).map(
+          x => StringUtils.toRegexSource(x)
+        ),
+        includeHosts: includeHosts?.map(x => HostPattern.toSource(x)),
+        excludeHosts: recordOptions.excludeHosts?.map(x =>
+          HostPattern.toSource(x)
+        )
+        // the function exists only once the recording started, after the test did
+      })
+      .then(() => sendTestStart());
   }
 );
 

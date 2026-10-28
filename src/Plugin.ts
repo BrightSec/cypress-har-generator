@@ -10,6 +10,7 @@ import type { NetworkObserverOptions } from './network/NetworkObserverOptions.ts
 import type { Observer } from './network/Observer.ts';
 import type { ObserverFactory } from './network/ObserverFactory.ts';
 import { HarBuilder } from './network/HarBuilder.ts';
+import { HarTests } from './network/HarTests.ts';
 import { NetworkIdleMonitor } from './network/NetworkIdleMonitor.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import { ErrorUtils } from './utils/ErrorUtils.ts';
@@ -64,6 +65,8 @@ export class Plugin {
   private addr?: Addr;
   private _connection?: Connection;
   private supported?: boolean;
+  // kept across recordings, as a spec can record again within a test that started before
+  private readonly tests = new HarTests();
 
   constructor(
     private readonly logger: Logger,
@@ -200,7 +203,9 @@ Please refer to the documentation:
   private async buildHar(): Promise<AsyncIterable<string> | undefined> {
     const har = await this.exporter?.read();
 
-    return har ? new HarBuilder(har.entries, har.pages).build() : undefined;
+    return har
+      ? new HarBuilder(har.entries, har.pages, this.tests).build()
+      : undefined;
   }
 
   private waitForNetworkIdle(
@@ -222,6 +227,8 @@ Please refer to the documentation:
 
   private async listenNetworkEvents(options: RecordOptions): Promise<void> {
     const network = this._connection?.discoverNetwork(options);
+
+    network?.onTestStarted((payload: string) => this.tests.start(payload));
 
     this.networkObservable = this.observerFactory.createNetworkObserver(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

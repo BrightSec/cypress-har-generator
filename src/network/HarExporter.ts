@@ -5,6 +5,7 @@ export interface ExportedEntry {
   // as `HarBuilder.formatEntry` serializes it
   json: string;
   pageref?: string;
+  startedAt: number;
 }
 
 export interface HarExport {

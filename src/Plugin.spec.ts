@@ -72,7 +72,7 @@ const useFakeTimers = () => {
 const entriesOf = (...entries: string[]): HarExport => ({
   pages: [],
   entries: (async function* () {
-    yield* entries.map(json => ({ json }));
+    yield* entries.map(json => ({ json, startedAt: 0 }));
   })()
 });
 

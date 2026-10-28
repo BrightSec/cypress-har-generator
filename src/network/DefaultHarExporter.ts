@@ -92,7 +92,7 @@ export class DefaultHarExporter implements HarExporter {
   }
 
   private async *readEntries(entries: Slot[]): AsyncGenerator<ExportedEntry> {
-    for (const { position, length, loaderId } of entries) {
+    for (const { position, length, loaderId, startedAt } of entries) {
       const { buffer, bytesRead } = await this.file.read(
         Buffer.alloc(length),
         0,
@@ -102,7 +102,8 @@ export class DefaultHarExporter implements HarExporter {
       // the page is known only once every document is written, so it is added as the entry is read
       yield {
         json: buffer.toString('utf-8', 0, bytesRead),
-        pageref: loaderId ? this.pages.idOf(loaderId) : undefined
+        pageref: loaderId ? this.pages.idOf(loaderId) : undefined,
+        startedAt
       };
     }
   }
