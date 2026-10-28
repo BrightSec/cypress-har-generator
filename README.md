@@ -410,7 +410,8 @@ The headers and the bodies often hold values that change on every run too, such 
 cy.recordHar({ stable: true, transform: '../support/remove-volatile-data.ts' });
 ```
 
-Here's what the `remove-volatile-data.ts` module might look like:
+<details>
+<summary>Here's what the <code>remove-volatile-data.ts</code> module might look like</summary>
 
 ```ts
 import type { Entry, PostData } from 'har-format';
@@ -495,6 +496,8 @@ export default (entry: Entry): Entry => {
   return entry;
 };
 ```
+
+</details>
 
 It removes the listed headers with the cookies parsed from them, and replaces the listed fields of a JSON body with `***`, at any depth. Since the masked values can differ in length, it also leaves out the sizes measured on the wire, which HAR 1.2 allows with `-1`, and sets `content.size` to the size of the masked body.
 
