@@ -295,7 +295,7 @@ export class DefaultNetwork implements Network {
         sessionId
       );
     } catch (e) {
-      // a page closing while it is attached cannot be told when its tests start, which only leaves `_test` out
+      // a page closing while it is attached cannot be told when its tests start, which only leaves `_testref` out
       this.logger.debug(
         `Failed to add the test binding: ${ErrorUtils.isError(e) ? e.message : e}`
       );

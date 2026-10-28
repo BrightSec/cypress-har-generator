@@ -1,10 +1,14 @@
 export interface HarTest {
+  startedDateTime: string;
+  id: string;
   titlePath: string[];
   // 1 for the first try, counting the retries
   attempt: number;
 }
 
-export interface TestStart extends HarTest {
+export interface TestStart {
+  titlePath: string[];
+  attempt: number;
   // the spec, as `Cypress.spec.relative`, so the tests of an earlier spec are dropped
   spec: string;
   startedAt: number;
@@ -15,7 +19,8 @@ export interface TestStart extends HarTest {
  */
 export class HarTests {
   private spec?: string;
-  private starts: TestStart[] = [];
+
+  constructor(private starts: TestStart[] = []) {}
 
   /**
    * Adds a test from the payload the page sends as it starts, ignoring a payload the commands would not send,
@@ -41,27 +46,71 @@ export class HarTests {
   }
 
   /**
-   * The test that was running at the given time: the last one that started by then.
+   * The tests that were running at the given times, as the start times of the entries,
+   * so a test that sent nothing to the HAR is left out of it.
    */
-  public at(time: number): HarTest | undefined {
+  public select(times: Iterable<number>): HarTests {
+    const selected = new Set<TestStart>();
+
+    for (const time of times) {
+      const index: number = this.indexAt(time);
+
+      if (index >= 0) {
+        selected.add(this.starts[index]);
+      }
+    }
+
+    return new HarTests(
+      this.starts.filter((start: TestStart): boolean => selected.has(start))
+    );
+  }
+
+  /**
+   * The ID of the test that was running at the given time: the last one that started by then.
+   */
+  public idAt(time: number): string | undefined {
+    const index: number = this.indexAt(time);
+
+    return index >= 0 ? this.idOf(index) : undefined;
+  }
+
+  public toArray({
+    startedDateTime
+  }: { startedDateTime?: string } = {}): HarTest[] {
+    return this.starts.map(
+      (
+        { titlePath, attempt, startedAt }: TestStart,
+        index: number
+      ): HarTest => ({
+        startedDateTime: startedDateTime ?? new Date(startedAt).toISOString(),
+        id: this.idOf(index),
+        titlePath,
+        attempt
+      })
+    );
+  }
+
+  private idOf(index: number): string {
+    return `test_${index + 1}`;
+  }
+
+  private indexAt(time: number): number {
     let low = 0;
     let high: number = this.starts.length - 1;
-    let found: TestStart | undefined;
+    let found = -1;
 
     while (low <= high) {
       const middle: number = Math.floor((low + high) / 2);
 
       if (this.starts[middle].startedAt <= time) {
-        found = this.starts[middle];
+        found = middle;
         low = middle + 1;
       } else {
         high = middle - 1;
       }
     }
 
-    return found
-      ? { titlePath: found.titlePath, attempt: found.attempt }
-      : undefined;
+    return found;
   }
 
   private parse(payload: string): TestStart | undefined {

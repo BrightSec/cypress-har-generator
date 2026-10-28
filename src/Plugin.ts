@@ -201,10 +201,10 @@ Please refer to the documentation:
   }
 
   private async buildHar(): Promise<AsyncIterable<string> | undefined> {
-    const har = await this.exporter?.read();
+    const har = await this.exporter?.read(this.tests);
 
     return har
-      ? new HarBuilder(har.entries, har.pages, this.tests).build()
+      ? new HarBuilder(har.entries, har.pages, har.tests).build()
       : undefined;
   }
 

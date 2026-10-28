@@ -1,6 +1,6 @@
 import pkg from '../../package.json' with { type: 'json' };
 import type { ExportedEntry } from './HarExporter.ts';
-import type { HarTests } from './HarTests.ts';
+import type { HarTest } from './HarTests.ts';
 import type { Entry, Har, Page } from 'har-format';
 
 // An entry sits three levels deep, at `log.entries[i]`.
@@ -10,7 +10,7 @@ export class HarBuilder {
   constructor(
     private readonly entries: AsyncIterable<ExportedEntry>,
     private readonly pages: Page[] = [],
-    private readonly tests?: HarTests
+    private readonly tests: HarTest[] = []
   ) {}
 
   // Serializes an entry the way it reads inside the HAR, so `build` writes it as is.
@@ -25,6 +25,8 @@ export class HarBuilder {
       log: {
         version: '1.2',
         pages: this.pages,
+        // a custom field, like `pages`, so each entry names its test by ID instead of repeating it
+        ...(this.tests.length ? { _tests: this.tests } : {}),
         creator: {
           name,
           version,
@@ -40,11 +42,11 @@ export class HarBuilder {
     yield json.slice(0, entriesStart);
 
     // the entry is yielded on its own, as joining it with the text around it would copy it
-    for await (const { json: entry, pageref, startedAt } of this.entries) {
+    for await (const { json: entry, pageref, testref } of this.entries) {
       // HAR 1.2 lists `pageref` first, right after the opening brace of the entry
       const fields: string = this.formatFields({
         pageref,
-        _test: this.tests?.at(startedAt)
+        _testref: testref
       });
 
       yield `${separator}\n${ENTRY_INDENT}`;

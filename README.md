@@ -397,7 +397,7 @@ cy.recordHar({ stable: true });
 
 | Field                                              | With `stable: true`        |
 | -------------------------------------------------- | -------------------------- |
-| `startedDateTime` of the entries and the pages     | `1970-01-01T00:00:00.000Z` |
+| `startedDateTime` of the entries, pages and tests  | `1970-01-01T00:00:00.000Z` |
 | `time`, `timings`                                  | `-1`                       |
 | `time` of WebSocket and server-sent event messages | `-1`                       |
 | `connection`                                       | removed                    |
@@ -503,13 +503,21 @@ It removes the listed headers with the cookies parsed from them, and replaces th
 
 The HAR groups the entries by page, as Chrome DevTools exports it: each document the app loads, such as with `cy.visit()` or a link, is a page of `log.pages`, and each entry has the `pageref` of the page whose document sent it. The requests of an iframe belong to the page that holds the iframe, and a popup has pages of its own. A page is titled with its URL and keeps no timings, so `pageTimings` is empty. A request sent by a document loaded before `cy.recordHar()`, or left out of the HAR by the options, has no `pageref`.
 
-Each entry also tells the test that sent it, in the custom `_test` field, so you can find the requests of a failed test or of one try of a retried test:
+The HAR also lists the tests that sent its requests, in the custom `log._tests` field, the way `log.pages` lists the pages, so you can find the requests of a failed test or of one try of a retried test. Each try of a test is listed once, in the order the tries started, and each entry has the `_testref` of the test that sent it:
 
 ```json
-"_test": { "titlePath": ["Cart", "adds an item"], "attempt": 2 }
+"_tests": [
+  {
+    "startedDateTime": "2026-10-28T13:20:00.000Z",
+    "id": "test_1",
+    "titlePath": ["Cart", "adds an item"],
+    "attempt": 2
+  }
+],
+"entries": [{ "pageref": "page_1", "_testref": "test_1", ... }]
 ```
 
-`titlePath` holds the titles of the suites and of the test, as `Cypress.currentTest.titlePath` does, and `attempt` counts the tries from `1`. A request belongs to the test that was running when the request started. Cypress runs the `before` hooks within the first test and the `after` hooks within the last one, so their requests belong to those tests. A request sent before any test started has no `_test`. The page tells the plugin which test started through a function the plugin adds to it while recording, so the commands send nothing and break nothing when no recording is active.
+`titlePath` holds the titles of the suites and of the test, as `Cypress.currentTest.titlePath` does, and `attempt` counts the tries from `1`. A request belongs to the test that was running when the request started, and a test that sent no request is left out. Cypress runs the `before` hooks within the first test and the `after` hooks within the last one, so their requests belong to those tests. A request sent before any test started has no `_testref`. With `stable`, the tests start at `1970-01-01T00:00:00.000Z`, like the pages. The page tells the plugin which test started through a function the plugin adds to it while recording, so the commands send nothing and break nothing when no recording is active.
 
 ### saveHar
 

@@ -1,14 +1,23 @@
 import { Entry } from 'har-format';
 
 type Test = { titlePath: string[]; attempt: number };
+type HarTest = Test & { id: string; startedDateTime: string };
+type Log = { entries: Entry[]; _tests?: HarTest[] };
 
 const path = (url: string): string => new URL(url).pathname;
 
 // the test that sent each request of the app, leaving out the ones of the Cypress runner
-const testsOf = (entries: Entry[]): [string, Test | undefined][] =>
+const testsOf = ({ entries, _tests = [] }: Log): [string, Test | undefined][] =>
   entries
     .filter(({ request }) => /^\/(pages|api)\//.test(path(request.url)))
-    .map(entry => [path(entry.request.url), entry._test as Test | undefined]);
+    .map(entry => {
+      const test = _tests.find(({ id }) => id === entry._testref);
+
+      return [
+        path(entry.request.url),
+        test && { titlePath: test.titlePath, attempt: test.attempt }
+      ];
+    });
 
 describe('Tests', () => {
   describe('recorded across the tests of a suite', () => {
@@ -48,10 +57,16 @@ describe('Tests', () => {
       cy.tmpdir()
         .then(outDir => cy.readFile(`${outDir}/${fileName}`, 'utf-8'))
         .then((text: string) => {
-          const { log }: { log: { entries: Entry[] } } = JSON.parse(text);
+          const { log }: { log: Log } = JSON.parse(text);
           const suite = ['Tests', 'recorded across the tests of a suite'];
 
-          expect(testsOf(log.entries)).to.deep.equal([
+          // each try is listed once, in start order, and named by its ID in the entries
+          expect(log._tests?.map(({ id }) => id)).to.deep.equal([
+            'test_1',
+            'test_2',
+            'test_3'
+          ]);
+          expect(testsOf(log)).to.deep.equal([
             [
               '/api/delay/1',
               {
@@ -107,9 +122,9 @@ describe('Tests', () => {
     cy.saveHar({ waitForIdle: true });
 
     cy.findHar()
-      .its('log.entries')
-      .should((entries: Entry[]) =>
-        expect(testsOf(entries)).to.deep.equal([
+      .its('log')
+      .should((log: Log) =>
+        expect(testsOf(log)).to.deep.equal([
           [
             '/api/products',
             {

@@ -105,10 +105,13 @@ export default defineConfig({
           }
 
           // each request was sent by a test, as the recording starts before the spec does
+          const tests = new Set<string>(
+            (log._tests ?? []).map(({ id }: { id: string }) => id)
+          );
           const untested: string[] = log.entries
             .filter(
-              ({ _test }: { _test?: { titlePath: string[] } }) =>
-                !_test?.titlePath.length
+              ({ _testref }: { _testref?: string }) =>
+                !_testref || !tests.has(_testref)
             )
             .map(({ request }: { request: { url: string } }) => request.url);
 
