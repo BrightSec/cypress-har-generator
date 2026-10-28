@@ -37,18 +37,23 @@ export class HarBuilder {
 
     yield json.slice(0, entriesStart);
 
+    // the entry is yielded on its own, as joining it with the text around it would copy it
     for await (const { json: entry, pageref } of this.entries) {
-      yield `${separator}\n${ENTRY_INDENT}${pageref === undefined ? entry : this.withPageref(entry, pageref)}`;
+      yield `${separator}\n${ENTRY_INDENT}`;
+
+      if (pageref === undefined) {
+        yield entry;
+      } else {
+        // HAR 1.2 lists `pageref` first, right after the opening brace of the entry
+        yield `{\n${ENTRY_INDENT}  "pageref": ${JSON.stringify(pageref)},`;
+        yield entry.slice(1);
+      }
+
       separator = ',';
     }
 
     yield separator
       ? `\n${ENTRY_INDENT.slice(2)}${json.slice(entriesStart)}`
       : json.slice(entriesStart);
-  }
-
-  // HAR 1.2 lists `pageref` first, right after the opening brace of the entry
-  private withPageref(json: string, pageref: string): string {
-    return `{\n${ENTRY_INDENT}  "pageref": ${JSON.stringify(pageref)},${json.slice(1)}`;
   }
 }
