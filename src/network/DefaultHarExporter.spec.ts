@@ -144,6 +144,60 @@ describe('DefaultHarExporter', () => {
       sut.end();
     });
 
+    describe('stable', () => {
+      it('should write the entries without their times, in the order they started', async () => {
+        // arrange
+        const startedAt: Record<string, string> = {
+          'https://example.com/b': '2022-04-18T09:09:35.705Z',
+          'https://example.com/a': '2022-04-18T09:09:35.585Z'
+        };
+        const sut = new DefaultHarExporter(instance(loggerMock), file, {
+          stable: true,
+          transform: (entry: Entry): Entry => ({
+            ...entry,
+            startedDateTime: startedAt[entry.request.url],
+            connection: '7'
+          })
+        });
+        for (const url of Object.keys(startedAt)) {
+          await sut.write(new NetworkRequest('1', url, url, '1'));
+        }
+        // act
+        const result = await readAll(sut);
+        // assert
+        expect(
+          result?.map(({ request, startedDateTime, time, connection }) => ({
+            url: request.url,
+            startedDateTime,
+            time,
+            connection
+          }))
+        ).toEqual(
+          ['https://example.com/a', 'https://example.com/b'].map(url => ({
+            url,
+            startedDateTime: '1970-01-01T00:00:00.000Z',
+            time: -1,
+            connection: undefined
+          }))
+        );
+        sut.end();
+      });
+
+      it('should pass the real times to the transform', async () => {
+        // arrange
+        transform.mockImplementation((entry: Entry): Entry => entry);
+        const sut = new DefaultHarExporter(instance(loggerMock), file, {
+          stable: true,
+          transform
+        });
+        // act
+        await sut.write(networkRequest);
+        // assert
+        expect(transform.mock.calls[0][0].time).not.toBe(-1);
+        sut.end();
+      });
+    });
+
     describe('dedupe', () => {
       const url = 'https://example.com/api';
       const at = (ms: number): string => new Date(1e12 + ms).toISOString();

@@ -207,6 +207,37 @@ describe('Record HAR', () => {
       });
   });
 
+  it('saves the same HAR for the same requests with stable', () => {
+    const record = (fileName: string) => {
+      cy.recordHar({ stable: true });
+      // one after another, as requests sent at the same time can swap places between runs
+      for (const url of ['/api/products', '/api/users']) {
+        cy.window().then(win => win.fetch(url).then(res => res.text()));
+      }
+      cy.tmpdir().then(outDir => cy.saveHar({ outDir, fileName }));
+    };
+    const read = (fileName: string) =>
+      cy.tmpdir().then(outDir => cy.readFile(`${outDir}/${fileName}`, 'utf-8'));
+
+    record('stable-1.har');
+    record('stable-2.har');
+
+    read('stable-1.har').then((first: string) =>
+      read('stable-2.har').should((second: string) => {
+        const { entries } = JSON.parse(second).log;
+
+        expect(entries.map(({ time }: Entry) => time)).to.have.members(
+          entries.map(() => -1)
+        );
+        // the response headers carry the server clock, which `stable` keeps
+        const withoutDate = (har: string) =>
+          har.replace(/("name": "date",\s*"value": )"[^"]*"/gi, '$1""');
+
+        expect(withoutDate(second)).to.equal(withoutDate(first));
+      })
+    );
+  });
+
   it('keeps one entry for each repeated request with dedupe', () => {
     const post = (args: number[]) =>
       cy.window().then(win =>

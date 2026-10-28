@@ -1,6 +1,7 @@
 /// <reference types="node" preserve="true" />
 import { EntryBuilder } from './EntryBuilder.ts';
 import { HarBuilder } from './HarBuilder.ts';
+import { StableEntry } from './StableEntry.ts';
 import type { NetworkRequest } from './NetworkRequest.ts';
 import type { HarExporter } from './HarExporter.ts';
 import type { Logger } from '../utils/Logger.ts';
@@ -166,7 +167,10 @@ ${stack}`
   private append(
     entry: Entry
   ): Pick<Slot, 'position' | 'length'> & { written: Promise<void> } {
-    const json = HarBuilder.formatEntry(entry);
+    // the real start time still orders the entries, as only the written entry leaves it out
+    const json = HarBuilder.formatEntry(
+      this.options?.stable ? new StableEntry(entry).toEntry() : entry
+    );
     const length = Buffer.byteLength(json);
     // the stream appends the chunks in the order they are written
     const position = this.size;

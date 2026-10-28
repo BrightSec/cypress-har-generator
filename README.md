@@ -389,6 +389,118 @@ cy.recordHar({ dedupe: true });
 
 The check applies after `filter` and `transform`, so it compares the entries as they are saved. Headers are not compared, since they often differ only in tokens or cookies. WebSocket and server-sent event entries with messages are always kept.
 
+To compare the HAR of a run with the HAR of an earlier one, such as in a snapshot test or a code review, set `stable` to `true`. It leaves out the values that change on every run, as Playwright does when it omits timing:
+
+```js
+cy.recordHar({ stable: true });
+```
+
+| Field                                              | With `stable: true`        |
+| -------------------------------------------------- | -------------------------- |
+| `startedDateTime`                                  | `1970-01-01T00:00:00.000Z` |
+| `time`, `timings`                                  | `-1`                       |
+| `time` of WebSocket and server-sent event messages | `-1`                       |
+| `connection`                                       | removed                    |
+
+The entries keep their order by start time, so requests sent at the same time can still swap places between runs. The headers, such as `Date`, and the bodies are kept as the server sent them. It applies after `filter` and `transform`, which still get the real times.
+
+The headers and the bodies often hold values that change on every run too, such as the `Date` header, session cookies, request IDs and the IDs and timestamps in a JSON body. They depend on your app, so leave them out with a `transform`:
+
+```js
+cy.recordHar({ stable: true, transform: '../support/remove-volatile-data.ts' });
+```
+
+<details>
+<summary>Here's what the <code>remove-volatile-data.ts</code> module might look like</summary>
+
+```ts
+import type { Entry, PostData } from 'har-format';
+
+// the headers and JSON fields whose values change on every run: add the ones your app sends
+const VOLATILE_HEADERS = new Set([
+  'date',
+  'content-length',
+  'expires',
+  'age',
+  'cookie',
+  'set-cookie',
+  'etag',
+  'x-request-id',
+  'traceparent',
+  'server-timing'
+]);
+const VOLATILE_FIELDS = new Set([
+  'id',
+  'token',
+  'createdAt',
+  'updatedAt',
+  'timestamp'
+]);
+
+const mask = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(mask);
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, x]) => [
+        key,
+        VOLATILE_FIELDS.has(key) ? '***' : mask(x)
+      ])
+    );
+  }
+
+  return value;
+};
+
+const maskJson = (text: string): string => {
+  try {
+    return JSON.stringify(mask(JSON.parse(text)));
+  } catch {
+    // not a JSON body
+    return text;
+  }
+};
+
+const maskBody = (body?: PostData | Entry['response']['content']): void => {
+  if (body?.text && !('encoding' in body && body.encoding === 'base64')) {
+    body.text = maskJson(body.text);
+  }
+};
+
+export default (entry: Entry): Entry => {
+  for (const message of [entry.request, entry.response]) {
+    message.headers = message.headers.filter(
+      ({ name }) => !VOLATILE_HEADERS.has(name.toLowerCase())
+    );
+    // the cookies come from the removed `Cookie` and `Set-Cookie` headers
+    message.cookies = [];
+    // the sizes as sent depend on the values masked here, so they are left out as HAR 1.2 allows
+    message.headersSize = -1;
+    message.bodySize = -1;
+  }
+
+  maskBody(entry.request.postData);
+  maskBody(entry.response.content);
+
+  const { content } = entry.response;
+
+  content.size = Buffer.byteLength(
+    content.text ?? '',
+    content.encoding === 'base64' ? 'base64' : 'utf-8'
+  );
+  delete content.compression;
+  delete entry.response._transferSize;
+
+  return entry;
+};
+```
+
+</details>
+
+It removes the listed headers with the cookies parsed from them, and replaces the listed fields of a JSON body with `***`, at any depth. Since the masked values can differ in length, it also leaves out the sizes measured on the wire, which HAR 1.2 allows with `-1`, and sets `content.size` to the size of the masked body.
+
 ### saveHar
 
 Stops recording and saves all requests that have occurred since `recordHar` was run to a HAR file. By default, the file is saved to the root of the project with a file name that includes the current spec's name (e.g. `{specName}.har`).
