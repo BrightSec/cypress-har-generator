@@ -45,6 +45,16 @@ describe('HarReader', () => {
     );
   });
 
+  it('should keep the parsing error as the cause', async () => {
+    // arrange
+    when(fileManagerMock.readFile('/project/example.har')).thenResolve('{');
+
+    // act & assert
+    await expect(reader.read('/project/example.har')).rejects.toMatchObject({
+      cause: expect.any(SyntaxError)
+    });
+  });
+
   it.each(['null', '{}', '{"log":{}}', '{"log":{"entries":{}}}'])(
     'should throw a TypeError when the file is %s',
     async content => {

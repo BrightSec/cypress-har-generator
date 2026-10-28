@@ -18,7 +18,8 @@ export class HarReader {
       har = JSON.parse(data);
     } catch (e) {
       throw new TypeError(
-        `The file at ${path} is not a valid JSON: ${ErrorUtils.isError(e) ? e.message : e}`
+        `The file at ${path} is not a valid JSON: ${ErrorUtils.isError(e) ? e.message : e}`,
+        { cause: e }
       );
     }
 
