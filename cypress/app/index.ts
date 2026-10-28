@@ -44,6 +44,9 @@ app.get('/', (_: Request, res: Response) =>
     ]
   })
 );
+app.get('/redirect', (_: Request, res: Response) =>
+  res.redirect('/pages/fetch')
+);
 app.get('/pages/:page', (req: Request, res: Response) =>
   res.render(`./${req.params.page}.hbs`)
 );

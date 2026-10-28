@@ -397,7 +397,7 @@ cy.recordHar({ stable: true });
 
 | Field                                              | With `stable: true`        |
 | -------------------------------------------------- | -------------------------- |
-| `startedDateTime`                                  | `1970-01-01T00:00:00.000Z` |
+| `startedDateTime` of the entries and the pages     | `1970-01-01T00:00:00.000Z` |
 | `time`, `timings`                                  | `-1`                       |
 | `time` of WebSocket and server-sent event messages | `-1`                       |
 | `connection`                                       | removed                    |
