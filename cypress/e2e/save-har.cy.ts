@@ -151,7 +151,9 @@ describe('Save HAR', () => {
         const entry = entries.find(({ request }: Entry) =>
           request.url.endsWith('/api/large-body')
         );
-        expect(entry?.response.content.text).to.have.length(size);
+        // Cypress logs each assertion with the value it checks, and formatting a 50MB string blocks the browser,
+        // so compare the length rather than the string
+        expect(entry?.response.content.text?.length).to.equal(size);
       });
   });
 
