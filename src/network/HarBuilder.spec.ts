@@ -143,6 +143,17 @@ describe('HarBuilder', () => {
       expect(result).toBe(expected);
     });
 
+    it('should add the test as the first field of an entry with no page', async () => {
+      // act
+      const result = await read(
+        new HarBuilder(entriesOf(entries, { testref: 'test_1' })).build()
+      );
+      // assert
+      const { log } = JSON.parse(result);
+      expect(log.entries).toEqual([{ _testref: 'test_1', ...entries[0] }]);
+      expect(Object.keys(log.entries[0])[0]).toBe('_testref');
+    });
+
     it('should leave out the tests when no entry has one', async () => {
       // act
       const result = await read(new HarBuilder(entriesOf(entries)).build());

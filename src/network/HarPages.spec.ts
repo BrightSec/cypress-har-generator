@@ -107,6 +107,18 @@ describe('HarPages', () => {
       expect(result).toEqual(['page_1', 'page_2', 'page_2', 'page_2']);
     });
 
+    it('should return the first page for an iframe document that started before any page above it', () => {
+      // arrange
+      const sut = new HarPages();
+      sut.add(document('iframe', 'child', 5, ['aut', 'runner']));
+      sut.add(document('first', 'aut', 10));
+      sut.add(document('second', 'aut', 20));
+      // act
+      const result = sut.idOf('iframe');
+      // assert
+      expect(result).toBe('page_1');
+    });
+
     it('should return nothing for a loader with no recorded document', () => {
       // arrange
       const sut = new HarPages();

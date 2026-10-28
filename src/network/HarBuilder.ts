@@ -7,6 +7,9 @@ import type { Entry, Har, Page } from 'har-format';
 const ENTRY_INDENT = ' '.repeat(6);
 
 export class HarBuilder {
+  // the few pages and tests are referred to by many entries, so each field is formatted once
+  private readonly fieldLines = new Map<string, string>();
+
   constructor(
     private readonly entries: AsyncIterable<ExportedEntry>,
     private readonly pages: Page[] = [],
@@ -49,12 +52,11 @@ export class HarBuilder {
         _testref: testref
       });
 
-      yield `${separator}\n${ENTRY_INDENT}`;
-
       if (fields) {
-        yield `{${fields}`;
+        yield `${separator}\n${ENTRY_INDENT}{${fields}`;
         yield entry.slice(1);
       } else {
+        yield `${separator}\n${ENTRY_INDENT}`;
         yield entry;
       }
 
@@ -67,13 +69,28 @@ export class HarBuilder {
   }
 
   // the fields known only once the HAR is read, as the lines that open the entry
-  private formatFields(fields: Record<string, unknown>): string {
-    return Object.entries(fields)
-      .filter(([, value]: [string, unknown]): boolean => value !== undefined)
-      .map(
-        ([name, value]: [string, unknown]): string =>
-          `\n${ENTRY_INDENT}  ${JSON.stringify(name)}: ${JSON.stringify(value, null, 2).replaceAll('\n', `\n${ENTRY_INDENT}  `)},`
-      )
-      .join('');
+  private formatFields(fields: Record<string, string | undefined>): string {
+    let lines = '';
+
+    for (const [name, value] of Object.entries(fields)) {
+      if (value !== undefined) {
+        lines += this.formatField(name, value);
+      }
+    }
+
+    return lines;
+  }
+
+  private formatField(name: string, value: string): string {
+    // a name holds no line break, so the key tells the fields apart
+    const key = `${name}\n${value}`;
+    let line: string | undefined = this.fieldLines.get(key);
+
+    if (line === undefined) {
+      line = `\n${ENTRY_INDENT}  ${JSON.stringify(name)}: ${JSON.stringify(value)},`;
+      this.fieldLines.set(key, line);
+    }
+
+    return line;
   }
 }

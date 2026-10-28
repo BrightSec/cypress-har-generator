@@ -34,6 +34,18 @@ describe('TestTimeline', () => {
     });
   });
 
+  it('should give an entry the test that started last when two started at the same time', () => {
+    // arrange
+    const sut = new TestTimeline([
+      start(['a', 'first'], 10),
+      start(['a', 'second'], 10)
+    ]);
+    // act
+    const result = sut.idAt(10);
+    // assert
+    expect(result).toBe('test_2');
+  });
+
   describe('toArray', () => {
     it('should list each try of a test once, in start order', () => {
       // arrange
