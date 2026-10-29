@@ -1,6 +1,6 @@
 {
   "name": "@neuralegion/cypress-har-generator",
-  "version": "6.0.0-rc.34",
+  "version": "6.0.0-rc.35",
   "private": false,
   "description": "Records the network requests of Cypress tests in Chrome, Edge and Electron to HAR files, and replays HAR files as mocks.",
   "repository": {
