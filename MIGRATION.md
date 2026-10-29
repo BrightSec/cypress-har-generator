@@ -1,11 +1,10 @@
 # Migrating from version 5 to version 6
 
 1. [Before you start](#before-you-start)
-2. [Find what applies to you](#find-what-applies-to-you)
-3. [Fix what breaks](#fix-what-breaks)
-4. [Check your HARs](#check-your-hars)
-5. [Choose how to record](#choose-how-to-record)
-6. [All breaking changes](#all-breaking-changes)
+2. [Fix what breaks](#fix-what-breaks)
+3. [Check your HARs](#check-your-hars)
+4. [Choose how to record](#choose-how-to-record)
+5. [All breaking changes](#all-breaking-changes)
 
 ## Before you start
 
@@ -20,25 +19,6 @@ If you can't update one of them yet, stay on version 5:
 ```bash
 $ npm i -D @neuralegion/cypress-har-generator@5
 ```
-
-## Find what applies to you
-
-Run this in your project. Each line it prints points to a step below:
-
-```bash
-$ grep -rnE "install\(on\)|enableExperimentalLifecycle|ensureBrowserFlags|minStatusCodeToInclude|hars_folders?|HARS_FOLDERS?|cypress-har-generator/(dist|commands\.js)|content\.error" \
-    --include='*.js' --include='*.mjs' --include='*.cjs' --include='*.ts' --include='*.mts' --include='*.cts' \
-    --include='*.json' --include='*.yml' --include='*.yaml' --exclude-dir=node_modules .
-```
-
-| The line has                                                                  | Step                                                   |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `install(on)`, `enableExperimentalLifecycle`                                  | [2](#2-pass-the-config-to-install)                     |
-| `hars_folder` under `env`, `--env`, `CYPRESS_`, `hars_folders`, `HARS_FOLDER` | [3](#3-move-hars_folder-to-expose)                     |
-| `minStatusCodeToInclude`                                                      | [4](#4-replace-minstatuscodetoinclude)                 |
-| `ensureBrowserFlags`                                                          | [5](#5-replace-ensurebrowserflags-with-cypress-on-fix) |
-| `cypress-har-generator/dist`, `commands.js`                                   | [6](#6-import-only-the-package-and-its-commands)       |
-| `content.error`                                                               | [7](#7-read-content_error-instead-of-contenterror)     |
 
 ## Fix what breaks
 
