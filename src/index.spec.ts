@@ -119,8 +119,65 @@ describe('install', () => {
       minIdleDuration: 200,
       maxWaitDuration: 3000,
       fileName: 'spec.cy.har',
-      outDir: '.'
+      outDir: '.',
+      stateOf: expect.any(Function)
     });
+  });
+
+  it('should list each test with the state Cypress reports for its try', async () => {
+    // arrange
+    const saveHar = jest
+      .spyOn(Plugin.prototype, 'saveHar')
+      .mockResolvedValue(undefined);
+    const { handlers, on } = createEvents();
+    install(on, config);
+
+    // act
+    await handlers.get('after:spec')?.(
+      {
+        name: 'spec.cy.ts',
+        absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+      },
+      {
+        tests: [
+          {
+            title: ['suite', 'flaky'],
+            state: 'passed',
+            attempts: [{ state: 'failed' }, { state: 'passed' }]
+          }
+        ]
+      }
+    );
+
+    // assert
+    const { stateOf, keep } = saveHar.mock.calls[0]?.[0] ?? {};
+    expect(
+      [1, 2].map(attempt =>
+        stateOf?.({ titlePath: ['suite', 'flaky'], attempt })
+      )
+    ).toEqual(['failed', 'passed']);
+    expect(keep).toBeUndefined();
+  });
+
+  it('should list no states when Cypress reports no results, as in cypress open', async () => {
+    // arrange
+    const saveHar = jest
+      .spyOn(Plugin.prototype, 'saveHar')
+      .mockResolvedValue(undefined);
+    const { handlers, on } = createEvents();
+    install(on, config);
+
+    // act
+    await handlers.get('after:spec')?.(
+      {
+        name: 'spec.cy.ts',
+        absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+      },
+      undefined
+    );
+
+    // assert
+    expect(saveHar.mock.calls[0]?.[0]).not.toHaveProperty('stateOf');
   });
 
   describe('failedTestsOnly', () => {

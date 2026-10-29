@@ -161,6 +161,20 @@ export default defineConfig({
             );
           }
 
+          // Cypress reports how each try ended in `after:spec`, before the HAR is saved
+          const stateless: string[] = (log._tests ?? [])
+            .filter(
+              ({ state }: { state?: string }) =>
+                !['passed', 'failed'].includes(state ?? '')
+            )
+            .map(({ id }: { id: string }) => id);
+
+          if (stateless.length) {
+            throw new Error(
+              `${path} has tests with no state: ${stateless.join(', ')}`
+            );
+          }
+
           // the first URL is the document of the spec's page, which every request of the spec was sent from
           const pages: string[] = log.pages.map(
             ({ title }: { title: string }) => title

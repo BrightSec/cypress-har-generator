@@ -522,13 +522,14 @@ The HAR also lists the tests that sent its requests, in the custom `log._tests` 
     "startedDateTime": "2026-10-28T13:20:00.000Z",
     "id": "test_1",
     "titlePath": ["Cart", "adds an item"],
-    "attempt": 2
+    "attempt": 2,
+    "state": "passed"
   }
 ],
 "entries": [{ "pageref": "page_1", "_testref": "test_1", ... }]
 ```
 
-`titlePath` holds the titles of the suites and of the test, as `Cypress.currentTest.titlePath` does, and `attempt` counts the tries from `1`. A request belongs to the test that was running when the request started, and a test that sent no request is left out. Cypress runs the `before` hooks within the first test and the `after` hooks within the last one, so their requests belong to those tests. A request sent before any test started has no `_testref`. With `stable`, the tests start at `1970-01-01T00:00:00.000Z`, like the pages. The page tells the plugin which test started through a function the plugin adds to it while recording, so the commands send nothing and break nothing when no recording is active.
+`titlePath` holds the titles of the suites and of the test, as `Cypress.currentTest.titlePath` does, and `attempt` counts the tries from `1`. In the HAR recorded for each spec, `state` tells how the try ended, as Cypress reports it in [`after:spec`](https://docs.cypress.io/api/node-events/after-spec-api), e.g. `passed` or `failed`. `cy.saveHar()` runs before Cypress has the result of the last test, and `cypress open` reports no results, so there the tests have no `state`. A request belongs to the test that was running when the request started, and a test that sent no request is left out. Cypress runs the `before` hooks within the first test and the `after` hooks within the last one, so their requests belong to those tests. A request sent before any test started has no `_testref`. With `stable`, the tests start at `1970-01-01T00:00:00.000Z`, like the pages. The page tells the plugin which test started through a function the plugin adds to it while recording, so the commands send nothing and break nothing when no recording is active.
 
 ### saveHar
 

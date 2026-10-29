@@ -11,7 +11,11 @@ import type { Observer } from './network/Observer.ts';
 import type { ObserverFactory } from './network/ObserverFactory.ts';
 import { HarBuilder } from './network/HarBuilder.ts';
 import { HarTests } from './network/HarTests.ts';
-import type { TestFilter, TestTimeline } from './network/TestTimeline.ts';
+import type {
+  TestFilter,
+  TestStateLookup,
+  TestTimeline
+} from './network/TestTimeline.ts';
 import { NetworkIdleMonitor } from './network/NetworkIdleMonitor.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
 import { ErrorUtils } from './utils/ErrorUtils.ts';
@@ -47,6 +51,10 @@ export interface SpecSaveOptions extends SaveOptions {
    * Keeps only the entries sent by the tests it accepts, and writes no HAR when none is left.
    */
   keep?: TestFilter;
+  /**
+   * Lists each test in `_tests` with the state its try ended in.
+   */
+  stateOf?: TestStateLookup;
 }
 
 export interface HostScopeOptions {
@@ -215,14 +223,22 @@ Please refer to the documentation:
   }
 
   private async buildHar({
-    keep
-  }: Pick<SpecSaveOptions, 'keep'>): Promise<
+    keep,
+    stateOf
+  }: Pick<SpecSaveOptions, 'keep' | 'stateOf'>): Promise<
     AsyncIterable<string> | undefined
   > {
-    const timeline: TestTimeline = this.tests.timeline();
-    const har = await this.exporter?.read(
-      keep ? timeline.only(keep) : timeline
-    );
+    let timeline: TestTimeline = this.tests.timeline();
+
+    if (stateOf) {
+      timeline = timeline.withStates(stateOf);
+    }
+
+    if (keep) {
+      timeline = timeline.only(keep);
+    }
+
+    const har = await this.exporter?.read(timeline);
 
     return har
       ? new HarBuilder(har.entries, har.pages, har.tests).build()
