@@ -1,3 +1,6 @@
+/**
+ * What `cy.replayHar()` does with a request the HAR has no entry for. See {@link ReplayOptions.notFound}.
+ */
 export type NotFoundAction = 'abort' | 'fallback';
 
 /**
@@ -6,6 +9,9 @@ export type NotFoundAction = 'abort' | 'fallback';
  */
 export type UpdateMode = 'missing' | 'all' | 'none';
 
+/**
+ * Which requests `cy.replayHar()` serves from the HAR, and what it does with those the HAR has no entry for.
+ */
 export interface ReplayOptions {
   /**
    * Serves from the HAR only the requests whose URL matches this glob pattern or regular expression,
