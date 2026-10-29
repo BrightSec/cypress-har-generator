@@ -33,15 +33,34 @@ import {
 import { join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 
+/**
+ * Where `cy.saveHar()` writes the HAR, and how long it waits for the pending requests first.
+ */
 export interface SaveOptions {
+  /**
+   * The name of the HAR file. Only the name is used, so a folder in it is dropped: set the folder with {@link outDir}.
+   * @defaultValue the name of the spec, with the `.har` extension
+   */
   fileName: string;
+  /**
+   * The folder the HAR is written to, created when it does not exist.
+   * @defaultValue `hars_folder` from `expose`, or the project root
+   */
   outDir: string;
   /**
-   * Waits for the pending requests to finish, up to `maxWaitDuration`, before saving.
+   * Waits for the pending requests to finish, up to `maxWaitDuration`, before saving. Open WebSockets do not hold it up.
    * @defaultValue true
    */
   waitForIdle?: boolean;
+  /**
+   * How long, in milliseconds, no request must be pending for the network to count as idle.
+   * @defaultValue 100
+   */
   minIdleDuration?: number;
+  /**
+   * The longest time, in milliseconds, to wait for the network to be idle. When it runs out, the HAR is saved without the requests still pending.
+   * @defaultValue 5000
+   */
   maxWaitDuration?: number;
 }
 
@@ -57,6 +76,9 @@ export interface SpecSaveOptions extends SaveOptions {
   stateOf?: TestStateLookup;
 }
 
+/**
+ * Limits the recording to the host of the app under test.
+ */
 export interface HostScopeOptions {
   /**
    * Adds the host of the Cypress `baseUrl`, with its port, to {@link NetworkObserverOptions.includeHosts},
@@ -67,6 +89,10 @@ export interface HostScopeOptions {
   includeBaseUrlHost?: boolean;
 }
 
+/**
+ * The options of `cy.recordHar()`: which requests are recorded, how the entries are changed before saving,
+ * and the buffer limits of Chrome.
+ */
 export type RecordOptions = NetworkObserverOptions &
   HarExporterOptions &
   NetworkOptions &

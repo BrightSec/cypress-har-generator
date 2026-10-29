@@ -31,19 +31,46 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
     interface Chainable<Subject> {
+      /**
+       * Stops recording and writes the requests recorded since `cy.recordHar()` to a HAR file.
+       * @param options - See {@link SaveOptions}.
+       * @example
+       * ```js
+       * cy.saveHar({ fileName: 'example.com.har', outDir: './hars' });
+       * ```
+       */
       saveHar(options?: Partial<SaveOptions>): Chainable<Subject>;
+      /**
+       * Starts recording the requests of the browser, to be written to a HAR by `cy.saveHar()`.
+       * @param options - See {@link RecordOptions}.
+       * @example
+       * ```js
+       * cy.recordHar({ includeHosts: ['api.example.com'], content: false });
+       * ```
+       */
       recordHar(options?: Partial<RecordOptions>): Chainable<Subject>;
+      /**
+       * Stops recording and drops the recorded requests without writing a HAR.
+       */
       disposeOfHar(): Chainable<Subject>;
       /**
        * Serves the matching requests with the responses recorded in the HAR of the spec, the one written for each spec to `hars_folder`.
        * Without that HAR, lets the requests reach the network so the spec records it, as `hars_update` in `expose` sets.
        * @param options - See {@link ReplayOptions}.
+       * @example
+       * ```js
+       * beforeEach(() => cy.replayHar({ url: '/api/**' }));
+       * ```
        */
       replayHar(options?: ReplayOptions): Chainable<null>;
       /**
        * Serves the matching requests with the responses recorded in a HAR file, which works without recording.
        * @param path - The path to the HAR file, relative to the project root.
        * @param options - See {@link ReplayOptions}.
+       * @example
+       * ```js
+       * cy.replayHar('cypress/fixtures/checkout.har', { notFound: 'fallback' });
+       * ```
        */
       replayHar(path: string, options?: ReplayOptions): Chainable<null>;
     }
@@ -82,10 +109,23 @@ export interface InstallOptions
 }
 
 /**
- * Sets the plugin up in `setupNodeEvents`.
+ * Sets the plugin up in `setupNodeEvents`. Throws a `TypeError` when `config` is missing.
  * @param on - The `on` argument of `setupNodeEvents`.
  * @param config - The `config` argument of `setupNodeEvents`.
  * @param options - See {@link InstallOptions}.
+ * @example
+ * ```ts
+ * import { install } from '@neuralegion/cypress-har-generator';
+ * import { defineConfig } from 'cypress';
+ *
+ * export default defineConfig({
+ *   e2e: {
+ *     setupNodeEvents(on, config) {
+ *       install(on, config, { failedTestsOnly: true });
+ *     }
+ *   }
+ * });
+ * ```
  */
 export const install = (
   on: Cypress.PluginEvents,
