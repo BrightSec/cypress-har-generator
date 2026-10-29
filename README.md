@@ -512,7 +512,7 @@ export default (entry: Entry): Entry => {
 
 It removes the listed headers with the cookies parsed from them, and replaces the listed fields of a JSON body with `***`, at any depth. Since the masked values can differ in length, it also leaves out the sizes measured on the wire, which HAR 1.2 allows with `-1`, and sets `content.size` to the size of the masked body.
 
-A HAR can hold bodies of many megabytes, more than a model can read at once. To give the HAR to an agent, cut the long bodies with a `transform`:
+A HAR can hold bodies of many megabytes, which make it slow to open, read or share. To keep it small, cut the long bodies with a `transform`:
 
 ```js
 cy.recordHar({ transform: '../support/cut-long-bodies.ts' });
@@ -524,7 +524,7 @@ cy.recordHar({ transform: '../support/cut-long-bodies.ts' });
 ```ts
 import type { Content, Entry, PostData } from 'har-format';
 
-// the most characters of a body to keep: set it to what your agent can read
+// the most characters of a body to keep
 const MAX_BODY_LENGTH = 10_000;
 
 const cut = (body: Content | PostData, base64: boolean): void => {
