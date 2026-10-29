@@ -43,6 +43,9 @@ declare global {
       /**
        * Starts recording the requests of the browser, to be written to a HAR by `cy.saveHar()`.
        * @param options - See {@link RecordOptions}.
+       * @throws {@link TypeError} When `includeBaseUrlHost`, `dedupe` or `stable` is not a boolean.
+       * @throws {@link TypeError} When `includeBaseUrlHost` is `true` and the Cypress `baseUrl` has no host.
+       * @throws {@link Error} When the browser started without a debugging port, as another `before:browser:launch` listener replaced the plugin's.
        * @example
        * ```js
        * cy.recordHar({ includeHosts: ['api.example.com'], content: false });
@@ -57,6 +60,8 @@ declare global {
        * Serves the matching requests with the responses recorded in the HAR of the spec, the one written for each spec to `hars_folder`.
        * Without that HAR, lets the requests reach the network so the spec records it, as `hars_update` in `expose` sets.
        * @param options - See {@link ReplayOptions}.
+       * @throws {@link TypeError} When `url` is not a string or a `RegExp`, or `notFound` is not `'abort'` or `'fallback'`.
+       * @throws {@link Error} When the spec has no HAR, and `hars_update: 'none'`, `lifecycle: false` or the interactive mode keeps the spec from recording it.
        * @example
        * ```js
        * beforeEach(() => cy.replayHar({ url: '/api/**' }));
@@ -67,6 +72,9 @@ declare global {
        * Serves the matching requests with the responses recorded in a HAR file, which works without recording.
        * @param path - The path to the HAR file, relative to the project root.
        * @param options - See {@link ReplayOptions}.
+       * @throws {@link TypeError} When `path` is empty, `url` is not a string or a `RegExp`, or `notFound` is not `'abort'` or `'fallback'`.
+       * @throws {@link TypeError} When the file is not a valid JSON, with the parsing error as its `cause`, or is not a HAR.
+       * @throws {@link Error} When the file cannot be read.
        * @example
        * ```js
        * cy.replayHar('cypress/fixtures/checkout.har', { notFound: 'fallback' });
@@ -109,10 +117,14 @@ export interface InstallOptions
 }
 
 /**
- * Sets the plugin up in `setupNodeEvents`. Throws a `TypeError` when `config` is missing.
+ * Sets the plugin up in `setupNodeEvents`.
  * @param on - The `on` argument of `setupNodeEvents`.
  * @param config - The `config` argument of `setupNodeEvents`.
  * @param options - See {@link InstallOptions}.
+ * @throws {@link TypeError} When `config` is missing.
+ * @throws {@link TypeError} When `failedTestsOnly` or `includeBaseUrlHost` is not a boolean.
+ * @throws {@link TypeError} When `includeBaseUrlHost` is `true` and the Cypress `baseUrl` has no host.
+ * @throws {@link TypeError} When the `hars_update` key of `expose` is not `'missing'`, `'all'` or `'none'`.
  * @example
  * ```ts
  * import { install } from '@neuralegion/cypress-har-generator';
