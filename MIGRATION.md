@@ -4,7 +4,6 @@
 2. [Fix what breaks](#fix-what-breaks)
 3. [Check your HARs](#check-your-hars)
 4. [Choose how to record](#choose-how-to-record)
-5. [All breaking changes](#all-breaking-changes)
 
 ## Before you start
 
@@ -145,19 +144,8 @@ cy.recordHar({ excludePaths: [/^\/__(cypress[\w-]*)?\//, /^\/login/] });
 
 The HAR of each spec takes the options of `cy.recordHar()` and `cy.saveHar()`, so the options in your tests can move to `install`.
 
-## All breaking changes
+## More
 
-- Cypress 15.10 or later is required ([#620](https://github.com/BrightSec/cypress-har-generator/pull/620), [#633](https://github.com/BrightSec/cypress-har-generator/pull/633))
-- Node.js 20.19 or later, or 22.12 or later, is required ([#619](https://github.com/BrightSec/cypress-har-generator/pull/619))
-- TypeScript 5.0 or later is required ([#621](https://github.com/BrightSec/cypress-har-generator/pull/621))
-- Only the package and its commands can be imported ([#622](https://github.com/BrightSec/cypress-har-generator/pull/622))
-- A HAR is recorded for each spec by default, and `install` requires the config ([#623](https://github.com/BrightSec/cypress-har-generator/pull/623))
-- The requests of Cypress itself are left out by default ([#624](https://github.com/BrightSec/cypress-har-generator/pull/624))
-- `minStatusCodeToInclude` and `hars_folders` are removed, and `blob:` requests are left out by default ([#630](https://github.com/BrightSec/cypress-har-generator/pull/630))
-- `hars_folder` is read only from `expose` ([#633](https://github.com/BrightSec/cypress-har-generator/pull/633))
-- The HAR of each spec keeps the folder of the spec in its name ([#645](https://github.com/BrightSec/cypress-har-generator/pull/645))
-- `ensureBrowserFlags` is removed ([#646](https://github.com/BrightSec/cypress-har-generator/pull/646))
-- Saving waits for the network to be idle by default ([#647](https://github.com/BrightSec/cypress-har-generator/pull/647))
-- The reason a response body is missing is in `content._error` ([#648](https://github.com/BrightSec/cypress-har-generator/pull/648))
+The [version 6 issue](https://github.com/BrightSec/cypress-har-generator/issues/667) lists every breaking change with its pull request.
 
-Something worked in version 5 and doesn't in version 6? [Open a bug](https://github.com/BrightSec/cypress-har-generator/issues/new?template=bug_report.md), or ask on the [version 6 issue](https://github.com/BrightSec/cypress-har-generator/issues/667).
+Something worked in version 5 and doesn't in version 6? [Open a bug](https://github.com/BrightSec/cypress-har-generator/issues/new?template=bug_report.md), or ask on the version 6 issue.
