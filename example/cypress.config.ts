@@ -13,7 +13,7 @@ export default defineConfig({
   // the e2e or component configuration
   e2e: {
     supportFile: 'cypress/support/e2e.ts',
-    specPattern: 'cypress/integration/**/*.cy.ts',
+    specPattern: 'cypress/e2e/**/*.cy.ts',
     baseUrl: 'http://localhost:7079',
     setupNodeEvents(
       on: Cypress.PluginEvents,
