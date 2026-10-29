@@ -703,42 +703,57 @@ cy.replayHar({ url: '**/api/**' });
 
 ## Example Usage
 
-To generate a HAR file during your tests, you'll need to include the `recordHar` and `saveHar` commands in your test file(s). Here's an example of how you might use these commands in a test:
+In a browser outside the Chrome family, such as Firefox, the plugin warns once and records nothing, so the examples below need no check of the browser.
+
+To keep a HAR of each spec that failed in CI, and attach the HARs to the failed job, pass [`failedTestsOnly`](#generating-a-har-file):
 
 ```js
-describe('my tests', () => {
-  before(() => {
-    // start recording
-    cy.recordHar();
-  });
+import { defineConfig } from 'cypress';
+import { install } from '@neuralegion/cypress-har-generator';
 
-  after(() => {
-    // save the HAR file
-    cy.saveHar();
-  });
+export default defineConfig({
+  expose: { hars_folder: 'cypress/hars' },
+  e2e: {
+    setupNodeEvents(on, config) {
+      install(on, config, { failedTestsOnly: true });
+    }
+  }
 });
 ```
 
-You can also generate a HAR file only for Chromium-based browser sessions (Chrome, Edge, and Electron), if it is not interactive run, and only if the test has failed:
+```yaml
+# .github/workflows/e2e.yml
+- uses: cypress-io/github-action@v7
+- if: failure()
+  uses: actions/upload-artifact@v4
+  with:
+    name: hars
+    path: cypress/hars
+```
+
+To serve the API of a spec from its own HAR, recorded on the first run and replayed on the next ones, call [`cy.replayHar()`](#replayhar). Requests outside `url` reach the network as usual:
 
 ```js
-describe('my tests', () => {
-  beforeEach(() => {
-    const isInteractive = Cypress.config('isInteractive');
-    const isChromium = Cypress.browser.family === 'chromium';
-    if (!isInteractive && isChromium) {
-      cy.recordHar();
-    }
-  });
+beforeEach(() => {
+  cy.replayHar({ url: '**/api/**' });
+});
+```
 
-  afterEach(function () {
-    const { state } = this.currentTest;
-    const isInteractive = Cypress.config('isInteractive');
-    const isChromium = Cypress.browser.family === 'chromium';
-    if (!isInteractive && isChromium && state !== 'passed') {
-      cy.saveHar();
-    }
-  });
+To give a scanner, such as [Bright](https://brightsec.com), one entry for each request the app sends to its own host, pass [`dedupe`](#recordhar) and [`includeBaseUrlHost`](#recordhar):
+
+```js
+install(on, config, { dedupe: true, includeBaseUrlHost: true });
+```
+
+To record only one part of a test, turn the HAR of each spec off with `lifecycle: false`, and use the [commands](#commands):
+
+```js
+it('checks out', () => {
+  cy.visit('/cart');
+
+  cy.recordHar({ includeHosts: ['api.example.com'] });
+  cy.get('[data-cy=checkout]').click();
+  cy.saveHar({ fileName: 'checkout.har' });
 });
 ```
 
