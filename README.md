@@ -22,6 +22,9 @@ The Cypress plugin for generating [HTTP Archive (HAR)](http://www.softwareishard
 
 The plugin allows you to record network requests from multiple targets such as pages, workers, and pop-ups, which allows you to get a more comprehensive view of your application's network activity. This is especially useful for debugging and troubleshooting issues that may be related to multiple sources.
 
+> [!IMPORTANT]
+> Upgrading from version 5? See the [migration guide](MIGRATION.md).
+
 ## Table of contents
 
 - [Install](#install)
@@ -48,9 +51,10 @@ $ npm i --save-dev @neuralegion/cypress-har-generator
 The plugin requires:
 
 - Cypress 15.10.0 or later
+- Node.js 20.19.0 or later, or 22.12.0 or later
 - TypeScript 5.0 or later, in TypeScript projects
 
-If your project uses older versions, stay on version 5 of the plugin.
+If your project uses older versions, stay on version 5 of the plugin. To upgrade from version 5, see the [migration guide](MIGRATION.md).
 
 > [!NOTE]
 > For details about changes between versions, and information about updates on previous releases, see the Releases tab on GitHub: https://github.com/BrightSec/cypress-har-generator/releases
