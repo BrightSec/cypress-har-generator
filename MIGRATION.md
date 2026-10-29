@@ -22,15 +22,7 @@ $ npm i -D @neuralegion/cypress-har-generator@5
 
 ## Fix what breaks
 
-### 1. Update Cypress, Node.js and TypeScript
-
-You need this if your versions are older than the ones in [Before you start](#before-you-start).
-
-```bash
-$ npm i -D cypress@latest @neuralegion/cypress-har-generator@latest
-```
-
-### 2. Pass the config to `install`
+### 1. Pass the config to `install`
 
 You need this if your config calls `install(on)` or `enableExperimentalLifecycle`, or you see:
 
@@ -46,7 +38,7 @@ You need this if your config calls `install(on)` or `enableExperimentalLifecycle
 
 `install(on, config, { lifecycle: true })` is now the default, so drop the option. `install` now also records a HAR for each spec: see [Choose how to record](#choose-how-to-record).
 
-### 3. Move `hars_folder` to `expose`
+### 2. Move `hars_folder` to `expose`
 
 You need this if you set `hars_folder` in `env`, with `--env` or with `CYPRESS_hars_folder`, or use the `hars_folders` or `HARS_FOLDER` names. Version 6 ignores them all, so the HARs land in the project root.
 
@@ -61,7 +53,7 @@ You need this if you set `hars_folder` in `env`, with `--env` or with `CYPRESS_h
 +$ cypress run --expose hars_folder=cypress/hars
 ```
 
-### 4. Replace `minStatusCodeToInclude`
+### 3. Replace `minStatusCodeToInclude`
 
 You need this if you pass `minStatusCodeToInclude`. JavaScript ignores it now, and TypeScript fails with:
 
@@ -74,7 +66,7 @@ You need this if you pass `minStatusCodeToInclude`. JavaScript ignores it now, a
 +cy.recordHar({ excludeStatusCodes: [200, 201, 204, 301, 302, 304] });
 ```
 
-### 5. Replace `ensureBrowserFlags` with `cypress-on-fix`
+### 4. Replace `ensureBrowserFlags` with `cypress-on-fix`
 
 You need this if you call `ensureBrowserFlags`, or you see one of:
 
@@ -100,7 +92,7 @@ Cypress keeps only the last listener for each event in `setupNodeEvents`, so you
  }
 ```
 
-### 6. Import only the package and its commands
+### 5. Import only the package and its commands
 
 You need this if you import a file inside the package, or you see:
 
@@ -116,7 +108,7 @@ You need this if you import a file inside the package, or you see:
 +import '@neuralegion/cypress-har-generator/commands';
 ```
 
-### 7. Read `content._error` instead of `content.error`
+### 6. Read `content._error` instead of `content.error`
 
 You need this if your code reads why a response body is missing. HAR 1.2 allows extra fields only when their names start with `_`, so strict HAR tools dropped `content.error`.
 
