@@ -9,7 +9,12 @@ const passedHar = join('cypress', 'hars', 'passed.cy.har');
 
 interface Log {
   pages: { id: string; title: string }[];
-  _tests?: { id: string; titlePath: string[]; attempt: number }[];
+  _tests?: {
+    id: string;
+    titlePath: string[];
+    attempt: number;
+    state?: string;
+  }[];
   entries: { pageref?: string; _testref?: string; request: { url: string } }[];
 }
 
@@ -54,17 +59,19 @@ export default defineConfig({
         }
 
         const tests: string = JSON.stringify(
-          log._tests?.map(({ id, titlePath, attempt }) => ({
+          log._tests?.map(({ id, titlePath, attempt, state }) => ({
             id,
             titlePath,
-            attempt
+            attempt,
+            state
           }))
         );
         const expectedTests: string = JSON.stringify([
           {
             id: 'test_1',
             titlePath: ['Failed tests only', 'passes on the second try'],
-            attempt: 1
+            attempt: 1,
+            state: 'failed'
           }
         ]);
 

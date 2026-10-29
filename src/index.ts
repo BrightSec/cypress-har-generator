@@ -13,7 +13,7 @@ import {
 } from './constants.ts';
 import type { RecordOptions, SaveOptions } from './Plugin.ts';
 import { HarReader } from './replay/HarReader.ts';
-import { FailedTests } from './FailedTests.ts';
+import { TestResults } from './TestResults.ts';
 import type { RecordedHar } from './replay/RecordedHar.ts';
 import type { ReplayOptions, UpdateMode } from './replay/ReplayOptions.ts';
 import picomatch from 'picomatch';
@@ -211,6 +211,9 @@ const enableLifecycle = (
         }
 
         const path = specHarPath(spec, config);
+        const tests: TestResults | undefined = results
+          ? new TestResults(results.tests)
+          : undefined;
 
         return plugin.saveHar({
           waitForIdle,
@@ -218,9 +221,8 @@ const enableLifecycle = (
           maxWaitDuration,
           fileName: basename(path),
           outDir: dirname(path),
-          ...(failedTestsOnly && results
-            ? { keep: new FailedTests(results.tests).includes }
-            : {})
+          ...(tests ? { stateOf: tests.stateOf } : {}),
+          ...(failedTestsOnly && tests ? { keep: tests.failed } : {})
         });
       }
     );

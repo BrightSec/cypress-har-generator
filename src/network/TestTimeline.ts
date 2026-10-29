@@ -1,18 +1,29 @@
 import type { TestStart } from './TestStart.ts';
 import { StartOrder } from './StartOrder.ts';
 
+export type TestAttempt = Pick<TestStart, 'titlePath' | 'attempt'>;
+
 /**
  * Tells whether the entries a test sent belong in the HAR.
  */
-export type TestFilter = (
-  test: Pick<TestStart, 'titlePath' | 'attempt'>
-) => boolean;
+export type TestFilter = (test: TestAttempt) => boolean;
+
+/**
+ * The state of a try once it ended, e.g. `passed` or `failed`, or `undefined` when it is not known.
+ */
+export type TestStateLookup = (test: TestAttempt) => string | undefined;
 
 export interface HarTest {
   startedDateTime: string;
   id: string;
   titlePath: string[];
   attempt: number;
+  state?: string;
+}
+
+interface TestTimelineOptions {
+  keep?: TestFilter;
+  stateOf?: TestStateLookup;
 }
 
 /**
@@ -23,7 +34,7 @@ export class TestTimeline {
 
   constructor(
     starts: Iterable<TestStart> = [],
-    private readonly keep?: TestFilter
+    private readonly options: TestTimelineOptions = {}
   ) {
     this.starts = new StartOrder(starts);
   }
@@ -32,7 +43,14 @@ export class TestTimeline {
    * The same tests, keeping only the entries sent by the ones the filter accepts.
    */
   public only(keep: TestFilter): TestTimeline {
-    return new TestTimeline(this.starts.items, keep);
+    return new TestTimeline(this.starts.items, { ...this.options, keep });
+  }
+
+  /**
+   * The same tests, each listed with the state its try ended in.
+   */
+  public withStates(stateOf: TestStateLookup): TestTimeline {
+    return new TestTimeline(this.starts.items, { ...this.options, stateOf });
   }
 
   /**
@@ -40,13 +58,15 @@ export class TestTimeline {
    * so an entry sent before the first test is then left out.
    */
   public keeps(time: number): boolean {
-    if (!this.keep) {
+    const { keep } = this.options;
+
+    if (!keep) {
       return true;
     }
 
     const test: TestStart | undefined = this.testAt(time);
 
-    return !!test && this.keep(test);
+    return !!test && keep(test);
   }
 
   /**
@@ -67,7 +87,8 @@ export class TestTimeline {
     return new TestTimeline(
       this.starts.items.filter((_: TestStart, index: number): boolean =>
         selected.has(index)
-      )
+      ),
+      { stateOf: this.options.stateOf }
     );
   }
 
@@ -87,12 +108,20 @@ export class TestTimeline {
       (
         { titlePath, attempt, startedAt }: TestStart,
         index: number
-      ): HarTest => ({
-        startedDateTime: startedDateTime ?? new Date(startedAt).toISOString(),
-        id: this.idOf(index),
-        titlePath,
-        attempt
-      })
+      ): HarTest => {
+        const state: string | undefined = this.options.stateOf?.({
+          titlePath,
+          attempt
+        });
+
+        return {
+          startedDateTime: startedDateTime ?? new Date(startedAt).toISOString(),
+          id: this.idOf(index),
+          titlePath,
+          attempt,
+          ...(state ? { state } : {})
+        };
+      }
     );
   }
 

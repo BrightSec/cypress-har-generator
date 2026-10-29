@@ -84,6 +84,51 @@ describe('TestTimeline', () => {
     });
   });
 
+  describe('withStates', () => {
+    const stateOf = ({
+      titlePath,
+      attempt
+    }: Pick<TestStart, 'titlePath' | 'attempt'>) =>
+      titlePath[1] === 'flaky'
+        ? attempt === 1
+          ? 'failed'
+          : 'passed'
+        : undefined;
+
+    it('should list each try with the state it ended in, leaving it out when unknown', () => {
+      // arrange
+      const sut = new TestTimeline([
+        start(['a', 'flaky'], 10),
+        start(['a', 'flaky'], 20, 2),
+        start(['a', 'unknown'], 30)
+      ]).withStates(stateOf);
+      // act
+      const result = sut.toArray();
+      // assert
+      expect(result.map(x => [x.id, x.state])).toEqual([
+        ['test_1', 'failed'],
+        ['test_2', 'passed'],
+        ['test_3', undefined]
+      ]);
+      expect(result[2]).not.toHaveProperty('state');
+    });
+
+    it('should keep the states after only and select', () => {
+      // arrange
+      const sut = new TestTimeline([
+        start(['a', 'flaky'], 10),
+        start(['a', 'flaky'], 20, 2)
+      ])
+        .withStates(stateOf)
+        .only(({ attempt }) => attempt === 1);
+      // act
+      const result = sut.select([15]).toArray();
+      // assert
+      expect(sut.keeps(25)).toBe(false);
+      expect(result.map(x => [x.id, x.state])).toEqual([['test_1', 'failed']]);
+    });
+  });
+
   describe('select', () => {
     it('should keep only the tests running at the given times, numbered anew', () => {
       // arrange
