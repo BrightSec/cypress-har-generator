@@ -27,7 +27,7 @@ describe('FileManager', () => {
     path = join(tmpdir(), randomBytes(16).toString('hex').substring(16));
   });
 
-  afterEach(() => sut.removeFile(path));
+  afterEach(() => actual.rm(path, { recursive: true, force: true }));
 
   describe('readFile', () => {
     it('should return the contents of a file', async () => {
@@ -39,12 +39,11 @@ describe('FileManager', () => {
       expect(result).toEqual(data);
     });
 
-    it('should return undefined if the file does not exist', async () => {
-      // act
-      const result = await sut.readFile(path);
-
-      // assert
-      expect(result).toBeUndefined();
+    it('should throw if the file does not exist', async () => {
+      // act & assert
+      await expect(sut.readFile(path)).rejects.toMatchObject({
+        code: 'ENOENT'
+      });
     });
   });
 
@@ -94,24 +93,6 @@ describe('FileManager', () => {
     });
   });
 
-  describe('removeFile', () => {
-    it('should remove the file if it exists', async () => {
-      // arrange
-      await sut.writeFile(path, data);
-      // act
-      await sut.removeFile(path);
-      // assert
-      await expect(access(path, constants.F_OK)).rejects.toThrow();
-    });
-
-    it('should do nothing if the file does not exist', async () => {
-      // act
-      await sut.removeFile(path);
-      // assert
-      await expect(access(path, constants.F_OK)).rejects.toThrow();
-    });
-  });
-
   describe('pathExists', () => {
     it('should return true if the file exists', async () => {
       // arrange
@@ -158,6 +139,15 @@ describe('FileManager', () => {
       await sut.createFolder(path);
       // assert
       await expect(access(path, constants.F_OK)).resolves.not.toThrow();
+    });
+
+    it('should throw if a file has the same path', async () => {
+      // arrange
+      await sut.writeFile(path, data);
+      // act & assert
+      await expect(sut.createFolder(path)).rejects.toMatchObject({
+        code: 'EEXIST'
+      });
     });
   });
 

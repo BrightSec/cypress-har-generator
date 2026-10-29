@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { debuglog } from 'node:util';
+import { debuglog, inspect } from 'node:util';
 
 export class Logger {
   private static _instance: Logger;
@@ -19,12 +19,12 @@ export class Logger {
     this.log(chalk.blue(`ℹ️ ${msg}`));
   }
 
-  public err(msg: string | Error | unknown): void {
-    this.log(chalk.red(`🍑 ${msg}`));
+  public err(msg: string, error?: unknown): void {
+    this.log(chalk.red(`🍑 ${this.withError(msg, error)}`));
   }
 
-  public warn(msg: string): void {
-    this.log(chalk.yellow(`⚠ ${msg}`));
+  public warn(msg: string, error?: unknown): void {
+    this.log(chalk.yellow(`⚠ ${this.withError(msg, error)}`));
   }
 
   // warns only the first time for a given id, so a deprecated call in every spec does not flood the output
@@ -37,8 +37,13 @@ export class Logger {
     this.warn(msg);
   }
 
-  public debug(msg: string): void {
-    this._debug(msg);
+  public debug(msg: string, error?: unknown): void {
+    this._debug(this.withError(msg, error));
+  }
+
+  // `inspect` prints the stack and every `cause` in the chain
+  private withError(msg: string, error: unknown): string {
+    return error === undefined ? msg : `${msg}\n${inspect(error)}`;
   }
 
   private log(msg: string): void {

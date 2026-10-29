@@ -39,6 +39,21 @@ describe('Logger', () => {
       // assert
       expect(logSpy).toHaveBeenCalledWith(expectedLog);
     });
+
+    it('should log the stack and the causes of the error', () => {
+      // arrange
+      const cause = new Error('ENOENT: no such file');
+      const error = new Error('Failed to read the file', { cause });
+
+      // act
+      Logger.Instance.err('Test message', error);
+
+      // assert
+      const [log]: unknown[] = logSpy.mock.calls[0];
+      expect(log).toContain('Test message\nError: Failed to read the file\n');
+      expect(log).toContain(`at `);
+      expect(log).toContain('[cause]: Error: ENOENT: no such file');
+    });
   });
 
   describe('warn', () => {

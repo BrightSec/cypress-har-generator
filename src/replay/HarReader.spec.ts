@@ -49,16 +49,19 @@ describe('HarReader', () => {
     );
   });
 
-  it('should throw when the file cannot be read', async () => {
+  it('should throw with the read error as the cause when the file cannot be read', async () => {
     // arrange
-    when(fileManagerMock.readFile('/project/missing.har')).thenResolve(
-      undefined
-    );
+    const error = Object.assign(new Error('ENOENT: no such file'), {
+      code: 'ENOENT'
+    });
+    when(fileManagerMock.readFile('/project/missing.har')).thenReject(error);
 
     // act & assert
-    await expect(reader.read('/project/missing.har')).rejects.toThrow(
-      'Failed to read the HAR file at /project/missing.har.'
-    );
+    await expect(reader.read('/project/missing.har')).rejects.toMatchObject({
+      message:
+        'Failed to read the HAR file at /project/missing.har: ENOENT: no such file',
+      cause: error
+    });
   });
 
   it('should throw a TypeError when the file is not a JSON', async () => {

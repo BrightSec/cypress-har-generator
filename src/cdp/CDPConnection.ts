@@ -48,13 +48,15 @@ export class CDPConnection implements Connection {
 
       this._cdp = cdp;
     } catch (e) {
-      const message = ErrorUtils.isError(e) ? e.message : e;
-      this.logger.debug(`${FAILED_ATTEMPT_TO_CONNECT}: ${message}`);
+      this.logger.debug(FAILED_ATTEMPT_TO_CONNECT, e);
 
       if (
         !(await this.retryStrategy.execute((): Promise<void> => this.open()))
       ) {
-        throw new Error(FAILED_TO_CONNECT);
+        throw new Error(
+          `${FAILED_TO_CONNECT}${ErrorUtils.isError(e) ? e.message : e}`,
+          { cause: e }
+        );
       }
     }
   }

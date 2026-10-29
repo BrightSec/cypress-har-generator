@@ -18,7 +18,6 @@ import type {
 } from './network/TestTimeline.ts';
 import { NetworkIdleMonitor } from './network/NetworkIdleMonitor.ts';
 import { NetworkRequest } from './network/NetworkRequest.ts';
-import { ErrorUtils } from './utils/ErrorUtils.ts';
 import type { Connection } from './cdp/Connection.ts';
 import type { TestStartedSource } from './network/TestStartedSource.ts';
 import type { ConnectionFactory } from './cdp/ConnectionFactory.ts';
@@ -201,9 +200,9 @@ export class Plugin {
         await this.fileManager.writeFile(filePath, har);
       }
     } catch (e) {
-      const message = ErrorUtils.isError(e) ? e.message : e;
       this.logger.err(
-        `An error occurred while attempting to save the HAR file. Error details: ${message}`
+        'An error occurred while attempting to save the HAR file.',
+        e
       );
     } finally {
       await this.disposeOfHar();

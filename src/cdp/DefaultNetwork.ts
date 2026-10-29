@@ -92,7 +92,7 @@ export class DefaultNetwork implements Network, TestStartedSource {
       ]);
     } catch (e) {
       // ADHOC: handle any unforeseen issues while detaching from targets.
-      this.logger.debug(`Unexpected error while detaching from targets: ${e}`);
+      this.logger.debug('Unexpected error while detaching from targets', e);
     }
 
     this.sessions.clear();
@@ -170,9 +170,7 @@ export class DefaultNetwork implements Network, TestStartedSource {
       });
     } catch (e) {
       // ADHOC: The CDP protocol may not support the Security domain.
-      this.logger.debug(
-        ErrorUtils.isError(e) ? e.message : `Something went wrong: ${e}`
-      );
+      this.logger.debug('Failed to ignore certificate errors', e);
     }
   }
 
@@ -301,9 +299,7 @@ export class DefaultNetwork implements Network, TestStartedSource {
       );
     } catch (e) {
       // a page closing while it is attached cannot be told when its tests start, which only leaves `_testref` out
-      this.logger.debug(
-        `Failed to add the test binding: ${ErrorUtils.isError(e) ? e.message : e}`
-      );
+      this.logger.debug('Failed to add the test binding', e);
     }
   }
 
@@ -352,12 +348,10 @@ export class DefaultNetwork implements Network, TestStartedSource {
       ]);
     } catch (e) {
       if (this.targetClosedError(e)) {
-        this.logger.debug(TARGET_OR_BROWSER_CLOSED);
+        this.logger.debug(TARGET_OR_BROWSER_CLOSED, e);
 
         return;
       }
-
-      const stack = ErrorUtils.isError(e) ? e.stack : e;
 
       this.logger.debug(
         `We encountered an issue while initializing the target for the session: ${sessionId}.`
@@ -367,7 +361,7 @@ export class DefaultNetwork implements Network, TestStartedSource {
           targetInfo
         )}`
       );
-      this.logger.warn(`${UNABLE_TO_ATTACH_TO_TARGET}\n${stack}`);
+      this.logger.warn(UNABLE_TO_ATTACH_TO_TARGET, e);
     }
   };
 
@@ -394,7 +388,7 @@ export class DefaultNetwork implements Network, TestStartedSource {
       ]);
     } catch (e) {
       if (this.targetClosedError(e)) {
-        this.logger.debug(TARGET_OR_BROWSER_CLOSED);
+        this.logger.debug(TARGET_OR_BROWSER_CLOSED, e);
 
         return;
       }

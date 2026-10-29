@@ -142,7 +142,8 @@ export class NetworkObserver implements Observer<NetworkRequest> {
         .getFrameAncestors(requestId, entry.frameId)
         .catch((e: unknown): Protocol.Page.FrameId[] => {
           this.logger.debug(
-            `Failed to read the frames above ${entry.frameId}: ${e}`
+            `Failed to read the frames above ${entry.frameId}`,
+            e
           );
 
           return [];
@@ -509,6 +510,13 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     const pending: Promise<unknown> = networkRequest
       .waitForCompletion()
       .then(() => this.destination?.(networkRequest))
+      // nothing awaits the write of a request that finishes while recording
+      .catch((e: unknown): void =>
+        this.logger.err(
+          `The entry for ${networkRequest.url} is missing as it failed to be written.`,
+          e
+        )
+      )
       .finally(() => {
         this._entries.delete(networkRequest.requestId);
         this._pendingWrites.delete(pending);
@@ -573,7 +581,14 @@ export class NetworkObserver implements Observer<NetworkRequest> {
                 ? this.decodeRequestBody(postData, request.requestContentType)
                 : postData
           )
-          .catch(() => undefined);
+          .catch((e: unknown): undefined => {
+            this.logger.debug(
+              `Failed to read the request body of ${request.url}`,
+              e
+            );
+
+            return undefined;
+          });
   }
 
   // Chrome sends a body that is not valid UTF-8 (e.g. a binary Blob or a multipart file part) in base64,

@@ -23,5 +23,5 @@ Possible reasons for failure:
   - Chrome not running in headless mode
   - Using Chrome version 58 or earlier
   - Inconsistent RDP configuration settings.
-  
-The stack trace for this error is:`;
+
+The last error was: `;

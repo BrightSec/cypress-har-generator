@@ -6,10 +6,15 @@ export class HarReader {
   constructor(private readonly fileManager: FileManager) {}
 
   public async read(path: string): Promise<RecordedHar> {
-    const data: string | undefined = await this.fileManager.readFile(path);
+    let data: string;
 
-    if (data === undefined) {
-      throw new Error(`Failed to read the HAR file at ${path}.`);
+    try {
+      data = await this.fileManager.readFile(path);
+    } catch (e) {
+      throw new Error(
+        `Failed to read the HAR file at ${path}: ${ErrorUtils.isError(e) ? e.message : e}`,
+        { cause: e }
+      );
     }
 
     let har: { log?: { entries?: unknown; _tests?: unknown } } | undefined;
