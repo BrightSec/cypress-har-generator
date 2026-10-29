@@ -512,6 +512,51 @@ export default (entry: Entry): Entry => {
 
 It removes the listed headers with the cookies parsed from them, and replaces the listed fields of a JSON body with `***`, at any depth. Since the masked values can differ in length, it also leaves out the sizes measured on the wire, which HAR 1.2 allows with `-1`, and sets `content.size` to the size of the masked body.
 
+A HAR can hold bodies of many megabytes, more than a model can read at once. To give the HAR to an agent, cut the long bodies with a `transform`:
+
+```js
+cy.recordHar({ transform: '../support/cut-long-bodies.ts' });
+```
+
+<details>
+<summary>Here's what the <code>cut-long-bodies.ts</code> module might look like</summary>
+
+```ts
+import type { Content, Entry, PostData } from 'har-format';
+
+// the most characters of a body to keep: set it to what your agent can read
+const MAX_BODY_LENGTH = 10_000;
+
+const cut = (body: Content | PostData, base64: boolean): void => {
+  const { text } = body;
+
+  if (!text || text.length <= MAX_BODY_LENGTH) {
+    return;
+  }
+
+  // a base64 body cut at a multiple of 4 characters still decodes, to its first bytes
+  body.text = text.slice(
+    0,
+    base64 ? MAX_BODY_LENGTH - (MAX_BODY_LENGTH % 4) : MAX_BODY_LENGTH
+  );
+  body.comment = `cut to the first ${body.text.length} of ${text.length} characters`;
+};
+
+export default (entry: Entry): Entry => {
+  cut(entry.response.content, entry.response.content.encoding === 'base64');
+
+  if (entry.request.postData) {
+    cut(entry.request.postData, false);
+  }
+
+  return entry;
+};
+```
+
+</details>
+
+It keeps the first `MAX_BODY_LENGTH` characters of each response and request body, and tells in the `comment` of the body, a HAR 1.2 field, how long the body was. A base64 body is cut at a multiple of 4 characters, so it still decodes to its first bytes, and `content.size` keeps the size of the whole body. Chrome drops a response body larger than `maxResourceBufferSize` before `transform` gets it, so raise that limit to cut such a body instead of losing it. Do not replay a HAR with cut bodies, since `cy.replayHar()` would serve them cut.
+
 The HAR groups the entries by page, as Chrome DevTools exports it: each document the app loads, such as with `cy.visit()` or a link, is a page of `log.pages`, and each entry has the `pageref` of the page whose document sent it. The requests of an iframe belong to the page that holds the iframe, and a popup has pages of its own. A page is titled with its URL and keeps no timings, so `pageTimings` is empty. A request sent by a document loaded before `cy.recordHar()`, or left out of the HAR by the options, has no `pageref`.
 
 The HAR also lists the tests that sent its requests, in the custom `log._tests` field, the way `log.pages` lists the pages, so you can find the requests of a failed test or of one try of a retried test. Each try of a test is listed once, in the order the tries started, and each entry has the `_testref` of the test that sent it:
