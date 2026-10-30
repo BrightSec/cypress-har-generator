@@ -3,7 +3,8 @@
 1. [Before you start](#before-you-start)
 2. [Fix what breaks](#fix-what-breaks)
 3. [Check your HARs](#check-your-hars)
-4. [Choose how to record](#choose-how-to-record)
+4. [Check your logs](#check-your-logs)
+5. [Choose how to record](#choose-how-to-record)
 
 ## Before you start
 
@@ -133,6 +134,19 @@ Passing `excludePaths` replaces its default. To leave out your own paths and the
 ```js
 cy.recordHar({ excludePaths: [/^\/__(cypress[\w-]*)?\//, /^\/login/] });
 ```
+
+## Check your logs
+
+The plugin's messages now start with its name, like those of Cypress, instead of an emoji. Update any CI step or log filter that looks for the old start.
+
+| Level   | Version 5                              | Version 6                                  |
+| ------- | -------------------------------------- | ------------------------------------------ |
+| info    | `ℹ️ message`                           | `[cypress-har-generator] message`          |
+| warning | `⚠ message`                            | `[cypress-har-generator] Warning: message` |
+| error   | `🍑 message`                           | `[cypress-har-generator] message`          |
+| debug   | `CYPRESS-HAR-GENERATOR <pid>: message` | `[cypress-har-generator] message`          |
+
+An error is now printed with its stack, and each of its causes under `Caused by:`. A `filter` module that throws now prints a warning, not only a debug line.
 
 ## Choose how to record
 
