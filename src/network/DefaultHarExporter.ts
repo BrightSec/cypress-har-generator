@@ -8,7 +8,6 @@ import { HarPages } from './HarPages.ts';
 import { TestTimeline } from './TestTimeline.ts';
 import { STABLE_STARTED_DATE_TIME } from '../constants.ts';
 import type { Logger } from '../utils/Logger.ts';
-import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type {
   DefaultHarExporterOptions,
   Filter,
@@ -153,16 +152,12 @@ export class DefaultHarExporter implements HarExporter {
 
       return result;
     } catch (e) {
-      const stack = ErrorUtils.isError(e) ? e.stack : e;
-
       this.logger.debug(
         format(`The entry has been filtered out due to an error: %j`, entry)
       );
       this.logger.err(
-        `The entry is missing as a result of an error in the 'transform' function.
-
-The stack trace for this error is:
-${stack}`
+        `The entry for ${entry.request.url} is missing as the 'transform' function in '${this.options?.transformPath}' threw an error:`,
+        e
       );
 
       return undefined;
@@ -292,10 +287,9 @@ ${stack}`
     try {
       return typeof this.filter === 'function' && (await this.filter(entry));
     } catch (e) {
-      const message = ErrorUtils.isError(e) ? e.message : e;
-
-      this.logger.debug(
-        `The operation has encountered an error while processing the entry. ${message}`
+      this.logger.warn(
+        `The entry for ${entry.request.url} is kept as the 'filter' function threw an error:`,
+        e
       );
 
       return false;

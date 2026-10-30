@@ -782,6 +782,25 @@ describe('DefaultHarExporter', () => {
       verify(streamMock.write(anyString(), anyFunction())).once();
     });
 
+    it('should warn with the error when the predicate throws an error', async () => {
+      // arrange
+      const error = new Error('something went wrong');
+      when(streamMock.writable).thenReturn(true);
+      when(optionsSpy.filter).thenReturn(predicate);
+      when(streamMock.write(anyString(), anyFunction())).thenCall(
+        (_, callback) => callback()
+      );
+      predicate.mockReturnValue(Promise.reject(error));
+
+      // act
+      await harExporter.write(networkRequest);
+
+      // assert
+      verify(
+        loggerMock.warn(match(/'filter' function threw an error/), error)
+      ).once();
+    });
+
     it('should transform the entry before writing to the buffer', async () => {
       // arrange
       const entry = { foo: 'bar' } as unknown as Entry;
@@ -816,6 +835,26 @@ describe('DefaultHarExporter', () => {
 
       // assert
       verify(streamMock.write(anyString(), anyFunction())).never();
+    });
+
+    it('should log the error when the transformation is failed with an error', async () => {
+      // arrange
+      const error = new Error('Something went wrong.');
+      when(streamMock.writable).thenReturn(true);
+      when(optionsSpy.transform).thenReturn(transform);
+      when(optionsSpy.transformPath).thenReturn('transform.js');
+      transform.mockReturnValue(Promise.reject(error));
+
+      // act
+      await harExporter.write(networkRequest);
+
+      // assert
+      verify(
+        loggerMock.err(
+          match(/'transform' function in 'transform.js' threw an error/),
+          error
+        )
+      ).once();
     });
 
     it('should warn once and skip the entries when the transformation returns no entry', async () => {

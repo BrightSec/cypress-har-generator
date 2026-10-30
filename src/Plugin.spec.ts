@@ -18,7 +18,6 @@ import {
   capture,
   deepEqual,
   instance,
-  match,
   mock,
   reset,
   spy,
@@ -417,15 +416,15 @@ describe('Plugin', () => {
         rootDir: '/'
       });
 
-      when(harExporterMock.read(anything())).thenReject(
-        new Error('something went wrong')
-      );
+      const error = new Error('something went wrong');
+      when(harExporterMock.read(anything())).thenReject(error);
       // act
       await plugin.saveHar(options);
       // assert
       verify(
         loggerMock.err(
-          match(/^An error occurred while attempting to save the HAR file/)
+          'An error occurred while attempting to save the HAR file.',
+          error
         )
       ).once();
     });

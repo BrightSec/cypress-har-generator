@@ -1,5 +1,4 @@
 /// <reference types="node" preserve="true" />
-import { Logger } from './Logger.ts';
 import { CoalescedChunks } from './CoalescedChunks.ts';
 import {
   access,
@@ -34,14 +33,8 @@ export class FileManager {
     return this._instance;
   }
 
-  public async readFile(path: string): Promise<string | undefined> {
-    try {
-      return await readFile(path, { encoding: 'utf-8' });
-    } catch (e) {
-      Logger.Instance.err(e);
-
-      return undefined;
-    }
+  public readFile(path: string): Promise<string> {
+    return readFile(path, { encoding: 'utf-8' });
   }
 
   public async writeFile<T extends Serializable>(
@@ -60,25 +53,7 @@ export class FileManager {
   }
 
   public async createFolder(path: string): Promise<void> {
-    try {
-      if (await this.pathExists(path)) {
-        return;
-      }
-
-      await mkdir(path, { recursive: true });
-    } catch (e) {
-      Logger.Instance.err(e);
-    }
-  }
-
-  public async removeFile(path: string): Promise<void> {
-    try {
-      if (await this.pathExists(path)) {
-        await unlink(path);
-      }
-    } catch (e) {
-      Logger.Instance.err(e);
-    }
+    await mkdir(path, { recursive: true });
   }
 
   public async pathExists(path: string): Promise<boolean> {

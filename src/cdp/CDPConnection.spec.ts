@@ -5,7 +5,8 @@ import {
   CONNECTED,
   CONNECTION_NOT_ESTABLISHED,
   DISCONNECTED,
-  FAILED_ATTEMPT_TO_CONNECT
+  FAILED_ATTEMPT_TO_CONNECT,
+  FAILED_TO_CONNECT
 } from './messages.ts';
 import type { CDPClient } from './CDPClient.ts';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
@@ -99,9 +100,20 @@ describe('CDPConnection', () => {
       const act = () => sut.open();
       // assert
       await expect(act).rejects.toThrow();
-      verify(
-        loggerMock.debug(`${FAILED_ATTEMPT_TO_CONNECT}: ${error.message}`)
-      ).once();
+      verify(loggerMock.debug(FAILED_ATTEMPT_TO_CONNECT, error)).once();
+    });
+
+    it('should keep the last connection error as the cause', async () => {
+      // arrange
+      const error = new Error('Connection failed');
+      connect.mockRejectedValue(error);
+      // act
+      const act = () => sut.open();
+      // assert
+      await expect(act).rejects.toMatchObject({
+        message: FAILED_TO_CONNECT,
+        cause: error
+      });
     });
 
     it('should retry the connection if it fails', async () => {

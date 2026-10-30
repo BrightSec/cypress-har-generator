@@ -12,7 +12,6 @@ import type { Connection } from './Connection.ts';
 import type { Network } from '../network/Network.ts';
 import type { TestStartedSource } from '../network/TestStartedSource.ts';
 import { DefaultNetwork } from './DefaultNetwork.ts';
-import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type { NetworkOptions } from './NetworkOptions.ts';
 import type { CDPClient } from './CDPClient.ts';
 import CDP, { Version } from 'chrome-remote-interface';
@@ -48,13 +47,12 @@ export class CDPConnection implements Connection {
 
       this._cdp = cdp;
     } catch (e) {
-      const message = ErrorUtils.isError(e) ? e.message : e;
-      this.logger.debug(`${FAILED_ATTEMPT_TO_CONNECT}: ${message}`);
+      this.logger.debug(FAILED_ATTEMPT_TO_CONNECT, e);
 
       if (
         !(await this.retryStrategy.execute((): Promise<void> => this.open()))
       ) {
-        throw new Error(FAILED_TO_CONNECT);
+        throw new Error(FAILED_TO_CONNECT, { cause: e });
       }
     }
   }

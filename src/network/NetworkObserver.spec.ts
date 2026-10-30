@@ -12,6 +12,7 @@ import {
   anyString,
   anything,
   instance,
+  match,
   mock,
   reset,
   spy,
@@ -288,6 +289,58 @@ describe('NetworkObserver', () => {
           requestId: '1'
         })
       );
+    });
+
+    it('should log the error when an entry fails to be written', async () => {
+      // arrange
+      const error = new Error('Something went wrong');
+      const unhandled = jest.fn();
+      process.on('unhandledRejection', unhandled);
+      callback.mockImplementation(() => Promise.reject(error));
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: ''
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb(requestWillBeSentEvent);
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      await sut.unsubscribe();
+      await new Promise(resolve => setImmediate(resolve));
+      process.off('unhandledRejection', unhandled);
+      // assert
+      verify(loggerMock.err(match(/failed to be written/), error)).once();
+      expect(unhandled).not.toHaveBeenCalled();
+    });
+
+    it('should log the error when the request body cannot be read', async () => {
+      // arrange
+      const error = new Error('No resource with given identifier found');
+      when(networkMock.getRequestBody('1')).thenReject(error);
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            request: {
+              ...requestWillBeSentEvent.params.request,
+              method: 'POST',
+              hasPostData: true
+            }
+          }
+        });
+        await cb(responseReceivedEvent);
+        await cb(loadingFinishedEvent);
+      });
+      // act
+      await sut.subscribe(callback);
+      await sut.unsubscribe();
+      // assert
+      verify(
+        loggerMock.debug(match(/Failed to read the request body/), error)
+      ).once();
     });
 
     it.each([

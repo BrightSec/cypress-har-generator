@@ -487,6 +487,7 @@ describe('DefaultNetwork', () => {
 
     it('should not throw an error when an unexpected error is happened', async () => {
       // arrange
+      const error = new Error('Something went wrong');
       const sessionId = '1';
       const targetInfo: Protocol.Target.TargetInfo = {
         targetId: '1',
@@ -506,12 +507,14 @@ describe('DefaultNetwork', () => {
           anything(),
           sessionId
         )
-      ).thenReject(new Error('Something went wrong'));
+      ).thenReject(error);
       await sut.attachToTargets(listener);
       // act
       await act?.({ sessionId, targetInfo, waitingForDebugger: true });
       // assert
-      verify(loggerMock.warn(match('Unable to attach to the target'))).once();
+      verify(
+        loggerMock.warn(match('Unable to attach to the target'), error)
+      ).once();
     });
 
     it.each([
@@ -523,6 +526,7 @@ describe('DefaultNetwork', () => {
       'should silently handle an error when the $input has been closed',
       async ({ input }) => {
         // arrange
+        const error = new Error(input);
         const sessionId = '1';
         const targetInfo: Protocol.Target.TargetInfo = {
           targetId: '1',
@@ -538,12 +542,12 @@ describe('DefaultNetwork', () => {
         );
         when(
           clientMock.send('Network.enable', deepEqual({}), sessionId)
-        ).thenReject(new Error(input));
+        ).thenReject(error);
         await sut.attachToTargets(listener);
         // act
         await act?.({ sessionId, targetInfo, waitingForDebugger: true });
         // assert
-        verify(loggerMock.debug(TARGET_OR_BROWSER_CLOSED)).once();
+        verify(loggerMock.debug(TARGET_OR_BROWSER_CLOSED, error)).once();
       }
     );
 
