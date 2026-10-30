@@ -22,6 +22,4 @@ export const FAILED_TO_CONNECT = `${FAILED_ATTEMPT_TO_CONNECT}
 Possible reasons for failure:
   - Chrome not running in headless mode
   - Using Chrome version 58 or earlier
-  - Inconsistent RDP configuration settings.
-
-The last error was: `;
+  - Inconsistent RDP configuration settings.`;

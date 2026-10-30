@@ -5,7 +5,8 @@ import {
   CONNECTED,
   CONNECTION_NOT_ESTABLISHED,
   DISCONNECTED,
-  FAILED_ATTEMPT_TO_CONNECT
+  FAILED_ATTEMPT_TO_CONNECT,
+  FAILED_TO_CONNECT
 } from './messages.ts';
 import type { CDPClient } from './CDPClient.ts';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
@@ -110,7 +111,7 @@ describe('CDPConnection', () => {
       const act = () => sut.open();
       // assert
       await expect(act).rejects.toMatchObject({
-        message: expect.stringMatching(/Connection failed$/),
+        message: FAILED_TO_CONNECT,
         cause: error
       });
     });

@@ -1,5 +1,4 @@
 import type { FileManager } from '../utils/FileManager.ts';
-import { ErrorUtils } from '../utils/ErrorUtils.ts';
 import type { RecordedHar } from './RecordedHar.ts';
 
 export class HarReader {
@@ -11,10 +10,9 @@ export class HarReader {
     try {
       data = await this.fileManager.readFile(path);
     } catch (e) {
-      throw new Error(
-        `Failed to read the HAR file at ${path}: ${ErrorUtils.isError(e) ? e.message : e}`,
-        { cause: e }
-      );
+      throw new Error(`Failed to read the HAR file at ${path}.`, {
+        cause: e
+      });
     }
 
     let har: { log?: { entries?: unknown; _tests?: unknown } } | undefined;
@@ -22,10 +20,9 @@ export class HarReader {
     try {
       har = JSON.parse(data);
     } catch (e) {
-      throw new TypeError(
-        `The file at ${path} is not a valid JSON: ${ErrorUtils.isError(e) ? e.message : e}`,
-        { cause: e }
-      );
+      throw new TypeError(`The file at ${path} is not a valid JSON.`, {
+        cause: e
+      });
     }
 
     const { entries, _tests: tests = [] } = har?.log ?? {};

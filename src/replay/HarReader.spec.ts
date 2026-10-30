@@ -58,8 +58,7 @@ describe('HarReader', () => {
 
     // act & assert
     await expect(reader.read('/project/missing.har')).rejects.toMatchObject({
-      message:
-        'Failed to read the HAR file at /project/missing.har: ENOENT: no such file',
+      message: 'Failed to read the HAR file at /project/missing.har.',
       cause: error
     });
   });
