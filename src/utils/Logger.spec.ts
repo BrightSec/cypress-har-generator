@@ -1,6 +1,8 @@
 import { Logger } from './Logger.ts';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import chalk from 'chalk';
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
 
 describe('Logger', () => {
   let logSpy!: jest.SpiedFunction<(msg: string, ...args: unknown[]) => void>;
@@ -99,6 +101,41 @@ describe('Logger', () => {
 
       // assert
       expect(logSpy).toHaveBeenCalledWith(expectedLog);
+    });
+  });
+
+  describe('debug', () => {
+    // Node reads NODE_DEBUG once at startup, so each case runs in a new process
+    const debugOutput = (nodeDebug: string): string =>
+      spawnSync(
+        process.execPath,
+        [
+          '--no-warnings',
+          '--experimental-transform-types',
+          '--input-type=module',
+          '-e',
+          `const { Logger } = await import(${JSON.stringify(resolve('src/utils/Logger.ts'))});
+          Logger.Instance.debug('Test message', new Error('Failed', { cause: new Error('ENOENT') }));`
+        ],
+        { env: { ...process.env, NODE_DEBUG: nodeDebug }, encoding: 'utf8' }
+      ).stderr;
+
+    it('should log the message with the plugin name and the causes when NODE_DEBUG names the plugin', () => {
+      // act
+      const output = debugOutput('cypress-har-generator');
+
+      // assert
+      expect(output).toMatch(
+        /^\[cypress-har-generator\] Test message\nError: Failed\n[\s\S]*\nCaused by:\nError: ENOENT\n/
+      );
+    });
+
+    it('should log nothing when NODE_DEBUG does not name the plugin', () => {
+      // act
+      const output = debugOutput('http');
+
+      // assert
+      expect(output).toBe('');
     });
   });
 

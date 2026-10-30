@@ -42,8 +42,12 @@ export class Logger {
     this.warn(msg);
   }
 
+  // `debuglog` only decides whether NODE_DEBUG names the plugin; its own output would start with `CYPRESS-HAR-GENERATOR <pid>:`
   public debug(msg: string, error?: unknown): void {
-    this._debug(this.withError(msg, error));
+    if (this._debug.enabled) {
+      // eslint-disable-next-line no-console
+      console.error(`${this.prefix} ${this.withError(msg, error)}`);
+    }
   }
 
   private withError(msg: string, error: unknown): string {
