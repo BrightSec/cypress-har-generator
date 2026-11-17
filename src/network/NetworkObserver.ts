@@ -54,12 +54,13 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   }
 
   public async unsubscribe(): Promise<void> {
-    // An event arriving while the targets detach could start a `Network.getResponseBody`
-    // that Chrome never answers, so the entries are written as they stand now.
-    this.listening = false;
     // Turning auto-attach off detaches the target sessions, and Chrome never answers
-    // a `Network.getResponseBody` still pending on a detached session.
-    await Promise.allSettled(this._pendingWrites);
+    // a `Network.getResponseBody` pending on a detached session, so no write may
+    // still run or start once detaching begins.
+    while (this._pendingWrites.size) {
+      await Promise.allSettled(this._pendingWrites);
+    }
+    this.listening = false;
     await this.network.detachFromTargets();
     // DevTools exports a request that is still in flight with what it received so far.
     await Promise.all(

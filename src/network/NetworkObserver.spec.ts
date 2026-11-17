@@ -1548,6 +1548,55 @@ describe('NetworkObserver', () => {
       );
     });
 
+    it('should write the body of a request whose loading finishes while earlier writes settle', async () => {
+      // arrange
+      let emit!: (event: any) => unknown;
+      const withId = (event: any, requestId: string) => ({
+        ...event,
+        params: { ...event.params, requestId }
+      });
+      when(optionsSpy.content).thenReturn(true);
+      when(networkMock.getRequestBody(anyString())).thenResolve({
+        postData: '',
+        base64Encoded: false
+      });
+      when(networkMock.getResponseBody('2')).thenResolve({
+        body: 'late',
+        base64Encoded: false
+      });
+      let release!: () => void;
+      const released = new Promise<void>(resolve => (release = resolve));
+      when(networkMock.getResponseBody('1')).thenCall(async () => {
+        await released;
+        await emit(withId(loadingFinishedEvent, '2'));
+
+        return { body: 'early', base64Encoded: false };
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        emit = cb;
+        for (const id of ['1', '2']) {
+          await cb(withId(requestWillBeSentEvent, id));
+          await cb(withId(responseReceivedEvent, id));
+        }
+        await cb(withId(loadingFinishedEvent, '1'));
+      });
+      await sut.subscribe(callback);
+      // act
+      const unsubscribed = sut.unsubscribe();
+      release();
+      await unsubscribed;
+      // assert
+      const bodies = await Promise.all(
+        callback.mock.calls.map(([entry]: [NetworkRequest]) =>
+          entry.contentData()
+        )
+      );
+      expect(bodies).toEqual([
+        { text: 'late', encoding: undefined },
+        { text: 'early', encoding: undefined }
+      ]);
+    });
+
     it('should not write a closed WebSocket again', async () => {
       // arrange
       when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
