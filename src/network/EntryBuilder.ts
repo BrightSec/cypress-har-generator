@@ -104,7 +104,8 @@ export class EntryBuilder {
     if (
       this.request.cached() ||
       this.request.statusCode === 304 ||
-      this.request.statusCode === 206
+      this.request.statusCode === 206 ||
+      !this.request.responseHeaderValue('Content-Encoding')
     ) {
       return undefined;
     }
@@ -255,7 +256,7 @@ export class EntryBuilder {
       result._workerRouterEvaluationStart = timing.workerRouterEvaluationStart;
       result._workerCacheLookupStart = timing.workerCacheLookupStart;
     } else if (this.request.responseReceivedTime === -1) {
-      result.blocked = this.request.endTime - issueTime;
+      result.blocked = this.toMilliseconds(this.request.endTime - issueTime);
 
       return result;
     }

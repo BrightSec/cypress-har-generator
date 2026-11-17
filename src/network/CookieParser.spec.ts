@@ -37,9 +37,37 @@ describe('CookieParser', () => {
         { name: 'key2', value: 'value2' }
       ]);
     });
+
+    it('should keep the case of cookie names', () => {
+      // arrange
+      const cookieHeader = 'JSESSIONID=abc; Theme=dark';
+
+      // act
+      const result = parser.parseCookie(cookieHeader);
+
+      // assert
+      expect(result).toMatchObject([
+        { name: 'JSESSIONID', value: 'abc' },
+        { name: 'Theme', value: 'dark' }
+      ]);
+    });
   });
 
   describe('parseSetCookie', () => {
+    it('should keep the case of cookie names', () => {
+      // arrange
+      const setCookieHeader = 'JSESSIONID=abc; Path=/\nTheme=dark; HttpOnly';
+
+      // act
+      const result = parser.parseSetCookie(setCookieHeader);
+
+      // assert
+      expect(result).toMatchObject([
+        { name: 'JSESSIONID', value: 'abc', path: '/' },
+        { name: 'Theme', value: 'dark', httpOnly: true }
+      ]);
+    });
+
     it('should handles cookies without a name', () => {
       // arrange
       const setCookieHeader = 'cookie1; Path=/; Domain=.example.com;';
