@@ -132,6 +132,15 @@ describe('FileManager', () => {
       }
     });
 
+    it('should reject when the path is a file', async () => {
+      // arrange
+      await sut.writeFile(path, data);
+      // act
+      const result = sut.createFolder(path);
+      // assert
+      await expect(result).rejects.toMatchObject({ code: 'EEXIST' });
+    });
+
     it('should do nothing if the folder already exists', async () => {
       // arrange
       await sut.createFolder(path);

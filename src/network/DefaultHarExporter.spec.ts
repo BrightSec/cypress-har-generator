@@ -735,6 +735,24 @@ describe('DefaultHarExporter', () => {
       await Promise.all([write, read]);
       expect(done).toBe(true);
     });
+
+    it('should reject when an entry failed to be written', async () => {
+      // arrange
+      const error = Object.assign(new Error('no space left on device'), {
+        code: 'ENOSPC'
+      });
+      when(streamMock.writable).thenReturn(true);
+      when(streamMock.write(anyString(), anyFunction())).thenCall(
+        (_, callback) => callback(error)
+      );
+      await harExporter.write(networkRequest).catch(() => undefined);
+
+      // act
+      const result = harExporter.read();
+
+      // assert
+      await expect(result).rejects.toThrow(error);
+    });
   });
 
   describe('end', () => {
