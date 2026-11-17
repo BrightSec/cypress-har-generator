@@ -93,7 +93,7 @@ export class CookieParser {
     }
 
     const result: KeyValue = {
-      key: this.toCamelCase(keyValueMatch[1]),
+      key: keyValueMatch[1],
       value: keyValueMatch[2]?.trim(),
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       position: this._originalInputLength! - this._input.length
@@ -102,13 +102,6 @@ export class CookieParser {
     this._input = this._input.slice(keyValueMatch[0].length);
 
     return result;
-  }
-
-  private toCamelCase(str: string): string {
-    return str
-      .replace(/\s(.)/g, (m: string): string => m.toUpperCase())
-      .replace(/\s/g, '')
-      .replace(/^(.)/, (m: string): string => m.toLowerCase());
   }
 
   private advanceAndCheckCookieDelimiter(): boolean {
