@@ -160,6 +160,7 @@ describe('EntryBuilder', () => {
       request.responseHeadersText = 'HTTP/1.1 404 Not Found';
       request.resourceSize = size;
       request.mimeType = mimeType;
+      request.responseHeaders = [{ name: 'Content-Encoding', value: 'gzip' }];
       request.transferSize = request.responseHeadersText.length + 4;
       const entryBuilder = new EntryBuilder(request);
       // act
@@ -172,6 +173,24 @@ describe('EntryBuilder', () => {
             compression: 10
           }
         }
+      });
+    });
+
+    it('should build an entry leaving compression out when the response has no content encoding', async () => {
+      // arrange
+      request.setContentData(
+        Promise.resolve({ body: '{"foo": "bar"}', base64Encoded: false })
+      );
+      request.responseHeadersText = 'HTTP/1.1 200 OK\r\n\r\n';
+      request.resourceSize = 14;
+      request.transferSize = request.responseHeadersText.length + 29;
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry.response).toMatchObject({
+        bodySize: 29,
+        content: { size: 14, compression: undefined }
       });
     });
 
