@@ -104,7 +104,8 @@ export class EntryBuilder {
     if (
       this.request.cached() ||
       this.request.statusCode === 304 ||
-      this.request.statusCode === 206
+      this.request.statusCode === 206 ||
+      !this.request.responseHeaderValue('Content-Encoding')
     ) {
       return undefined;
     }
