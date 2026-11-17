@@ -62,7 +62,7 @@ describe('EntryBuilder', () => {
         },
         time: 0,
         timings: {
-          blocked: -2,
+          blocked: -2000,
           connect: -1,
           dns: -1,
           receive: 0,
@@ -314,6 +314,28 @@ describe('EntryBuilder', () => {
           send: 0.22999999999999998,
           wait: 298.012000012882,
           receive: 0.5379999929573387
+        }
+      });
+    });
+
+    it('should build an entry with the timings in milliseconds when the request failed before a response', async () => {
+      // arrange
+      request.setIssueTime(208215.856, 1673020881.302);
+      request.endTime = 208216.157;
+      const entryBuilder = new EntryBuilder(request);
+      // act
+      const entry = await entryBuilder.build();
+      // assert
+      expect(entry).toMatchObject({
+        time: 301.0000000067521,
+        timings: {
+          blocked: 301.0000000067521,
+          dns: -1,
+          ssl: -1,
+          connect: -1,
+          send: 0,
+          wait: 0,
+          receive: 0
         }
       });
     });
