@@ -97,6 +97,23 @@ describe('Save HAR', () => {
     });
   });
 
+  it('fails when the output folder cannot be created', done => {
+    cy.on('fail', (error: Error) => {
+      expect(error.message).to.match(/cy\.task\('saveHar'\).+EEXIST/s);
+      done();
+    });
+    cy.recordHar();
+
+    cy.get('a[href$=fetch]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 1);
+
+    cy.get<{ outDir: string; fileName: string }>('@options').then(options => {
+      const outDir = `${options.outDir}/${options.fileName}`;
+      cy.writeFile(outDir, '');
+      cy.saveHar({ outDir });
+    });
+  });
+
   it('saves a HAR file with a custom name', () => {
     cy.recordHar();
 

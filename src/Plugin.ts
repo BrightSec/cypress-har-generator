@@ -199,11 +199,6 @@ export class Plugin {
       if (har) {
         await this.fileManager.writeFile(filePath, har);
       }
-    } catch (e) {
-      this.logger.err(
-        'An error occurred while attempting to save the HAR file.',
-        e
-      );
     } finally {
       await this.disposeOfHar();
     }

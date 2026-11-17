@@ -400,7 +400,7 @@ describe('Plugin', () => {
       );
     });
 
-    it('should log an error message when failing to build a HAR file', async () => {
+    it('should reject when failing to build a HAR file', async () => {
       // arrange
       when(connectionFactoryMock.create(anything())).thenReturn(
         instance(connectionMock)
@@ -419,14 +419,9 @@ describe('Plugin', () => {
       const error = new Error('something went wrong');
       when(harExporterMock.read(anything())).thenReject(error);
       // act
-      await plugin.saveHar(options);
+      const result = plugin.saveHar(options);
       // assert
-      verify(
-        loggerMock.err(
-          'An error occurred while attempting to save the HAR file.',
-          error
-        )
-      ).once();
+      await expect(result).rejects.toThrow(error);
     });
 
     it('should unsubscribe from the network events', async () => {
