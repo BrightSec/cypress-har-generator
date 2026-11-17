@@ -98,6 +98,30 @@ describe('Record HAR', () => {
       });
   });
 
+  it('records a no-store response body read as a stream', () => {
+    const size = 4 * 1024 ** 2;
+
+    cy.recordHar();
+
+    cy.window().then(async win => {
+      const reader = (await win.fetch('/api/no-store-body')).body?.getReader();
+
+      while (reader && !(await reader.read()).done);
+    });
+
+    cy.saveHar({ waitForIdle: true });
+
+    cy.findHar()
+      .its('log.entries')
+      .should((entries: Entry[]) => {
+        const entry = entries.find(({ request }: Entry) =>
+          request.url.endsWith('/api/no-store-body')
+        );
+
+        expect(entry?.response.content.text?.length).to.equal(size);
+      });
+  });
+
   it('records a large response body greater than 100MB', () => {
     cy.recordHar({
       maxTotalBufferSize: 256 * 1024 ** 2,

@@ -279,6 +279,79 @@ describe('DefaultNetwork', () => {
       }
     );
 
+    it.each([
+      { options: undefined, expected: 200 * 1000 * 1000 },
+      { options: { maxTotalBufferSize: 1024 }, expected: 1024 }
+    ])(
+      'should keep response bodies in the browser process up to $expected bytes',
+      async ({ options, expected }) => {
+        // arrange
+        sut = new DefaultNetwork(
+          instance(clientMock),
+          instance(loggerMock),
+          options
+        );
+        const sessionId = '1';
+        const targetInfo: Protocol.Target.TargetInfo = {
+          targetId: '1',
+          type: 'page',
+          url: '',
+          title: '',
+          attached: true,
+          canAccessOpener: false
+        };
+        let act: ((...args: unknown[]) => Promise<void>) | undefined;
+        when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
+          (_, callback) => (act = callback)
+        );
+        await sut.attachToTargets(listener);
+        // act
+        await act?.({ sessionId, targetInfo, waitingForDebugger: false });
+        // assert
+        verify(
+          clientMock.send(
+            'Network.configureDurableMessages',
+            deepEqual({ maxTotalBufferSize: expected }),
+            sessionId
+          )
+        ).once();
+      }
+    );
+
+    it('should track network events when the browser has no durable messages', async () => {
+      // arrange
+      const sessionId = '1';
+      const targetInfo: Protocol.Target.TargetInfo = {
+        targetId: '1',
+        type: 'page',
+        url: '',
+        title: '',
+        attached: true,
+        canAccessOpener: false
+      };
+      let act: ((...args: unknown[]) => Promise<void>) | undefined;
+      when(clientMock.on('Target.attachedToTarget', anyFunction())).thenCall(
+        (_, callback) => (act = callback)
+      );
+      when(
+        clientMock.send(
+          'Network.configureDurableMessages',
+          anything(),
+          sessionId
+        )
+      ).thenReject(
+        new Error("'Network.configureDurableMessages' wasn't found")
+      );
+      await sut.attachToTargets(listener);
+      // act
+      await act?.({ sessionId, targetInfo, waitingForDebugger: false });
+      // assert
+      verify(
+        clientMock.send('Network.enable', deepEqual({}), sessionId)
+      ).once();
+      verify(loggerMock.warn(anything())).never();
+    });
+
     it('should release a service worker attached to the browser instead of tracking it twice', async () => {
       // arrange
       const sessionId = '1';
