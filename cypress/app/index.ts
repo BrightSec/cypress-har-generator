@@ -130,6 +130,11 @@ app.get('/api/large-body', (_: Request, res: Response) =>
   res.type('text/plain').send(largeBody)
 );
 
+const noStoreBody = 'a'.repeat(4 * 1024 ** 2);
+app.get('/api/no-store-body', (_: Request, res: Response) =>
+  res.set('Cache-Control', 'no-store').type('text/plain').send(noStoreBody)
+);
+
 const server = app.listen(port);
 server.on('upgrade', (request, socket, head) =>
   ws.handleUpgrade(request, socket, head, client =>

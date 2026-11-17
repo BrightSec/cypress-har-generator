@@ -172,6 +172,25 @@ describe('NetworkCookie', () => {
       expect(result?.toJSON()).toBe(input.toJSON());
     });
 
+    it('should return the request date when maxAge is zero', () => {
+      // arrange
+      const input = new Date();
+      cookie.addAttribute(CookieAttribute.MAXAGE, '0');
+      // act
+      const result = cookie.expiresDate(input);
+      // assert
+      expect(result?.toJSON()).toBe(input.toJSON());
+    });
+
+    it('should return undefined when expires is not a valid date', () => {
+      // arrange
+      cookie.addAttribute(CookieAttribute.EXPIRES, 'not-a-date');
+      // act
+      const result = cookie.expiresDate(new Date());
+      // assert
+      expect(result).toBeUndefined();
+    });
+
     it('should return undefined when expires and maxAge are omitted', () => {
       // arrange
       const input = new Date();

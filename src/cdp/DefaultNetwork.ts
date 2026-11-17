@@ -23,6 +23,9 @@ export class DefaultNetwork implements Network, TestStartedSource {
     'shared_worker'
   ]);
 
+  // the size Chrome uses for `Network.enable` when `maxTotalBufferSize` is not set
+  private readonly DEFAULT_TOTAL_BUFFER_SIZE = 200 * 1000 * 1000;
+
   private readonly FINAL_EVENTS = new Set<string>([
     'Network.loadingFinished',
     'Network.loadingFailed',
@@ -378,6 +381,7 @@ export class DefaultNetwork implements Network, TestStartedSource {
     try {
       await Promise.all([
         this.cdp.send('Network.enable', this.options ?? {}, sessionId),
+        this.keepResponseBodies(sessionId),
         this.cdp.send(
           'Network.setCacheDisabled',
           {
@@ -394,6 +398,26 @@ export class DefaultNetwork implements Network, TestStartedSource {
       }
 
       throw e;
+    }
+  }
+
+  // the renderer loses the body of a large `no-store` response that the page reads as a stream (Electron 41),
+  // while the browser process keeps it
+  private async keepResponseBodies(sessionId?: string): Promise<void> {
+    try {
+      await this.cdp.send(
+        'Network.configureDurableMessages',
+        {
+          maxTotalBufferSize:
+            this.options?.maxTotalBufferSize ?? this.DEFAULT_TOTAL_BUFFER_SIZE
+        },
+        sessionId
+      );
+    } catch (e) {
+      // ADHOC: older browsers do not have this command
+      this.logger.debug(
+        ErrorUtils.isError(e) ? e.message : `Something went wrong: ${e}`
+      );
     }
   }
 
