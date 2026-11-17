@@ -21,10 +21,8 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   get empty(): boolean {
     // Like Chrome's network idle, a WebSocket or an EventSource does not count as
     // a pending request, since it may stay open for the whole page lifetime.
-    return [...this._entries.values()].every(
-      (entry: NetworkRequest): boolean =>
-        entry.resourceType === 'WebSocket' ||
-        entry.resourceType === 'EventSource'
+    return [...this._entries.values()].every((entry: NetworkRequest): boolean =>
+      this.isStream(entry)
     );
   }
 
@@ -56,11 +54,11 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     // a `Network.getResponseBody` still pending on a detached session.
     await Promise.allSettled(this._pendingWrites);
     await this.network.detachFromTargets();
-    // DevTools exports a request that is still in flight with what it received so far.
+    // DevTools exports a stream that is still open with what it received so far.
     await Promise.all(
-      [...this._entries.values()].map((entry: NetworkRequest): Promise<void> =>
-        this.writeRequest(entry)
-      )
+      [...this._entries.values()]
+        .filter((entry: NetworkRequest): boolean => this.isStream(entry))
+        .map((entry: NetworkRequest): Promise<void> => this.writeRequest(entry))
     );
     delete this.destination;
     this._entries.clear();
@@ -717,6 +715,12 @@ export class NetworkObserver implements Observer<NetworkRequest> {
         return acc;
       },
       []
+    );
+  }
+
+  private isStream(entry: NetworkRequest): boolean {
+    return (
+      entry.resourceType === 'WebSocket' || entry.resourceType === 'EventSource'
     );
   }
 

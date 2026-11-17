@@ -469,20 +469,25 @@ describe('Record HAR', () => {
       });
   });
 
-  it('records a request that is still waiting for its response', () => {
+  it('waits for a pending request but not for an open EventSource', () => {
     cy.recordHar();
 
+    cy.get('a[href$=server-sent-events]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 2);
     cy.window().then(win => {
-      void win.fetch('/api/delay/10000');
+      void win.fetch('/api/delay/1000');
     });
-    cy.wait(500);
 
-    cy.saveHar();
+    const startedAt = Date.now();
+    cy.saveHar({ waitForIdle: true, maxWaitDuration: 10000 }).then(() =>
+      expect(Date.now() - startedAt).to.be.lessThan(10000)
+    );
 
     cy.findHar()
       .its('log.entries')
       .should('contain.something.like', {
-        request: { url: /\/api\/delay\/10000$/ }
+        request: { url: /\/api\/delay\/1000$/ },
+        response: { status: 200, content: { text: '{"delay":"1000"}' } }
       });
   });
 

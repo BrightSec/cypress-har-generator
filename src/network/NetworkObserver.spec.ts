@@ -1498,7 +1498,7 @@ describe('NetworkObserver', () => {
       );
     });
 
-    it('should write a request that is still waiting for its response', async () => {
+    it('should not write a request that is still waiting for its response', async () => {
       // arrange
       when(networkMock.getRequestBody('1')).thenResolve({
         postData: '',
@@ -1511,14 +1511,7 @@ describe('NetworkObserver', () => {
       // act
       await sut.unsubscribe();
       // assert
-      expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          requestId: '1',
-          url: 'http://localhost:8080/',
-          endTime: -1
-        })
-      );
+      expect(callback).not.toHaveBeenCalled();
     });
 
     it('should not write a closed WebSocket again', async () => {
