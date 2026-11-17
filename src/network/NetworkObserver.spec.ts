@@ -1548,6 +1548,42 @@ describe('NetworkObserver', () => {
       );
     });
 
+    it('should write the body of a request whose body Chrome sends while the targets are attached', async () => {
+      // arrange
+      let detached = false;
+      when(networkMock.getRequestBody('1')).thenReturn(
+        new Promise(resolve =>
+          setImmediate(() => {
+            if (!detached) {
+              resolve({ postData: 'a=1', base64Encoded: false });
+            }
+          })
+        )
+      );
+      when(networkMock.detachFromTargets()).thenCall(async () => {
+        detached = true;
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        await cb({
+          ...requestWillBeSentEvent,
+          params: {
+            ...requestWillBeSentEvent.params,
+            request: {
+              ...requestWillBeSentEvent.params.request,
+              method: 'POST',
+              hasPostData: true
+            }
+          }
+        });
+      });
+      await sut.subscribe(callback);
+      // act
+      await sut.unsubscribe();
+      // assert
+      const entry: NetworkRequest = callback.mock.calls[0][0] as NetworkRequest;
+      expect(await entry.requestFormData()).toBe('a=1');
+    });
+
     it('should write the body of a request whose loading finishes while earlier writes settle', async () => {
       // arrange
       let emit!: (event: any) => unknown;

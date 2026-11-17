@@ -15,7 +15,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     Protocol.Network.RequestId,
     ExtraInfoBuilder
   >;
-  private readonly _pendingWrites = new Set<Promise<unknown>>();
+  private readonly _pendingCalls = new Set<Promise<unknown>>();
   private destination?: (chromeEntry: NetworkRequest) => unknown;
   private listening = false;
 
@@ -55,10 +55,10 @@ export class NetworkObserver implements Observer<NetworkRequest> {
 
   public async unsubscribe(): Promise<void> {
     // Turning auto-attach off detaches the target sessions, and Chrome never answers
-    // a `Network.getResponseBody` pending on a detached session, so no write may
+    // a `Network.getResponseBody` pending on a detached session, so no call may
     // still run or start once detaching begins.
-    while (this._pendingWrites.size) {
-      await Promise.allSettled(this._pendingWrites);
+    while (this._pendingCalls.size) {
+      await Promise.allSettled(this._pendingCalls);
     }
     this.listening = false;
     await this.network.detachFromTargets();
@@ -491,6 +491,13 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     this.writeRequest(networkRequest);
   }
 
+  private track<T>(call: Promise<T>): Promise<T> {
+    const settled = call.finally(() => this._pendingCalls.delete(settled));
+    this._pendingCalls.add(settled);
+
+    return settled;
+  }
+
   private async writeRequest(networkRequest: NetworkRequest): Promise<void> {
     if (this.shouldExcludeRequest(networkRequest)) {
       this._entries.delete(networkRequest.requestId);
@@ -498,17 +505,12 @@ export class NetworkObserver implements Observer<NetworkRequest> {
       return;
     }
 
-    const pending: Promise<unknown> = networkRequest
-      .waitForCompletion()
-      .then(() => this.destination?.(networkRequest))
-      .finally(() => {
-        this._entries.delete(networkRequest.requestId);
-        this._pendingWrites.delete(pending);
-      });
-
-    this._pendingWrites.add(pending);
-
-    await pending;
+    await this.track(
+      networkRequest
+        .waitForCompletion()
+        .then(() => this.destination?.(networkRequest))
+        .finally(() => this._entries.delete(networkRequest.requestId))
+    );
   }
 
   private loadContent(networkRequest: NetworkRequest): void {
@@ -552,8 +554,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   ): Promise<string | undefined> {
     return rawRequest.postData !== undefined
       ? Promise.resolve(rawRequest.postData)
-      : this.network
-          .getRequestBody(request.requestId)
+      : this.track(this.network.getRequestBody(request.requestId))
           .then(
             ({
               postData,
