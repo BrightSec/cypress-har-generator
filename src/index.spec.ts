@@ -124,6 +124,48 @@ describe('install', () => {
     });
   });
 
+  it('should run the next specs when the HAR of a spec cannot be saved', async () => {
+    // arrange
+    jest
+      .spyOn(Plugin.prototype, 'saveHar')
+      .mockRejectedValue(new Error('EEXIST'));
+    const { handlers, on } = createEvents();
+    install(on, config);
+
+    // act
+    const result = handlers.get('after:spec')?.(
+      {
+        name: 'spec.cy.ts',
+        absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+      },
+      {}
+    );
+
+    // assert
+    await expect(result).resolves.toBeUndefined();
+  });
+
+  it('should fail the run when the HAR of a spec cannot be saved', async () => {
+    // arrange
+    const error = new Error('EEXIST');
+    jest.spyOn(Plugin.prototype, 'saveHar').mockRejectedValue(error);
+    const { handlers, on } = createEvents();
+    install(on, config);
+    await handlers.get('after:spec')?.(
+      {
+        name: 'spec.cy.ts',
+        absolute: join(projectRoot, 'cypress/e2e/spec.cy.ts')
+      },
+      {}
+    );
+
+    // act
+    const result = () => handlers.get('after:run')?.({});
+
+    // assert
+    expect(result).toThrow(error);
+  });
+
   it('should list each test with the state Cypress reports for its try', async () => {
     // arrange
     const saveHar = jest

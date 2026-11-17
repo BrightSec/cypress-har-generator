@@ -252,6 +252,8 @@ const enableLifecycle = (
         ...recordOptions
       })
     );
+    let saveError: unknown;
+
     on(
       'after:spec',
       (
@@ -267,17 +269,27 @@ const enableLifecycle = (
           ? new TestResults(results.tests)
           : undefined;
 
-        return plugin.saveHar({
-          waitForIdle,
-          minIdleDuration,
-          maxWaitDuration,
-          fileName: basename(path),
-          outDir: dirname(path),
-          ...(tests ? { stateOf: tests.stateOf } : {}),
-          ...(failedTestsOnly && tests ? { keep: tests.failed } : {})
-        });
+        return plugin
+          .saveHar({
+            waitForIdle,
+            minIdleDuration,
+            maxWaitDuration,
+            fileName: basename(path),
+            outDir: dirname(path),
+            ...(tests ? { stateOf: tests.stateOf } : {}),
+            ...(failedTestsOnly && tests ? { keep: tests.failed } : {})
+          })
+          .catch((e: unknown): void => {
+            // throwing in `after:spec` stops the run, so the error waits for `after:run`
+            saveError ??= e;
+          });
       }
     );
+    on('after:run', (): void => {
+      if (saveError) {
+        throw saveError;
+      }
+    });
   }
 };
 

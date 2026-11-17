@@ -422,6 +422,7 @@ describe('Plugin', () => {
       const result = plugin.saveHar(options);
       // assert
       await expect(result).rejects.toThrow(error);
+      verify(connectionMock.close()).once();
     });
 
     it('should unsubscribe from the network events', async () => {

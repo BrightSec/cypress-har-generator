@@ -46,6 +46,7 @@ export class DefaultHarExporter implements HarExporter {
   private readonly pages = new HarPages();
   private size = 0;
   private invalidTransformResultReported = false;
+  private writeError?: unknown;
 
   constructor(
     private readonly logger: Logger,
@@ -59,6 +60,10 @@ export class DefaultHarExporter implements HarExporter {
     tests: TestTimeline = new TestTimeline()
   ): Promise<HarExport | undefined> {
     await Promise.allSettled(this.pendingWrites);
+
+    if (this.writeError) {
+      throw this.writeError;
+    }
 
     // Entries are recorded as requests finish; HAR 1.2 orders them by start time.
     const entries = this.index
@@ -101,6 +106,10 @@ export class DefaultHarExporter implements HarExporter {
 
     try {
       await pending;
+    } catch (e) {
+      this.writeError ??= e;
+
+      throw e;
     } finally {
       this.pendingWrites.delete(pending);
     }
