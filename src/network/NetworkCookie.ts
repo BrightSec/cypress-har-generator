@@ -71,9 +71,11 @@ export class NetworkCookie {
   }
 
   get maxAge(): number | undefined {
-    const maxAge: string = this._attributes.get(CookieAttribute.MAXAGE) ?? '';
+    const maxAge: string | undefined = this._attributes.get(
+      CookieAttribute.MAXAGE
+    );
 
-    return isNaN(+maxAge) ? undefined : +maxAge;
+    return maxAge && !isNaN(+maxAge) ? +maxAge : undefined;
   }
 
   get url(): string {
@@ -86,14 +88,16 @@ export class NetworkCookie {
   }
 
   public expiresDate(requestDate: Date): Date | undefined {
-    if (this.maxAge) {
+    if (this.maxAge !== undefined) {
       const targetDate = requestDate === null ? new Date() : requestDate;
 
       return new Date(targetDate.getTime() + 1000 * this.maxAge);
     }
 
     if (this.expires) {
-      return new Date(this.expires);
+      const date = new Date(this.expires);
+
+      return isNaN(date.getTime()) ? undefined : date;
     }
 
     return undefined;
