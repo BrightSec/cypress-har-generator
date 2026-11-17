@@ -152,6 +152,47 @@ describe('NetworkObserver', () => {
     }
   };
 
+  const eventSourceEvents = [
+    {
+      method: 'Network.requestWillBeSent',
+      params: {
+        ...requestWillBeSentEvent.params,
+        requestId: '3',
+        request: {
+          ...requestWillBeSentEvent.params.request,
+          url: 'http://localhost:8080/events'
+        },
+        type: 'EventSource'
+      }
+    },
+    {
+      method: 'Network.responseReceived',
+      params: {
+        ...responseReceivedEvent.params,
+        requestId: '3',
+        type: 'EventSource'
+      }
+    },
+    {
+      method: 'Network.dataReceived',
+      params: {
+        requestId: '3',
+        timestamp: 2,
+        dataLength: 11,
+        encodedDataLength: 11
+      }
+    },
+    {
+      method: 'Network.eventSourceMessageReceived',
+      params: {
+        requestId: '3',
+        timestamp: 2,
+        eventName: 'message',
+        eventId: '1',
+        data: 'test'
+      }
+    }
+  ];
   const webSocketEvents = [
     {
       method: 'Network.webSocketCreated',
@@ -253,6 +294,20 @@ describe('NetworkObserver', () => {
       // arrange
       when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
         for (const event of webSocketEvents) {
+          await cb(event);
+        }
+      });
+      await sut.subscribe(callback);
+      // act
+      const result = sut.empty;
+      // assert
+      expect(result).toBe(true);
+    });
+
+    it('should return true when only an EventSource is open', async () => {
+      // arrange
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        for (const event of eventSourceEvents) {
           await cb(event);
         }
       });
@@ -1416,6 +1471,52 @@ describe('NetworkObserver', () => {
           url: 'ws://localhost:8080/ws',
           statusCode: 101,
           frames: [expect.objectContaining({ type: 'response', data: 'test' })]
+        })
+      );
+    });
+
+    it('should write an EventSource that is still open with its messages', async () => {
+      // arrange
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        for (const event of eventSourceEvents) {
+          await cb(event);
+        }
+      });
+      await sut.subscribe(callback);
+      // act
+      await sut.unsubscribe();
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: '3',
+          resourceType: 'EventSource',
+          eventSourceMessages: [
+            expect.objectContaining({ eventName: 'message', data: 'test' })
+          ]
+        })
+      );
+    });
+
+    it('should write a request that is still waiting for its response', async () => {
+      // arrange
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: '',
+        base64Encoded: false
+      });
+      when(networkMock.attachToTargets(anyFunction())).thenCall(cb =>
+        cb(requestWillBeSentEvent)
+      );
+      await sut.subscribe(callback);
+      // act
+      await sut.unsubscribe();
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: '1',
+          url: 'http://localhost:8080/',
+          endTime: -1
         })
       );
     });

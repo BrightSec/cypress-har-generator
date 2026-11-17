@@ -445,6 +445,47 @@ describe('Record HAR', () => {
       });
   });
 
+  it('saves an open EventSource with its messages without waiting for it to close', () => {
+    cy.recordHar();
+
+    cy.get('a[href$=server-sent-events]').click();
+    cy.get('ul > li', { timeout: 300 }).should('have.length.gte', 2);
+
+    const startedAt = Date.now();
+    cy.saveHar({ waitForIdle: true, maxWaitDuration: 10000 }).then(() =>
+      expect(Date.now() - startedAt).to.be.lessThan(10000)
+    );
+
+    cy.findHar()
+      .its('log.entries')
+      .then((entries: Entry[]) => {
+        const eventSource = entries.find(
+          ({ _resourceType }: Entry) => _resourceType === 'EventSource'
+        );
+        expect(eventSource?._eventSourceMessages).to.contain.something.like({
+          eventName: 'message',
+          data: /^This is a message at time/
+        });
+      });
+  });
+
+  it('records a request that is still waiting for its response', () => {
+    cy.recordHar();
+
+    cy.window().then(win => {
+      void win.fetch('/api/delay/10000');
+    });
+    cy.wait(500);
+
+    cy.saveHar();
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: { url: /\/api\/delay\/10000$/ }
+      });
+  });
+
   it('records the WebSocket frame times as wall-clock time', () => {
     const startedAt = Date.now() / 1000;
 
