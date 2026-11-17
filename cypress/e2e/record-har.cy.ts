@@ -491,6 +491,22 @@ describe('Record HAR', () => {
       });
   });
 
+  it('records a request that is still pending after the wait is over', () => {
+    cy.recordHar();
+
+    cy.window().then(win => {
+      void win.fetch('/api/delay/10000');
+    });
+
+    cy.saveHar({ waitForIdle: true, maxWaitDuration: 1000 });
+
+    cy.findHar()
+      .its('log.entries')
+      .should('contain.something.like', {
+        request: { url: /\/api\/delay\/10000$/ }
+      });
+  });
+
   it('records the WebSocket frame times as wall-clock time', () => {
     const startedAt = Date.now() / 1000;
 
