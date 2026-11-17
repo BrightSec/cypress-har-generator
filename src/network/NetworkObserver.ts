@@ -17,6 +17,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   >;
   private readonly _pendingWrites = new Set<Promise<unknown>>();
   private destination?: (chromeEntry: NetworkRequest) => unknown;
+  private listening = false;
 
   get empty(): boolean {
     // Like Chrome's network idle, a WebSocket or an EventSource does not count as
@@ -45,6 +46,7 @@ export class NetworkObserver implements Observer<NetworkRequest> {
     callback: (chromeEntry: NetworkRequest) => unknown
   ): Promise<void> {
     this.destination = callback;
+    this.listening = true;
 
     await this.network.attachToTargets((event: NetworkEvent): void =>
       this.handleEvent(event)
@@ -52,6 +54,9 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   }
 
   public async unsubscribe(): Promise<void> {
+    // An event arriving while the targets detach could start a `Network.getResponseBody`
+    // that Chrome never answers, so the entries are written as they stand now.
+    this.listening = false;
     // Turning auto-attach off detaches the target sessions, and Chrome never answers
     // a `Network.getResponseBody` still pending on a detached session.
     await Promise.allSettled(this._pendingWrites);
@@ -727,6 +732,10 @@ export class NetworkObserver implements Observer<NetworkRequest> {
   }
 
   private handleEvent({ method, params, sessionId }: NetworkEvent): void {
+    if (!this.listening) {
+      return;
+    }
+
     const methodName = method.substring(method.indexOf('.') + 1);
 
     if (typeof (this as any)[methodName] === 'function') {

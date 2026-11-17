@@ -1521,6 +1521,33 @@ describe('NetworkObserver', () => {
       );
     });
 
+    it('should write a request whose loading finishes while the targets detach', async () => {
+      // arrange
+      let emit!: (event: unknown) => unknown;
+      when(optionsSpy.content).thenReturn(true);
+      when(networkMock.getRequestBody('1')).thenResolve({
+        postData: '',
+        base64Encoded: false
+      });
+      when(networkMock.getResponseBody('1')).thenReturn(new Promise(() => {}));
+      when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
+        emit = cb;
+        await cb(requestWillBeSentEvent);
+        await cb(responseReceivedEvent);
+      });
+      when(networkMock.detachFromTargets()).thenCall(async () => {
+        await emit(loadingFinishedEvent);
+      });
+      await sut.subscribe(callback);
+      // act
+      await sut.unsubscribe();
+      // assert
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ requestId: '1', endTime: -1 })
+      );
+    });
+
     it('should not write a closed WebSocket again', async () => {
       // arrange
       when(networkMock.attachToTargets(anyFunction())).thenCall(async cb => {
